@@ -243,13 +243,13 @@ The answer appears big as you type, with what a percentage hid beside it; Enter 
 
 | Type | You get |
 |---|---|
-| `week`, `next week` | Your week across the card, a column a day, each day's events with their times; Enter opens Calendar |
-| `month`, `next month` | The month as a grid, a dot for each event; Enter opens Calendar |
+| `week`, `next week` | Your week across the card, a column a day, each day's events with their times; Enter opens your calendar: Calendar, Google Calendar or Outlook |
+| `month`, `next month` | The month as a grid, a dot for each event; Enter opens your calendar |
 | `free`, `free tomorrow`, `free next week` | Your free time between 9:00 and 18:00, a line a day; Enter copies it |
 | `camera` | You, mirrored, before a call; Enter joins the call about to start, or opens Photo Booth |
 | `codes` | Verification codes from Messages, the last 15 minutes; Enter copies one |
 | `meetings`, `agenda`, `events` | The rest of today's events, a copper badge on what's soon; Tab shows the details (call link, people, notes), Enter joins the call. A few minutes before a call, it's already there when you open the launcher (or all of today, with Settings › Launcher › Calendar) |
-| `add todo call mom tomorrow 5pm` | A reminder, due and alerting then |
+| `add todo call mom tomorrow 5pm` | A reminder, due and alerting then; or a to-do in Things, TickTick or Todoist (Settings › Options › To-dos) |
 | `due` | Reminders due today and overdue; Enter completes one. What's due soon waits when you open the launcher |
 | `add event fri 10am dentist` | An event in your calendar |
 | `note` ⇥, `note milk` ⇥, `new note`, `add note buy milk` | Floating notes, saved as you type: Tab on `note` lists only your notes, with a preview, and typing finds the one that says it |
@@ -324,7 +324,7 @@ few features. The welcome window asks for them in one place; otherwise macOS ask
 | Bluetooth | `:connect` (connecting and disconnecting your paired devices) |
 | Camera | `camera` (seeing yourself before a call; nothing is recorded) |
 | Notifications | The end of a pomodoro or a timer, shell lines that finish in the background, errors |
-| Automation | Your browser's open tabs (asked once per browser, from `tabs` ⇥); `:empty trash`, `:dark`, `:restart`, `:shut down`, `:log out` (asking Finder, System Events or loginwindow) |
+| Automation | Your browser's open tabs (asked once per browser, from `tabs` ⇥); `:empty trash`, `:dark`, `:restart`, `:shut down`, `:log out` (asking Finder, System Events or loginwindow); `due` with Things picked |
 | Full Disk Access, by hand | Safari's bookmarks and history, and `codes` from Messages |
 
 ## Privacy
@@ -335,7 +335,7 @@ few features. The welcome window asks for them in one place; otherwise macOS ask
   false` turns the app descriptions off.
 - **The rest only when you ask:** a ticker in the Stock chip, a city or a rounded location in the Weather chip, a
   subject in the Wikipedia chip, each once you pause typing; your public IP, a speed test or a Homebrew install on
-  Enter. Typing alone never sends anything.
+  Enter; your to-dos, if you connect Todoist, when you add, show or complete one. Typing alone never sends anything.
 - **What it keeps stays on your Mac,** in `~/.config/copperlight/`. Copies made in password managers are never
   recorded, and copied links lose their tracking.
 

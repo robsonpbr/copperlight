@@ -64,6 +64,8 @@ Roughly in that order, then a few weeks of daily use with fixes only.
 
 ## Done
 
+- **v0.14:** your own calendar and to-do apps, all optional: Google Calendar or Outlook for Open Calendar, the calendar
+  `add event` uses, and Things, TickTick or Todoist for `add todo` and `due`.
 - **v0.13:** a privacy page: every server Copperlight contacts, every permission and every file it keeps. `free
   tomorrow`, your free time to paste in an email; `month`, the month as a grid; `camera`, yourself before a call;
   `screenshots` and `downloads`, the newest pasted where you are; `wifi password`, with a QR code that joins a phone;

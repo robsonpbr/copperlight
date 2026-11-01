@@ -34,6 +34,7 @@ Those descriptions let you find an app by what it does, like "draw" or "noise". 
 | api.ipify.org | Enter on the Public IP row (`ip`) | Nothing besides the request: it answers with your public address |
 | Apple's servers | Enter on `speed` | The speed test macOS runs itself (`networkQuality`) |
 | Homebrew, and the app's own site | Enter on Install, on an app you don't have | `brew install --cask` downloads the app |
+| api.todoist.com | Only with Todoist picked in Settings › Options › To-dos and your key saved: Enter on `add todo`, on Show in `due`, or on a to-do | Your key, with the to-do and its date; a request for today's and overdue tasks; or the task to complete |
 
 Typing alone never sends anything: an answer from elsewhere waits for the chip, a pause or Enter. Translation runs on
 your Mac, with the languages macOS downloads; so do the dictionary, the thesaurus, spelling, the text in photos and
@@ -47,7 +48,7 @@ Saying no only turns off what that permission is for.
 | Permission | Asked | What it turns on | Without it |
 |---|---|---|---|
 | Accessibility | The first paste or window command | Pasting into your app, window commands and layouts, menu search, the media keys, opening on the text you selected | A paste copies instead, and the row says Copy |
-| Automation | The first `:empty trash`, `:dark`, `:restart`, `:shut down` or `:log out`; a browser's row in `tabs` ⇥; the hotkey over Finder, from its row | Asking Finder, System Events or loginwindow to do it; listing and switching a browser's tabs; the files selected in Finder | Those commands, the tabs and Finder's selection don't work |
+| Automation | The first `:empty trash`, `:dark`, `:restart`, `:shut down` or `:log out`; a browser's row in `tabs` ⇥; the hotkey over Finder, from its row; `due` with Things picked, from its row | Asking Finder, System Events or loginwindow to do it; listing and switching a browser's tabs; the files selected in Finder; reading and completing Things' Today list | Those commands, the tabs, Finder's selection and Things' to-dos don't work |
 | Calendars, add only | The first `add event` | Adding events | `add event` doesn't work |
 | Calendars, full access | `meetings`, `week`, `month` or `free`, from its Allow row | Reading your events, the next meeting in the empty launcher, and your free time | No events |
 | Reminders | The first `add todo`, or `due`'s Allow row | Adding reminders, and the ones that are due | No reminders |
@@ -65,7 +66,7 @@ Saying no only turns off what that permission is for.
 
 Everything is in `~/.config/copperlight/`, on your Mac, and nowhere else:
 
-- `config.toml`: your settings.
+- `config.toml`: your settings. Never a key or a password.
 - `note.txt` and `notes/`: your notes.
 - `state.json`: what you open most and what you picked for what you typed, recent queries, saved layouts, the
   running timer, the apps you open around each time of day, and the colors you picked.
@@ -75,13 +76,17 @@ Everything is in `~/.config/copperlight/`, on your Mac, and nowhere else:
 - `photos.sqlite`: the text in your photos.
 - `scripts/`: your scripts.
 
-Settings › Launcher has a Forget button for what it learned. Deleting the folder removes everything.
+One thing is kept outside it: your Todoist key, if you save one, in your Mac's keychain. Settings › Options ›
+To-dos › Forget Key deletes it.
+
+Settings › Launcher has a Forget button for what it learned. Deleting the folder removes everything but the Todoist key,
+which Forget Key deletes.
 
 ## What it reads and doesn't keep
 
 Contacts, browser tabs, reminders and events are read on your Mac when you open the launcher, and kept in memory
-only. A Wi-Fi password you ask for is shown after macOS asks for your Mac's password, and kept in memory for 10
-minutes. `codes` reads only the last 15 minutes of Messages, when you type it. The camera shows only while the row is on
+only. What's due in Todoist is kept in memory for a minute after you ask. A Wi-Fi password you ask for is shown
+after macOS asks for your Mac's password, and kept in memory for 10 minutes. `codes` reads only the last 15 minutes of Messages, when you type it. The camera shows only while the row is on
 screen. A link you copy loses its tracking (`utm_…`, `fbclid`) before it's saved, and Settings › Features turns that
 off.
 

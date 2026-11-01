@@ -6,7 +6,8 @@ homepages and App Store descriptions, which `[apps] online = false` turns off. T
 for, and only when you ask: `stock AAPL` sends that ticker to Yahoo Finance, in the Stock chip only (Tab) and once
 typing pauses, kept a minute; Enter on the Public IP row (`ip`) asks api.ipify.org (decided 2026-10-28); Enter on `speed` runs macOS's
 `networkQuality` against Apple's servers (decided 2026-10-29); Enter on Install runs `brew install --cask`, with Homebrew
-installed (decided 2026-10-29). On-device models are fine: Apple
+installed (decided 2026-10-29); with Todoist picked in Settings and your key pasted (kept in the keychain, the one
+credential it ever holds), Enter on `add todo`, on Show in `due` or on a to-do asks Todoist (decided 2026-11-01). On-device models are fine: Apple
 Intelligence writes app search words, Vision reads the text in photos (decided 2026-10-15) and in the part of the
 screen you drag over with `copy text` (decided 2026-10-29). Projects and the developer
 tools built on them (git, gh, Claude Code, Jira) were taken out on 2026-10-27: they belong in another app.
@@ -14,7 +15,8 @@ tools built on them (git, gh, Claude Code, Jira) were taken out on 2026-10-27: t
 ## Principles
 
 - **Small core, config over code.** Anything that can be an entry in `config.toml` must not be a new feature.
-  Built-ins use macOS's own apps (Reminders, Calendar, the screenshot toolbar); a `[[command]]` with the same name
+  Built-ins use macOS's own apps (Reminders, Calendar, the screenshot toolbar), or the calendar and to-do app picked
+  in Settings › Options, Apple's until you pick (decided 2026-11-01); a `[[command]]` with the same name
   replaces one (`screenshot` → CleanShot, `add todo` → Things), so there are no plugins (decided 2026-10-13).
 - **Keyboard-only.** Every action is reachable without the mouse.
 - **One hotkey.** Only the launcher has a global hotkey; every other feature is found by typing in it.

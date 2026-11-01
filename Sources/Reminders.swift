@@ -68,6 +68,17 @@ struct RemindersProvider: ResultProvider {
     /// `[reminders] lists`: only these lists' reminders count; none, all of them.
     var lists: @Sendable () -> [String] = { RemindersProvider.chosenLists.withLock { $0 } }
     static let chosenLists = Mutex<[String]>([])
+    /// `[reminders] app`: Things is read instead; TickTick only adds, so Reminders is still read.
+    var app: @Sendable () -> Config.Reminders.App = { RemindersProvider.chosenApp.withLock { $0 } }
+    static let chosenApp = Mutex(Config.Reminders.App.reminders)
+    var lookAtThings: @Sendable () async -> ThingsLook = readThingsToday
+    var things = ThingsToday.shared
+    var todoistKey: @Sendable () -> String? = { TodoistKey.read() }
+    var todoist = TodoistDue.shared
+    var send: TodoistSend = urlSessionSend
+    /// Types the query again once Todoist answered, so the list shows; opens Settings, for the key.
+    var show: @MainActor @Sendable (String) -> Void = { _ in }
+    var showSettings: @MainActor @Sendable () -> Void = {}
 
     /// The reminders that are due, from the lists that count.
     private func due() async -> [ReminderItem]? {
@@ -75,25 +86,42 @@ struct RemindersProvider: ResultProvider {
         return await fetch().map { items in chosen(items, named: names, name: \.list) ?? items }
     }
 
-    private func row(_ item: ReminderItem, score: Double, now: Date) -> LauncherResult {
+    private func row(_ item: ReminderItem, score: Double, now: Date, app: Config.Reminders.App = .reminders) -> LauncherResult {
         let when = item.allDay ? (calendar.isDate(item.due, inSameDayAs: now) ? "Today" : item.due.formatted(.dateTime.weekday().day().month()))
             : calendar.isDate(item.due, inSameDayAs: now) ? item.due.formatted(date: .omitted, time: .shortened)
             : item.due.formatted(.dateTime.weekday().day().month().hour().minute())
         let id = item.id
         return LauncherResult(id: "reminder:\(id)", title: item.title, subtitle: [item.list, when].filter { !$0.isEmpty }.joined(separator: " · "),
-                              icon: .symbol("checklist"), score: score, actionTitle: "Complete", action: { complete(id) }, staysOpen: true,
+                              icon: .symbol("checklist"), score: score, actionTitle: "Complete",
+                              action: {
+                                  switch app {
+                                  case .things: completeInThings(id)
+                                  case .todoist: completeInTodoist(id)
+                                  case .reminders, .ticktick: complete(id)
+                                  }
+                              }, staysOpen: true,
                               badge: reminderBadge(item, now: now, calendar: calendar))
     }
 
     /// For the empty launcher. Nothing without access.
     func upNext(now: Date = .now) async -> [LauncherResult] {
-        dueNow(await due() ?? [], now: now, calendar: calendar).enumerated().map { row($1, score: 99.5 - Double($0) / 100, now: now) }
+        let app = app()
+        let items: [ReminderItem]
+        switch app {
+        case .things: items = await things.lastAndLook(lookAtThings)
+        case .todoist: return [] // asked only on Enter, never when the launcher opens
+        case .reminders, .ticktick: items = await due() ?? []
+        }
+        return dueNow(items, now: now, calendar: calendar).enumerated().map { row($1, score: 99.5 - Double($0) / 100, now: now, app: app) }
     }
 
     func results(for query: String) async -> [LauncherResult] { await results(for: query, now: .now) }
 
     func results(for query: String, now: Date) async -> [LauncherResult] {
         guard ["due", "overdue", "todos"].contains(query.lowercased().trimmingCharacters(in: .whitespaces)) else { return [] }
+        let app = app()
+        if app == .things { return await thingsRows(now: now) }
+        if app == .todoist { return await todoistRows(query, now: now) }
         guard let items = await due() else {
             let status = EKEventStore.authorizationStatus(for: .reminder)
             return [status == .denied || status == .restricted
@@ -109,10 +137,67 @@ struct RemindersProvider: ResultProvider {
                     }
                 })]
         }
+        let rows = dueRows(items, now: now, app: .reminders)
+        return app == .reminders ? rows : rows + [openTodoAppRow(app, score: 50 - Double(rows.count) / 100)]
+    }
+
+    /// The to-dos due, soonest first, or a row saying there are none.
+    private func dueRows(_ items: [ReminderItem], now: Date, app: Config.Reminders.App) -> [LauncherResult] {
         let due = items.sorted { deadline($0, calendar: calendar) < deadline($1, calendar: calendar) }
         guard !due.isEmpty else {
             return [LauncherResult(id: "builtin:due", title: "Nothing due today", icon: .symbol("checklist"), score: 50, actionTitle: "", action: {})]
         }
-        return due.enumerated().map { row($1, score: 50 - Double($0) / 100, now: now) }
+        return due.enumerated().map { row($1, score: 50 - Double($0) / 100, now: now, app: app) }
+    }
+
+    /// `due` with Todoist: what Enter on Show fetched in the last minute, or Show. Typing alone never asks Todoist.
+    private func todoistRows(_ query: String, now: Date) async -> [LauncherResult] {
+        let icon = LauncherResult.Icon.symbol("checklist")
+        guard let key = todoistKey() else {
+            return [LauncherResult(id: "builtin:due", title: "Connect Todoist in Settings", subtitle: "Settings › Options › To-dos: paste your Todoist key",
+                                   icon: icon, score: 50, actionTitle: "Open Settings", action: showSettings)]
+        }
+        if let items = await todoist.cached(now: now) {
+            let rows = dueRows(items, now: now, app: .todoist)
+            return rows + [openTodoAppRow(.todoist, score: 50 - Double(rows.count) / 100)]
+        }
+        let (todoist, send, show) = (todoist, send, show)
+        return [LauncherResult(id: "builtin:due", title: "Show What's Due in Todoist", subtitle: "Asks Todoist for today's and overdue tasks",
+                               icon: icon, score: 50, actionTitle: "Show", action: {
+            Task {
+                switch await todoist.load(key: key, send: send) {
+                case .success: show(query)
+                case .failure(let failure): notify(failure.title)
+                }
+            }
+        })]
+    }
+
+    /// `due` with Things: its Today list and a row that opens it; asked first, or opened first when it's closed.
+    private func thingsRows(now: Date) async -> [LauncherResult] {
+        let id = todoAppBundleID(.things)
+        let message = { (title: String, subtitle: String, actionTitle: String, action: @escaping @MainActor @Sendable () -> Void) in
+            [LauncherResult(id: "builtin:due", title: title, subtitle: subtitle, icon: .symbol("checklist"), score: 50, actionTitle: actionTitle, action: action)]
+        }
+        let look = await lookAtThings()
+        await things.keep(look)
+        switch look {
+        case .due(let items):
+            let rows = dueRows(items, now: now, app: .things)
+            return rows + [openTodoAppRow(.things, score: 50 - Double(rows.count) / 100)]
+        case .closed: return [openTodoAppRow(.things, title: "Open Things to See What's Due", score: 50)]
+        case .failed: return [openTodoAppRow(.things, title: "Couldn't read Things", score: 50)]
+        case .unasked:
+            return message("See What's Due in Things", "Asks to control Things, once", "Allow", {
+                Task.detached {
+                    guard automationPermission(id, ask: true) == noErr else { return }
+                    await MainActor.run { notify("Type “due” again to see them") }
+                }
+            })
+        case .refused:
+            return message("Allow Copperlight to control Things", "Privacy & Security → Automation", "Open System Settings", {
+                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation")!)
+            })
+        }
     }
 }

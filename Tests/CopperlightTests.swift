@@ -2153,7 +2153,8 @@ private let macOS26 = ProcessInfo.processInfo.isOperatingSystemAtLeast(Operating
     let rows = outputRows("", outputs: outputs, current: 2)
     #expect(rows.map(\.title) == ["AirPods Pro", "MacBook Pro Speakers", "U27B3M"]) // the one playing now first
     #expect(rows.map(\.subtitle) == ["Current output", "", ""])
-    #expect(rows.map(\.score) == rows.map(\.score).sorted(by: >))
+    let scores = rows.map(\.score)
+    #expect(scores == scores.sorted(by: >))
     #expect(outputRows("mac", outputs: outputs, current: 2).map(\.title) == ["MacBook Pro Speakers"])
 }
 
@@ -4376,4 +4377,287 @@ private let thesaurusHappy = "happy adjective 1 Melissa came in looking happy an
     }
     let wide = NSHostingController(rootView: ResultRow(result: row, selected: true)).sizeThatFits(in: CGSize(width: 680, height: 46))
     #expect(wide.width <= 680)
+}
+
+/// `[meetings] open_in` and `add_to`, `[reminders] app` and `add_to`: Apple's apps and the Mac's defaults unless set.
+@Test func calendarAndTodoAppKeys() throws {
+    let empty = try Config.parse("")
+    #expect(empty.meetings.openIn == .calendar && empty.meetings.addTo == nil)
+    #expect(empty.reminders.app == .reminders && empty.reminders.addTo == nil)
+
+    let set = try Config.parse("""
+        [meetings]
+        open_in = "Google"
+        add_to = "Work"
+        [reminders]
+        app = "things"
+        add_to = "Inbox"
+        """)
+    #expect(set.meetings.openIn == .google && set.meetings.addTo == "Work")
+    #expect(set.reminders.app == .things && set.reminders.addTo == "Inbox")
+    for wrong in ["[reminders]\napp = \"omnifocus\"", "[meetings]\nopen_in = \"fantastical\""] {
+        #expect(throws: (any Error).self, "\(wrong)") { try Config.parse(wrong) }
+    }
+}
+
+/// Google Calendar and Outlook on the web open on the row's day, week or month.
+@Test func calendarAppLinks() {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "Europe/Lisbon")!
+    let day = calendar.date(from: DateComponents(year: 2026, month: 11, day: 12, hour: 15))!
+    #expect(googleCalendarLink(.day, day, calendar: calendar).absoluteString == "https://calendar.google.com/calendar/r/day/2026/11/12")
+    #expect(googleCalendarLink(.week, day, calendar: calendar).absoluteString == "https://calendar.google.com/calendar/r/week/2026/11/12")
+    #expect(googleCalendarLink(.month, day, calendar: calendar).absoluteString == "https://calendar.google.com/calendar/r/month/2026/11/1")
+    #expect(outlookCalendarLink(.day, day, calendar: calendar).absoluteString == "https://outlook.office.com/calendar/view/day/2026/11/12")
+    #expect(outlookCalendarLink(.week, day, calendar: calendar).absoluteString == "https://outlook.office.com/calendar/view/week/2026/11/12")
+    #expect(outlookCalendarLink(.month, day, calendar: calendar).absoluteString == "https://outlook.office.com/calendar/view/month/2026/11/1")
+    #expect(calendarActionTitle(.calendar) == "Open Calendar" && calendarActionTitle(.google) == "Open Google Calendar"
+            && calendarActionTitle(.outlook) == "Open Outlook")
+}
+
+/// A calendar or list picked in Settings, by name; gone or unset, nil: the Mac's default.
+@Test func chosenCalendarFallsBack() {
+    #expect(chosenCalendar(["Home", "Work"], named: "Work", title: \.self) == "Work")
+    #expect(chosenCalendar(["Home", "Work"], named: "Gone", title: \.self) == nil)
+    #expect(chosenCalendar(["Home", "Work"], named: nil, title: \.self) == nil)
+}
+
+/// The meeting about to start offers the calendar `[meetings] open_in` picks, under Join.
+@Test func meetingOpensInYourCalendar() {
+    let call = CalendarItem(title: "Weekly sync", start: .now + 240, end: .now + 2040, link: URL(string: "https://meet.google.com/abc-defg-hij"))
+    #expect(joinRows(call, browser: Config.Browser(), score: 100).map(\.title).last == "Open in Calendar")
+    #expect(joinRows(call, browser: Config.Browser(), openIn: .google, score: 100).map(\.title).last == "Open in Google Calendar")
+}
+
+/// `add todo` in Things or TickTick: their own links, the title intact whatever's in it, and Things' `when` from the date.
+@Test func todoAppLinks() throws {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "Europe/Lisbon")!
+    let title = "Call Ana & Rui #2 + café 🎉?"
+    let query = { (url: URL) in URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? [] }
+    let plain = thingsAddLink(title, due: nil, calendar: calendar)
+    #expect(plain.absoluteString.hasPrefix("things:///add?"))
+    #expect(query(plain).first { $0.name == "title" }?.value == title && !query(plain).contains { $0.name == "when" })
+    let day = calendar.date(from: DateComponents(year: 2026, month: 11, day: 12, hour: 12))!
+    let allDay = CaptureDate(title: title, date: day, duration: 0, allDay: true)
+    #expect(query(thingsAddLink(title, due: allDay, calendar: calendar)).first { $0.name == "when" }?.value == "2026-11-12")
+    let timed = CaptureDate(title: title, date: calendar.date(from: DateComponents(year: 2026, month: 11, day: 12, hour: 17, minute: 5))!,
+                            duration: 0, allDay: false)
+    #expect(query(thingsAddLink(title, due: timed, calendar: calendar)).first { $0.name == "when" }?.value == "2026-11-12@17:05")
+    let tick = tickTickAddLink(title)
+    #expect(tick.absoluteString.hasPrefix("ticktick://x-callback-url/v1/add_task?"))
+    #expect(query(tick).first { $0.name == "title" }?.value == title)
+    #expect(Config.Reminders.App.allCases.map(todoAppName) == ["Reminders", "Things", "TickTick", "Todoist"])
+}
+
+/// With another to-do app picked, `add todo` says which, in its chip and its row; with Reminders, as it always was.
+@Test func addTodoSaysItsApp() {
+    let things = { var todos = Config.Reminders(); todos.app = .things; return todos }()
+    let capture = CaptureProvider(addToNote: { _ in }, todos: { things })
+    #expect(capture.modes.map(\.title).contains("Add to Things"))
+    #expect(capture.results(for: "add todo call Ana tomorrow").first?.subtitle.hasPrefix("Things · ") == true)
+    let reminders = CaptureProvider(addToNote: { _ in }, todos: { Config.Reminders() })
+    #expect(reminders.modes.map(\.title).contains("Add Reminder"))
+    #expect(reminders.results(for: "add todo call Ana tomorrow").first?.subtitle.hasPrefix("Reminder · ") == true)
+}
+
+/// What `thingsTodayScript` printed for Things' Today list (Tests/Fixtures/things-today.txt, made up): the open to-dos,
+/// projects left out, each an id, a title and a deadline day or nothing. In Today, it's for today; a deadline past
+/// makes it overdue, one to come doesn't move it.
+@Test func thingsTodayParses() throws {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "Europe/Lisbon")!
+    let now = calendar.date(from: DateComponents(year: 2026, month: 11, day: 12, hour: 10))!
+    let output = try String(contentsOf: URL(filePath: #filePath).deletingLastPathComponent().appending(path: "Fixtures/things-today.txt"), encoding: .utf8)
+    let items = parseThingsToday(output, now: now, calendar: calendar)
+    #expect(items.map(\.title) == ["Send Northwind the invoice", "Renew the passport", "Book the dentist"])
+    #expect(items.allSatisfy { $0.list.isEmpty && $0.allDay } && items[0].id == "3Fq9aXkLm2")
+    #expect(items.map { reminderBadge($0, now: now, calendar: calendar) } == ["Today", "Overdue", "Today"])
+    #expect(items[2].due == calendar.startOfDay(for: now) && dueNow(items, now: now, calendar: calendar).count == 3)
+    #expect(parseThingsToday("", now: now, calendar: calendar).isEmpty)
+}
+
+/// `due` with Things: its Today list, then a row that opens Things; asked first, or opened first if it's closed.
+/// The empty launcher shows what the last look found and looks again behind it, never waiting for Things.
+/// With Reminders, no such row.
+@Test func dueReadsThings() async {
+    let item = ReminderItem(id: "3Fq9aXkLm2", title: "Send Northwind the invoice", due: .now, allDay: true, list: "")
+    let kept = ThingsToday()
+    let things = RemindersProvider(fetch: { nil }, app: { .things }, lookAtThings: { .due([item]) }, things: kept)
+    #expect(await things.upNext().isEmpty) // nothing looked at yet: it looks now, in the background
+    await kept.settle()
+    #expect(await things.upNext().map(\.title) == ["Send Northwind the invoice"])
+    #expect(await things.results(for: "due").map(\.title) == ["Send Northwind the invoice", "Open Things"])
+    let one = { (look: ThingsLook) in RemindersProvider(fetch: { nil }, app: { .things }, lookAtThings: { look }, things: ThingsToday()) }
+    #expect(await one(.unasked).results(for: "due").map(\.actionTitle) == ["Allow"])
+    #expect(await one(.closed).results(for: "due").map(\.title) == ["Open Things to See What's Due"])
+    #expect(await one(.failed).results(for: "due").map(\.title) == ["Couldn't read Things"])
+    let closed = ThingsToday()
+    _ = await RemindersProvider(fetch: { nil }, app: { .things }, lookAtThings: { .closed }, things: closed).upNext()
+    await closed.settle()
+    #expect(await RemindersProvider(fetch: { nil }, app: { .things }, lookAtThings: { .closed }, things: closed).upNext().isEmpty)
+    let reminders = RemindersProvider(fetch: { [item] }, app: { .reminders }, lookAtThings: { .closed })
+    #expect(await reminders.results(for: "due").map(\.title) == ["Send Northwind the invoice"])
+    let ticktick = RemindersProvider(fetch: { [item] }, app: { .ticktick }, lookAtThings: { .closed })
+    #expect(await ticktick.results(for: "due").map(\.title) == ["Send Northwind the invoice", "Open TickTick"])
+}
+
+/// What Todoist's `tasks/filter?query=today | overdue` answered (Tests/Fixtures/todoist-tasks.json, made up): a day, a
+/// time in UTC, and a floating time, read in this Mac's time zone.
+@Test func todoistTasksParse() throws {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "Europe/Lisbon")!
+    let data = try Data(contentsOf: URL(filePath: #filePath).deletingLastPathComponent().appending(path: "Fixtures/todoist-tasks.json"))
+    let items = try parseTodoistTasks(data, calendar: calendar)
+    #expect(items.map(\.title) == ["Send Northwind the invoice", "Call Ana Ribeiro", "Water the plants"])
+    #expect(items.map(\.allDay) == [true, false, false] && items[0].id == "6XGgmFVcrG5RRjVr")
+    #expect(items[0].due == calendar.date(from: DateComponents(year: 2026, month: 11, day: 12)))
+    #expect(items[1].due == ISO8601DateFormatter().date(from: "2026-11-12T17:00:00Z"))
+    #expect(items[2].due == calendar.date(from: DateComponents(year: 2026, month: 11, day: 11, hour: 9, minute: 30)))
+}
+
+/// Todoist's three requests: add (the title, and its day or its time in UTC), what's due, and complete. Each carries the key.
+@Test func todoistRequests() throws {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "Europe/Lisbon")!
+    let body = { (request: URLRequest) in try JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: String] ?? [:] }
+    let plain = todoistAddRequest("Call Ana & Rui", due: nil, key: "k", calendar: calendar)
+    #expect(plain.httpMethod == "POST" && plain.url?.absoluteString == "https://api.todoist.com/api/v1/tasks")
+    #expect(plain.value(forHTTPHeaderField: "Authorization") == "Bearer k" && plain.value(forHTTPHeaderField: "Content-Type") == "application/json")
+    #expect(try body(plain) == ["content": "Call Ana & Rui"])
+    let day = CaptureDate(title: "", date: calendar.date(from: DateComponents(year: 2026, month: 11, day: 12, hour: 12))!, duration: 0, allDay: true)
+    #expect(try body(todoistAddRequest("Pay rent", due: day, key: "k", calendar: calendar)) == ["content": "Pay rent", "due_date": "2026-11-12"])
+    let timed = CaptureDate(title: "", date: calendar.date(from: DateComponents(year: 2026, month: 11, day: 12, hour: 17))!, duration: 0, allDay: false)
+    #expect(try body(todoistAddRequest("Call", due: timed, key: "k", calendar: calendar)) == ["content": "Call", "due_datetime": "2026-11-12T17:00:00Z"])
+    let due = todoistDueRequest(key: "k")
+    #expect(due.httpMethod == "GET" && due.value(forHTTPHeaderField: "Authorization") == "Bearer k")
+    #expect(URLComponents(url: due.url!, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "query" }?.value == "today | overdue")
+    #expect(due.url?.path() == "/api/v1/tasks/filter")
+    let close = todoistCloseRequest("6XGgmFVcrG5RRjVr", key: "k")
+    #expect(close.httpMethod == "POST" && close.url?.absoluteString == "https://api.todoist.com/api/v1/tasks/6XGgmFVcrG5RRjVr/close")
+    #expect(TodoistKey.cleaned("  0123abc\n") == "0123abc" && TodoistKey.cleaned(" \n") == nil)
+}
+
+/// What's due is kept a minute, and only what Todoist answered: a refused key or no network keeps nothing.
+@Test func todoistFailuresDontCache() async throws {
+    let data = try Data(contentsOf: URL(filePath: #filePath).deletingLastPathComponent().appending(path: "Fixtures/todoist-tasks.json"))
+    let answer = { (status: Int, body: Data) -> TodoistSend in
+        { request in (body, HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!) }
+    }
+    let due = TodoistDue()
+    #expect(await due.load(key: "k", send: answer(401, Data())) == .failure(.rejected))
+    #expect(await due.cached() == nil)
+    #expect(await due.load(key: "k", send: { _ in throw URLError(.notConnectedToInternet) }) == .failure(.offline))
+    #expect(await due.load(key: "k", send: answer(503, Data())) == .failure(.server))
+    #expect(await due.cached() == nil)
+    let loaded = await due.load(key: "k", send: answer(200, data))
+    let kept = await due.cached()
+    #expect((try? loaded.get())?.count == 3 && kept?.count == 3)
+    #expect(await due.cached(now: .now + 61) == nil)
+}
+
+/// Typing `due` or opening the launcher never asks Todoist: Enter on Show does. Without a key, a row says where to add it.
+@Test func todoistIsAskedOnlyOnEnter() async {
+    actor Calls { var count = 0; func add() { count += 1 } }
+    let calls = Calls()
+    let send: TodoistSend = { request in await calls.add(); return (Data(), URLResponse()) }
+    let todoist = RemindersProvider(fetch: { nil }, app: { .todoist }, todoistKey: { "k" }, todoist: TodoistDue(), send: send)
+    #expect(await todoist.upNext().isEmpty)
+    #expect(await todoist.results(for: "due").map(\.title) == ["Show What's Due in Todoist"])
+    #expect(await calls.count == 0)
+    let keyless = RemindersProvider(fetch: { nil }, app: { .todoist }, todoistKey: { nil }, todoist: TodoistDue(), send: send)
+    #expect(await keyless.results(for: "due").map(\.title) == ["Connect Todoist in Settings"])
+}
+
+/// With Todoist picked and no key saved, `add todo` says where to add it instead of adding, and Enter opens it there.
+@Test func addTodoWithoutTodoistKey() {
+    let todoist = { var todos = Config.Reminders(); todos.app = .todoist; return todos }()
+    let row = CaptureProvider(addToNote: { _ in }, todos: { todoist }, hasTodoistKey: { false }).results(for: "add todo pay rent").first
+    #expect(row?.subtitle == "Connect Todoist in Settings › Options › To-dos" && row?.actionTitle == "Open Settings")
+    let keyed = CaptureProvider(addToNote: { _ in }, todos: { todoist }, hasTodoistKey: { true }).results(for: "add todo pay rent").first
+    #expect(keyed?.subtitle == "Todoist · no date" && keyed?.actionTitle == "Add")
+}
+
+/// Dates sent to or read from another app are Gregorian, whatever calendar this Mac uses (a Thai Mac's is Buddhist:
+/// its year 2569 is 2026). Only the time zone comes from the Mac's calendar.
+@Test func otherAppsGetGregorianDates() throws {
+    var buddhist = Calendar(identifier: .buddhist)
+    buddhist.timeZone = TimeZone(identifier: "Europe/Lisbon")!
+    var gregorian = Calendar(identifier: .gregorian)
+    gregorian.timeZone = buddhist.timeZone
+    let day = gregorian.date(from: DateComponents(year: 2026, month: 11, day: 12, hour: 12))!
+    #expect(googleCalendarLink(.day, day, calendar: buddhist).absoluteString.hasSuffix("/r/day/2026/11/12"))
+    let when = CaptureDate(title: "", date: day, duration: 0, allDay: true)
+    #expect(thingsAddLink("Pay rent", due: when, calendar: buddhist).absoluteString.hasSuffix("when=2026-11-12"))
+    let body = try JSONSerialization.jsonObject(with: todoistAddRequest("Pay rent", due: when, key: "k", calendar: buddhist).httpBody!) as? [String: String]
+    #expect(body?["due_date"] == "2026-11-12")
+    let midnight = gregorian.date(from: DateComponents(year: 2026, month: 11, day: 12))!
+    #expect(parseThingsToday("a\u{1F}Pay rent\u{1F}2026-11-12", now: day, calendar: buddhist).first?.due == midnight)
+    let tasks = Data(#"{"results": [{"id": "a", "content": "Pay rent", "due": {"date": "2026-11-12"}}]}"#.utf8)
+    #expect(try parseTodoistTasks(tasks, calendar: buddhist).first?.due == midnight)
+}
+
+/// Todoist's answers, and the key in each request, are never cached to disk.
+@Test func todoistKeepsNothingOnDisk() {
+    #expect(todoistSession.configuration.urlCache == nil)
+}
+
+/// TickTick's link can't take a date, so its row says so before Enter.
+@Test func tickTickRowSaysNoDate() {
+    let ticktick = { var todos = Config.Reminders(); todos.app = .ticktick; return todos }()
+    let capture = CaptureProvider(addToNote: { _ in }, todos: { ticktick })
+    #expect(capture.results(for: "add todo call Ana tomorrow 5pm").first?.subtitle == "TickTick · without its date")
+    #expect(capture.results(for: "add todo call Ana").first?.subtitle == "TickTick · no date")
+}
+
+/// A `[[command]]` named `add todo` still replaces the built-in, whatever app Settings picks.
+@MainActor @Test func addTodoCommandWinsOverTheApp() async throws {
+    let commands = CommandProvider()
+    await commands.setCommands([.init(alias: "add todo", action: .url("omnifocus:///add?name={query}", browser: nil, profile: nil))])
+    let things = { var todos = Config.Reminders(); todos.app = .things; return todos }()
+    let model = SearchModel(providers: [commands, CaptureProvider(addToNote: { _ in }, todos: { things })])
+    model.query = "add todo buy milk"
+    try await Task.sleep(for: .milliseconds(100))
+    #expect(model.results.map(\.id) == ["command:add todo"])
+}
+
+/// Settings can be opened on a pane: "Connect Todoist" opens it on Options.
+@MainActor @Test func settingsOpensOnAPane() {
+    let model = SettingsModel(file: URL(filePath: NSTemporaryDirectory()).appending(path: "copperlight-\(UUID().uuidString).toml"))
+    #expect(model.pane == .general)
+    model.pane = .options
+    #expect(model.pane == .options)
+}
+
+/// Adding a to-do to Todoist forgets the minute's list, so `due` asks again and shows it; a failed add keeps it.
+@Test func todoistAddForgetsTheList() async throws {
+    let data = try Data(contentsOf: URL(filePath: #filePath).deletingLastPathComponent().appending(path: "Fixtures/todoist-tasks.json"))
+    let answer = { (status: Int, body: Data) -> TodoistSend in
+        { request in (body, HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!) }
+    }
+    let due = TodoistDue()
+    _ = await due.load(key: "k", send: answer(200, data))
+    #expect(await due.add("Pay rent", due: nil, key: "k", send: answer(503, Data())) == .failure(.server))
+    #expect(await due.cached() != nil)
+    #expect(await due.add("Pay rent", due: nil, key: "k", send: answer(200, Data("{}".utf8))) == .success(Data("{}".utf8)))
+    #expect(await due.cached() == nil)
+}
+
+/// A Todoist due date in a shape it doesn't know still shows the task: on its day when that's readable, else today.
+@Test func todoistOddDatesKeepTheTask() throws {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "Europe/Lisbon")!
+    let tasks = Data(#"{"results": [{"id": "a", "content": "Pay rent", "due": {"date": "2026-11-12T17:00:00.250"}}, {"id": "b", "content": "Call", "due": {"date": "soon"}}]}"#.utf8)
+    let items = try parseTodoistTasks(tasks, calendar: calendar)
+    #expect(items.map(\.title) == ["Pay rent", "Call"] && items.allSatisfy(\.allDay))
+    #expect(items[0].due == calendar.date(from: DateComponents(year: 2026, month: 11, day: 12)))
+    #expect(items[1].due == calendar.startOfDay(for: .now))
+}
+
+/// Settings' calendar and list pickers: each name once (two accounts may both have "Calendar"), and a name that's gone
+/// shows as Default, which is where things go then.
+@Test func pickerNamesAndChoice() {
+    #expect(pickerNames(["Work", "Calendar", "Calendar", "Home"]) == ["Calendar", "Home", "Work"])
+    #expect(pickerChoice("Work", among: ["Calendar", "Work"]) == "Work")
+    #expect(pickerChoice("Old name", among: ["Calendar", "Work"]) == nil && pickerChoice(nil, among: ["Work"]) == nil)
 }

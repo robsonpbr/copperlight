@@ -1,0 +1,11 @@
+{
+  "results": [
+    {"id": "6XGgmFVcrG5RRjVr", "project_id": "6XGgm6PHrGgMpCFX", "content": "Send Northwind the invoice", "checked": false,
+     "due": {"date": "2026-11-12", "is_recurring": false, "lang": "en", "string": "today"}},
+    {"id": "6XGgmFVcrG5RRjVs", "project_id": "6XGgm6PHrGgMpCFX", "content": "Call Ana Ribeiro", "checked": false,
+     "due": {"date": "2026-11-12T17:00:00Z", "is_recurring": false, "lang": "en", "string": "today 5pm", "timezone": "Europe/Lisbon"}},
+    {"id": "6XGgmFVcrG5RRjVt", "project_id": "6XGgm6PHrGgMpCFX", "content": "Water the plants", "checked": false,
+     "due": {"date": "2026-11-11T09:30:00", "is_recurring": true, "lang": "en", "string": "every day 9:30am"}}
+  ],
+  "next_cursor": null
+}

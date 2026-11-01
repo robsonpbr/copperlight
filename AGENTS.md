@@ -26,5 +26,6 @@ code is laid out, the rules a change has to fit) first. This file only adds what
 ## Writing
 
 - Short, plain sentences that say what happens. A row says what Enter does.
-- The README and docs describe Copperlight on its own and don't name other apps.
+- The README and docs describe Copperlight on its own and don't name other launchers. The apps it works with
+  (Google Calendar, Things, Todoist) are named where you pick them.
 - No personal data in fixtures, screenshots or examples: made-up names, events and paths.

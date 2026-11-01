@@ -224,12 +224,16 @@ struct Config: Decodable, Equatable {
     /// about to start.
     /// `calendars`: the ones that count, by name (none: all). `heads_up`: how many minutes before a meeting with a
     /// call it waits in the empty launcher. `work_start`, `work_end`: the hours `free` looks in.
+    /// `open_in`: where "Open Calendar" goes. `add_to`: the calendar `add event` uses, by name (none: the Mac's default).
     struct Meetings: Decodable, Equatable {
+        enum OpenIn: String, CaseIterable { case calendar, google, outlook }
         var showOnOpen = false
         var showNext = true
         var calendars: [String] = []
         var headsUp = 10
         var workHours = 9..<18
+        var openIn = OpenIn.calendar
+        var addTo: String?
 
         init() {}
         init(from decoder: any Decoder) throws {
@@ -247,25 +251,34 @@ struct Config: Decodable, Equatable {
                 throw DecodingError.dataCorruptedError(forKey: .workEnd, in: c, debugDescription: "work_start must come before work_end, 0 to 24")
             }
             workHours = start..<end
+            openIn = try choice(c, .openIn, openIn)
+            addTo = try c.decodeIfPresent(String.self, forKey: .addTo)
         }
         private enum CodingKeys: String, CodingKey {
             case showOnOpen = "show_on_open", showNext = "show_next", calendars, headsUp = "heads_up", workStart = "work_start", workEnd = "work_end"
+            case openIn = "open_in", addTo = "add_to"
         }
     }
 
     /// `show_due`: reminders that are due wait in the empty launcher.
     /// `lists`: the lists whose reminders count, by name (none: all).
+    /// `app`: where `add todo` goes and `due` reads. `add_to`: the Reminders list new ones go in (none: the default).
     struct Reminders: Decodable, Equatable {
+        enum App: String, CaseIterable { case reminders, things, ticktick, todoist }
         var showDue = true
         var lists: [String] = []
+        var app = App.reminders
+        var addTo: String?
 
         init() {}
         init(from decoder: any Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             showDue = try c.decodeIfPresent(Bool.self, forKey: .showDue) ?? showDue
             lists = try c.decodeIfPresent([String].self, forKey: .lists) ?? lists
+            app = try choice(c, .app, app)
+            addTo = try c.decodeIfPresent(String.self, forKey: .addTo)
         }
-        private enum CodingKeys: String, CodingKey { case showDue = "show_due", lists }
+        private enum CodingKeys: String, CodingKey { case showDue = "show_due", lists, app, addTo = "add_to" }
     }
 
     /// `show_running`: a pomodoro, timer, stopwatch or `:awake` waits in the empty launcher while it runs.
@@ -558,10 +571,14 @@ struct Config: Decodable, Equatable {
         heads_up = 10                  # minutes before a meeting with a call that it waits in the empty launcher
         work_start = 9                 # the hours "free" looks in
         work_end = 18
+        open_in = "calendar"           # Enter on week, month or a meeting without a call: "calendar", "google", "outlook"
+        # add_to = "Work"              # the calendar "add event" uses; unset: your Mac's default
 
         [reminders]
         show_due = true                # reminders that are due wait in the empty launcher
         # lists = ["Groceries"]        # the lists whose reminders count; unset: all
+        app = "reminders"              # where "add todo" goes and "due" reads: "reminders", "things", "ticktick", "todoist"
+        # add_to = "Inbox"             # the Reminders list new to-dos go in; unset: your Mac's default
 
         [timers]
         show_running = true            # a pomodoro, timer, stopwatch or :awake waits in the empty launcher while it runs

@@ -31,8 +31,8 @@ Keywords, or `[keywords]` (`translate = "t"`, `commands = ";"`).
 | `ana` | People from Contacts; Tab: every way to reach them | Messages them |
 | `due` | Reminders due today and overdue (soon ones wait in the empty launcher) | Completes it |
 | `meetings`, `agenda`, `events` | The rest of today's events; a copper badge on what's soon; Tab: the details | Joins the video call |
-| `week`, `next week` | Your week at a glance, a column a day | Opens Calendar |
-| `month`, `next month` | The month as a grid, a dot for each event | Opens Calendar |
+| `week`, `next week` | Your week at a glance, a column a day | Opens your calendar |
+| `month`, `next month` | The month as a grid, a dot for each event | Opens your calendar |
 | `free`, `free tomorrow`, `free next week` | Your free time between 9:00 and 18:00, from your calendars | Copies it all, or one slot |
 | `camera` | You, mirrored, before a call | Joins the meeting about to start, or opens Photo Booth |
 | `bluetooth`, `dark mode` | System Settings pages | Opens that page |
@@ -98,7 +98,7 @@ Keywords, or `[keywords]` (`translate = "t"`, `commands = ";"`).
 - **The next meeting, waiting:** from 10 minutes before a meeting with a call (Meet, Zoom, Teams, Webex) until 10
   minutes after it started, the empty launcher shows it on a band: how soon ("in 4 min", "Now"), its title, times
   and call, who's coming (initials and first names) and the first line of its own notes (never the call's invitation).
-  Under it, Join (Enter) and Open in Calendar; `meetings` puts it first the same way. With `[meetings] show_on_open`
+  Under it, Join (Enter) and Open in Calendar (or your calendar, below); `meetings` puts it first the same way. With `[meetings] show_on_open`
   (Settings › Launcher › Calendar: Today's events), the empty launcher lists the day's next five events, that one on its band first. It needs Calendars access already given (`meetings` asks): opening the launcher never asks.
   Typing hides it. Settings › Launcher › Calendar: Nothing (`show_next = false`) keeps it away.
 - **Due reminders, waiting:** the reminders that are overdue, due within the hour, or due today with no time, soonest
@@ -284,20 +284,30 @@ Keywords, or `[keywords]` (`translate = "t"`, `commands = ";"`).
   the browsers that are running and that you allowed (once per browser, from the Tabs chip's row), kept in memory only.
 - **Meetings** (`meetings` from `mee`, `agenda` from `age`, `events`): the rest of today, soonest first, with start
   time and how soon, a copper badge on one within the hour or going; Tab shows its details. Enter joins a Meet,
-  Zoom, Teams or Webex call found in the event (a Meet link opens in your `[browser]` profile), or opens Calendar.
+  Zoom, Teams or Webex call found in the event (a Meet link opens in your `[browser]` profile), or opens your calendar.
   Calendars added to the Calendar app count (Google, Outlook).
 - **The week** (`week` from `wee`, `this week`, `next week`): the whole card, a column a day from your first
   weekday, each day's events stacked with their times (all-day ones first, 5 a day and how many more). Today's date
-  is on copper; the days and events already over fade. Enter opens Calendar.
+  is on copper; the days and events already over fade. Enter opens your calendar.
 - **The month** (`month` from `mont`, `this month`, `next month`): the whole card, the month as a grid of whole weeks
   from your first weekday, a dot under each day for each of its events (up to 3). Today's date is on copper; the days
-  already over and those of the months around it fade. Enter opens Calendar.
+  already over and those of the months around it fade. Enter opens your calendar.
 - **The camera** (`camera` from `came`): what your camera sees, mirrored, across the card, to check yourself before
   a call. With a meeting about to start (the one the empty launcher offers), the card names it and Enter joins it;
   otherwise Enter opens Photo Booth. The camera is on only while the card shows, and nothing is recorded.
 
 ## People and reminders
 
+- **Your calendar and to-do apps** (Settings › Options, all on Apple's apps until you pick):
+  - Calendar › Open in (`[meetings] open_in`): Calendar, Google Calendar (in your browser, on that day, week or
+    month) or Outlook (the app, or the web). It's where Enter goes on `week`, `month` and a meeting without a
+    call. Add events to (`add_to`): the calendar `add event` uses.
+  - To-dos › Add to-dos to (`[reminders] app`): Reminders (Reminders list, `add_to`: the list new ones go in),
+    Things (added through its link; `due` reads its Today list and completes there, Automation asked once; the empty
+    launcher reads it only while Things is open), TickTick (added through its link, without the date; `due` reads
+    Reminders) or Todoist (with your key, kept in the keychain: added, shown on Enter in `due` and kept a minute,
+    completed, all through Todoist's API; never in the empty launcher). Any app but Reminders: `due` ends with Open
+    Things, Open Todoist, and so on.
 - **Contacts** (from 2 letters): people whose name, nickname or company has a word starting with each word typed. The
   row shows their number and email; Enter messages them (mobile number, else a number, else their email), or opens
   their card. Tab: the Contact chip, with Message, Call, FaceTime and WhatsApp (when installed) per number, Email per

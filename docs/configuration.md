@@ -62,10 +62,18 @@ calendars = ["Work", "Family"] # optional: the calendars that count, by name, fo
 heads_up = 10                  # default: minutes before a meeting with a call that it waits in the empty launcher, 1–60
 work_start = 9                 # default: the hours `free` looks in, 0–24
 work_end = 18                  # default
+open_in = "calendar"           # default: Enter on week, month or a meeting without a call opens Calendar.
+                               # "google": Google Calendar in your browser, on that day, week or month. "outlook": the
+                               # Outlook app, or Outlook on the web. Settings › Options › Calendar.
+add_to = "Work"                # optional: the calendar `add event` puts events in. Unset: your Mac's default.
 
 [reminders]
 show_due = true                # default: reminders that are due wait in the empty launcher. Settings › Launcher.
 lists = ["Groceries", "Work"]  # optional: the lists whose reminders count. Unset: all of them. Settings › Options.
+app = "reminders"              # default: where `add todo` goes and `due` reads. "things": added and read on your Mac.
+                               # "ticktick": added in TickTick; `due` reads Reminders. "todoist": with your Todoist
+                               # key, saved in Settings › Options › To-dos (kept in your Mac's keychain, not here).
+add_to = "Inbox"               # optional: the Reminders list `add todo` puts to-dos in. Unset: your Mac's default.
 
 [timers]
 show_running = true            # default: a pomodoro, timer, stopwatch or :awake waits in the empty launcher while it

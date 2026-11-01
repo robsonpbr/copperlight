@@ -190,11 +190,31 @@ Accessibility, like clipboard history; without it, Enter only copies. The pasted
 The row shows the title and date Copperlight read before you press Enter, and a notification confirms it. Dates are
 read in English ("fri 10am", "tomorrow 5pm", "Oct 20 at 14:00", "next tuesday"). The first reminder asks for
 Reminders access (macOS has no add-only option for reminders); the first event asks to add events only, so Copperlight
-never reads your calendar. Google or Outlook calendars work when they're added in the Calendar app.
+never reads your calendar. Google or Outlook calendars work when they're added in System Settings › Internet
+Accounts, and so do Microsoft To Do's lists, in Reminders, with its Reminders switch on.
+
+**Your calendar and to-do apps:** Settings › Options picks them. Until you do, nothing changes.
+
+- **Calendar › Open in:** Calendar, Google Calendar or Outlook. "Your calendar" below means this one. Enter on
+  `week`, `month` and a meeting without a call opens it: Google Calendar in your browser on that day, week or
+  month; the Outlook app, or Outlook on the web without it. Google Calendar opens the browser's first Google account.
+- **Calendar › Add events to:** the calendar `add event` uses. It lists your calendars once Copperlight may read them
+  (`meetings` asks).
+- **To-dos › Add to-dos to:** Reminders, Things, TickTick or Todoist. With Reminders, Reminders list picks the list
+  new to-dos go in.
+  - **Things:** `add todo` adds through Things' link, the date as its When. `due` lists Things' Today list, and Enter
+    completes one there. macOS asks once to let Copperlight control Things. The empty launcher shows them only while
+    Things is open.
+  - **TickTick:** `add todo` adds the title, without its date. `due` keeps reading Reminders.
+  - **Todoist:** paste your key, from Todoist › Settings › Integrations › Developer. It's kept in your Mac's
+    keychain, not in config.toml. `add todo` sends the to-do and its date to Todoist. `due` shows Show What's Due in
+    Todoist, and Enter asks Todoist for today's and overdue tasks, kept for a minute. Enter on one completes it in
+    Todoist. They don't wait in the empty launcher, since that would mean asking Todoist each time it opens.
+  - Any app but Reminders: `due` ends with a row that opens it.
 
 **Your own tools:** a `[[command]]` with the same name as a built-in replaces it, so `screenshot` can open
-CleanShot and `add todo` can go to Things. Only the replacement shows. The text after the name reaches it as
-typed (Copperlight reads dates only for its own Reminders and Calendar).
+CleanShot and `add todo` can go to any app with a link. Only the replacement shows, whatever Settings › Options picks. The text after the name reaches it as
+typed (Copperlight reads dates only for what it adds itself).
 
 ```toml
 [[command]]
@@ -515,17 +535,17 @@ Calendar, all-day ones aside, with their times and how soon they start; `calenda
 Calendar app. One that starts within the hour, or is going, has a copper badge ("in 17 min", "Now"). Tab shows its
 details beside the list: its day, times and notes, its calendar, place, call and link, who's coming and who asked.
 Enter joins the video call it finds in the event's URL, location or notes (Google Meet, Zoom, Teams, Webex), opening
-web links where `[browser]` says, or opens Calendar. The first time, the row asks to read your calendars (full
+web links where `[browser]` says, or opens your calendar. The first time, the row asks to read your calendars (full
 access; `add event` only asked to add).
 
 **The week:** `week` (from `wee`) shows the week you're in across the card, a column a day starting on your first
 weekday, each day's events stacked under it with their times: all-day ones first, up to five, then "+2 more".
 Today's date sits on copper, and the days and events already over fade. `next week` shows the one after. Enter
-opens Calendar.
+opens your calendar.
 
 **The month:** `month` (from `mont`) shows the month you're in as a grid, whole weeks from your first weekday, with
 a dot under each day for each of its events, up to three. Today's date sits on copper; the days already over and
-those of the months around it fade. `next month` shows the one after. Enter opens Calendar.
+those of the months around it fade. `next month` shows the one after. Enter opens your calendar.
 
 **Free time:** `free tomorrow` lists the gaps in your calendars between 9:00 and 18:00, 30 minutes or more, to offer
 someone a time. Events shown as free and all-day events don't count. Also `free today`, `free friday` (the next
@@ -546,7 +566,7 @@ Services, so without it a row asks for it, or you type the name.
 
 **The next meeting:** a few minutes before a meeting with a call, there's no need to type: from 10 minutes before it
 starts until 10 minutes after, the empty launcher shows that meeting on a band: how soon it starts, its title, times
-and call, who's coming and the first line of its notes. Enter joins; the row under it opens Calendar. `meetings` puts
+and call, who's coming and the first line of its notes. Enter joins; the row under it opens your calendar. `meetings` puts
 it first the same way. Settings › Launcher › Calendar picks what the empty launcher shows: Today's events (`[meetings]
 show_on_open`), the day's next five, with or without a call; A meeting about to start, as above; or Nothing
 (`show_next = false`). Either only once Calendars access is given; opening the launcher
@@ -557,7 +577,8 @@ time, the soonest deadline first, each with a copper badge ("Overdue", "in 20 mi
 completes one and keeps the launcher open, so you can tick off the next. `due` (or `overdue`, `todos`) lists all of
 today's and the overdue ones. Reading them needs full Reminders access, which `add todo` asks for, or the row `due`
 shows the first time; opening the launcher never asks. Settings › Launcher › Reminders that are due (`[reminders]
-show_due`) keeps them out of the empty launcher.
+show_due`) keeps them out of the empty launcher. With Things or Todoist picked in Settings › Options › To-dos, `due`
+reads that app instead (above, under Your calendar and to-do apps).
 
 **Pomodoro:** `pomo` starts `default_minutes`, `pomo 50` starts 50 minutes (1–240), `pomo break` starts
 `break_minutes` of break (`pomo break 15` for another length; a cup in the menu bar), `pomo stop` stops. While it

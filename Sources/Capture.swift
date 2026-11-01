@@ -1,5 +1,6 @@
 import AppKit
 import EventKit
+import Synchronization
 
 /// A date read from typed text ("fri 10am dentist"): the rest of the text is the title.
 struct CaptureDate: Equatable {
@@ -36,8 +37,15 @@ private func eventLength(_ when: CaptureDate) -> TimeInterval { when.duration > 
 /// `add note|todo|event …`, `screenshot`, `record`. Each one's id is `builtin:<name>`, so a `[[command]]`
 /// with the same name replaces it (SearchModel drops the built-in row).
 struct CaptureProvider: ResultProvider {
+    /// Where `add event` and `add todo` put things: `[meetings] add_to` and `[reminders]`. App.swift sets it.
+    struct Chosen: Sendable { var calendar: String?; var todos = Config.Reminders() }
+    static let chosen = Mutex(Chosen())
+
     let addToNote: @MainActor @Sendable (String) -> Void
+    var showSettings: @MainActor @Sendable () -> Void = {} // for the Todoist key
     var isOn: @Sendable (Feature) -> Bool = { $0.isOn }
+    var todos: @Sendable () -> Config.Reminders = { CaptureProvider.chosen.withLock(\.todos) }
+    var hasTodoistKey: @Sendable () -> Bool = { TodoistKey.read() != nil }
 
     private struct Target { let name, title, icon: String; let feature: Feature }
     private static let all = [
@@ -45,7 +53,13 @@ struct CaptureProvider: ResultProvider {
         Target(name: "todo", title: "Add Reminder", icon: "checklist", feature: .reminders),
         Target(name: "event", title: "Add Calendar Event", icon: "calendar", feature: .calendar),
     ]
-    private var targets: [Target] { Self.all.filter { isOn($0.feature) } }
+    /// The to-do target says the app it adds to: "Add Reminder", or "Add to Things".
+    private var targets: [Target] {
+        let app = todos().app
+        return Self.all.filter { isOn($0.feature) }.map { target in
+            target.name == "todo" && app != .reminders ? Target(name: "todo", title: "Add to \(todoAppName(app))", icon: target.icon, feature: target.feature) : target
+        }
+    }
 
     var modes: [Mode] {
         targets.map { Mode(prefix: "add \($0.name) ", title: $0.title, icon: .symbol($0.icon), hint: example($0.name)) }
@@ -91,10 +105,16 @@ struct CaptureProvider: ResultProvider {
             return LauncherResult(id: id, title: text, subtitle: "Add to Note", icon: icon, score: 50,
                                   actionTitle: "Add", action: { [addToNote] in addToNote(text) })
         case "todo":
-            let when = captureDate(text)
-            let title = when.map { $0.title.isEmpty ? "New Reminder" : $0.title } ?? text
-            return LauncherResult(id: id, title: title, subtitle: "Reminder · " + (when.map { whenText($0, end: false) } ?? "no date"),
-                                  icon: icon, score: 50, actionTitle: "Add", action: { addReminder(title, due: when) })
+            let when = captureDate(text), todos = todos()
+            if todos.app == .todoist, !hasTodoistKey() {
+                return LauncherResult(id: id, title: text, subtitle: "Connect Todoist in Settings › Options › To-dos", icon: icon, score: 50,
+                                      actionTitle: "Open Settings", action: showSettings)
+            }
+            let kind = todos.app == .reminders ? "Reminder" : todoAppName(todos.app)
+            let title = when.map { $0.title.isEmpty ? (todos.app == .reminders ? "New Reminder" : "New To-do") : $0.title } ?? text
+            let date = todos.app == .ticktick && when != nil ? "without its date" : when.map { whenText($0, end: false) } ?? "no date"
+            return LauncherResult(id: id, title: title, subtitle: kind + " · " + date,
+                                  icon: icon, score: 50, actionTitle: "Add", action: { addTodo(title, due: when, todos: todos) })
         default: // event
             guard let when = captureDate(text) else {
                 return LauncherResult(id: id, title: target.title, subtitle: "Needs a day or time: add event fri 10am dentist",
@@ -123,16 +143,18 @@ private func words(after name: String, in query: String) -> String? {
     NSWorkspace.shared.openApplication(at: URL(filePath: "/System/Applications/Utilities/Screenshot.app"), configuration: .init())
 }
 
-/// Adds a reminder to the default list, due (and alerting) at `due`. Asks for Reminders access the first time:
-/// EventKit has no add-only access for reminders.
-@MainActor func addReminder(_ title: String, due: CaptureDate?) {
+/// Adds a reminder to the list `[reminders] add_to` names, or the default one, due (and alerting) at `due`. Asks for
+/// Reminders access the first time: EventKit has no add-only access for reminders.
+@MainActor func addReminder(_ title: String, due: CaptureDate?, list name: String? = nil) {
     Task {
         let store = EKEventStore()
         do {
             guard try await store.requestFullAccessToReminders() else {
                 return notify("Allow Copperlight in Reminders to add reminders", "Privacy & Security → Reminders")
             }
-            guard let list = store.defaultCalendarForNewReminders() else { return notify("Couldn't add the reminder", "There's no Reminders list") }
+            guard let list = chosenCalendar(store.calendars(for: .reminder), named: name, title: \.title) ?? store.defaultCalendarForNewReminders() else {
+                return notify("Couldn't add the reminder", "There's no Reminders list")
+            }
             let reminder = EKReminder(eventStore: store)
             reminder.title = title
             reminder.calendar = list
@@ -149,8 +171,9 @@ private func words(after name: String, in query: String) -> String? {
     }
 }
 
-/// Adds an event to the default calendar. Asks for add-only Calendar access the first time: Copperlight never reads it.
-@MainActor func addEvent(_ title: String, _ when: CaptureDate) {
+/// Adds an event to the calendar `[meetings] add_to` names, or the default one. Asks for add-only Calendar access the
+/// first time: Copperlight never reads it, and with only that, macOS lets it see the default calendar alone.
+@MainActor func addEvent(_ title: String, _ when: CaptureDate, calendar name: String? = CaptureProvider.chosen.withLock(\.calendar)) {
     Task {
         let store = EKEventStore()
         do {
@@ -162,7 +185,9 @@ private func words(after name: String, in query: String) -> String? {
             event.isAllDay = when.allDay
             event.startDate = when.date
             event.endDate = when.date + eventLength(when)
-            event.calendar = store.defaultCalendarForNewEvents
+            let full = EKEventStore.authorizationStatus(for: .event) == .fullAccess
+            let writable = full ? store.calendars(for: .event).filter(\.allowsContentModifications) : [] // not a holidays calendar of the same name
+            event.calendar = chosenCalendar(writable, named: name, title: \.title) ?? store.defaultCalendarForNewEvents
             try store.save(event, span: .thisEvent, commit: true)
             notify("Event added", "\(title) · \(whenText(when, end: true))")
         } catch {

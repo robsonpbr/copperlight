@@ -170,7 +170,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let meetings = MeetingsProvider()
     private let contacts = ContactsProvider()
     private let tabs = BrowserTabsProvider()
-    private let reminders = RemindersProvider()
+    private lazy var reminders = RemindersProvider(show: { [unowned self] in panel.show(typing: $0) },
+                                                   showSettings: { [unowned self] in showSettings(.options) })
     private let translate = TranslateProvider()
     private let weather = WeatherProvider()
     private let files = FileSearchProvider()
@@ -184,7 +185,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                 showWelcome: { [unowned self] in showWelcome() },
                                                 showSettings: { [unowned self] in showSettings() },
                                                 newNote: { [unowned self] in newNote($0) })
-    private lazy var capture = CaptureProvider(addToNote: { [unowned self] in addToNote($0) })
+    private lazy var capture = CaptureProvider(addToNote: { [unowned self] in addToNote($0) },
+                                               showSettings: { [unowned self] in showSettings(.options) })
     private lazy var verbs = VerbProvider(
         verbs: Verb.launcher(files: files) + Verb.notes(release: { [unowned self] in releaseNote($0) }),
         more: { frontMenuRows($0) })
@@ -355,10 +357,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         welcome?.show()
     }
 
-    func showSettings() {
+    /// Opens Settings, on `pane` when given.
+    func showSettings(_ pane: Pane? = nil) {
         if settings?.isVisible != true {
             settings = SettingsWindow(showWelcome: { [unowned self] in showWelcome() }, forget: { [unowned self] in model.forget($0) })
         }
+        if let pane { settings?.model.pane = pane }
         settings?.show()
     }
 
@@ -456,6 +460,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         weather.setCity(config.weather.city ?? "")
         weather.setUnits(config.weather.units)
         RemindersProvider.chosenLists.withLock { $0 = config.reminders.lists }
+        RemindersProvider.chosenApp.withLock { $0 = config.reminders.app }
+        CaptureProvider.chosen.withLock { $0 = .init(calendar: config.meetings.addTo, todos: config.reminders) }
         TimeZoneProvider.chosenCities.withLock { $0 = config.timeZones.cities }
         ColorProvider.chosenNotation.withLock { $0 = config.colors.copy }
         chosenEndSound.withLock { $0 = config.timers.sound }

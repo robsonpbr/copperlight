@@ -223,8 +223,10 @@ func eventNote(_ notes: String?) -> String? {
 }
 
 /// The meeting to join now on a band (how soon, its title, times and call, who's coming, a line of its notes), and
-/// its rows under it: Join, then Open in Calendar.
-func joinRows(_ item: CalendarItem, now: Date = .now, browser: Config.Browser, score: Double) -> [LauncherResult] {
+/// its rows under it: Join, then Open in Calendar (or the calendar `[meetings] open_in` picks).
+func joinRows(_ item: CalendarItem, now: Date = .now, browser: Config.Browser, openIn: Config.Meetings.OpenIn = .calendar,
+              score: Double) -> [LauncherResult] {
+    let open = calendarOpener(openIn, .day, item.start, browser: browser)
     let hours = { (date: Date) in date.formatted(date: .omitted, time: .shortened) }
     let service = item.link.map(callService)
     let people = item.people.prefix(4).map { String($0.split(separator: "@").first ?? "") } // an address alone: its name part
@@ -236,9 +238,9 @@ func joinRows(_ item: CalendarItem, now: Date = .now, browser: Config.Browser, s
                            note: eventNote(item.notes))
     return [LauncherResult(id: "meeting:\(item.id)", title: "Join " + (service ?? "Call"),
                            subtitle: item.link.map { ($0.host() ?? "") + $0.path() } ?? "", icon: .symbol("video"), score: score,
-                           actionTitle: "Join", action: item.link.map { webOpener($0, browser: browser) } ?? openCalendar, answer: .meeting(card)),
-            LauncherResult(id: "meeting:\(item.id):calendar", title: "Open in Calendar", icon: .symbol("calendar"), score: score - 0.001,
-                           actionTitle: "Open", action: openCalendar, answer: .meeting(card))]
+                           actionTitle: "Join", action: item.link.map { webOpener($0, browser: browser) } ?? open, answer: .meeting(card)),
+            LauncherResult(id: "meeting:\(item.id):calendar", title: "Open in " + calendarAppName(openIn), icon: .symbol("calendar"),
+                           score: score - 0.001, actionTitle: "Open", action: open, answer: .meeting(card))]
 }
 
 /// `meetings`, `agenda`, `events` (and `calendar`, below the Calendar app): the rest of today's events from Calendar,
@@ -289,7 +291,8 @@ actor MeetingsProvider: ResultProvider {
             subtitle: "\(hours(item.start))–\(hours(item.end))" + (badge == nil ? " · \(startsIn(item.start, end: item.end, now: now))" : "")
                 + (item.link.map { " · \(callService($0))" } ?? ""),
             icon: .symbol(item.link == nil ? "calendar" : "video"), score: score,
-            actionTitle: item.link == nil ? "Open Calendar" : "Join", action: item.link.map { webOpener($0, browser: browser) } ?? openCalendar,
+            actionTitle: item.link == nil ? calendarActionTitle(options.openIn) : "Join",
+            action: item.link.map { webOpener($0, browser: browser) } ?? calendarOpener(options.openIn, .day, item.start, browser: browser),
             badge: badge, preview: preview.text, previewStyle: .prose, details: preview.details)
     }
 
@@ -297,7 +300,7 @@ actor MeetingsProvider: ResultProvider {
     private func rows(_ items: [CalendarItem], base: Double, now: Date) -> [LauncherResult] {
         guard let next = nextMeeting(items, now: now, headsUp: headsUp) else { return items.enumerated().map { row($1, score: base - Double($0) / 100, now: now) } }
         let others = items.filter { $0.id != next.id || $0.start != next.start }
-        return joinRows(next, now: now, browser: browser, score: base) + others.enumerated().map { row($1, score: base - Double($0 + 1) / 100, now: now) }
+        return joinRows(next, now: now, browser: browser, openIn: options.openIn, score: base) + others.enumerated().map { row($1, score: base - Double($0 + 1) / 100, now: now) }
     }
 
     /// For the empty launcher: the meeting to join now, if any; with `show_on_open`, the day's next events. Never asks
@@ -306,13 +309,13 @@ actor MeetingsProvider: ResultProvider {
         let now = Date.now
         guard showsOnOpen || showsNext, let items = today(now: now) else { return [] }
         if showsOnOpen { return rows(Array(items.prefix(5)), base: 100, now: now) }
-        return nextMeeting(items, now: now, headsUp: headsUp).map { joinRows($0, now: now, browser: browser, score: 100) } ?? []
+        return nextMeeting(items, now: now, headsUp: headsUp).map { joinRows($0, now: now, browser: browser, openIn: options.openIn, score: 100) } ?? []
     }
 
     /// The meeting to join now, as its Join row (what Enter does after `camera`); nil without one. Never asks for access.
     func joinable() -> LauncherResult? {
         let now = Date.now
-        return today(now: now).flatMap { nextMeeting($0, now: now, headsUp: headsUp) }.map { joinRows($0, now: now, browser: browser, score: 100)[0] }
+        return today(now: now).flatMap { nextMeeting($0, now: now, headsUp: headsUp) }.map { joinRows($0, now: now, browser: browser, openIn: options.openIn, score: 100)[0] }
     }
 
     func results(for query: String) async -> [LauncherResult] {
@@ -351,32 +354,36 @@ actor MeetingsProvider: ResultProvider {
         if let free, let first = free.days.first, let last = free.days.last {
             let busy = events(in: DateInterval(start: first, end: last.addingTimeInterval(86_400)))
                 .filter { $0.busy && !$0.allDay }.map { DateInterval(start: $0.start, end: max($0.start, $0.end)) }
-            return freeRows(freeSlots(busy: busy, days: free.days, hours: options.workHours, now: now), label: free.label, hours: options.workHours, base: base)
+            return freeRows(freeSlots(busy: busy, days: free.days, hours: options.workHours, now: now), label: free.label, hours: options.workHours, base: base,
+                            open: (calendarActionTitle(options.openIn), calendarOpener(options.openIn, .day, first, browser: browser)))
         }
         if let next = month {
             let card = monthCard(events(in: monthGrid(monthInterval(now: now, next: next))), now: now, next: next)
             return [LauncherResult(id: "builtin:month", title: "\(card.range): \(card.count == 1 ? "1 event" : "\(card.count) events")",
-                                   subtitle: card.kicker, icon: .symbol("calendar"), score: base, actionTitle: "Open Calendar",
-                                   action: openCalendar, answer: .month(card))]
+                                   subtitle: card.kicker, icon: .symbol("calendar"), score: base, actionTitle: calendarActionTitle(options.openIn),
+                                   action: calendarOpener(options.openIn, .month, monthInterval(now: now, next: next).start, browser: browser),
+                                   answer: .month(card))]
         }
         if let next = week {
             let card = weekCard(events(in: weekInterval(now: now, next: next)), now: now, next: next)
             return [LauncherResult(id: "builtin:week", title: "\(card.kicker): \(card.count == 1 ? "1 event" : "\(card.count) events")",
-                                   subtitle: card.range, icon: .symbol("calendar"), score: base, actionTitle: "Open Calendar",
-                                   action: openCalendar, answer: .week(card))]
+                                   subtitle: card.range, icon: .symbol("calendar"), score: base, actionTitle: calendarActionTitle(options.openIn),
+                                   action: calendarOpener(options.openIn, .week, weekInterval(now: now, next: next).start, browser: browser),
+                                   answer: .week(card))]
         }
         let items = today(now: now) ?? []
-        guard !items.isEmpty else { return [message("No more meetings today", "", "Open Calendar", openCalendar)] }
+        guard !items.isEmpty else { return [message("No more meetings today", "", calendarActionTitle(options.openIn), calendarOpener(options.openIn, .day, now, browser: browser))] }
         return rows(items, base: base, now: now)
     }
 }
 
 /// `free tomorrow`: all of it to copy first, then a row a slot, each copied as "Wed, Nov 4, 9:00 – 10:00 AM".
-private func freeRows(_ slots: [DateInterval], label: String, hours: Range<Int>, base: Double) -> [LauncherResult] {
+private func freeRows(_ slots: [DateInterval], label: String, hours: Range<Int>, base: Double,
+                      open: (title: String, action: @MainActor @Sendable () -> Void)) -> [LauncherResult] {
     let icon = LauncherResult.Icon.symbol("calendar.badge.checkmark")
     guard !slots.isEmpty else {
         return [LauncherResult(id: "builtin:free", title: "No free time \(label.lowercased())", subtitle: "Between \(hours.lowerBound):00 and \(hours.upperBound):00, 30 minutes or more",
-                               icon: icon, score: base, actionTitle: "Open Calendar", action: openCalendar)]
+                               icon: icon, score: base, actionTitle: open.title, action: open.action)]
     }
     let all = freeText(slots)
     let lengths = Duration.UnitsFormatStyle(allowedUnits: [.hours, .minutes], width: .narrow)
@@ -390,8 +397,4 @@ private func freeRows(_ slots: [DateInterval], label: String, hours: Range<Int>,
                                   + Duration.seconds(slot.duration).formatted(lengths),
                               icon: icon, score: base - Double(index + 1) / 100, actionTitle: "Copy", action: { copyToClipboard(text) })
     }
-}
-
-@MainActor private func openCalendar() {
-    NSWorkspace.shared.openApplication(at: URL(filePath: "/System/Applications/Calendar.app"), configuration: .init())
 }

@@ -12,6 +12,7 @@ import SwiftUI
     var problem: String?
     var launchAtLogin = false
     private(set) var hotkeyResets = 0 // a cleared recorder is rebuilt, showing the hotkey that stays
+    var pane = Pane.general // the one showing; a row can open Settings on another ("Connect Todoist": Options)
     private let file: URL
 
     init(file: URL = Config.file) {
@@ -166,7 +167,7 @@ final class SettingsWindow: AppWindow {
     }
 }
 
-private enum Pane: String, CaseIterable, Identifiable {
+enum Pane: String, CaseIterable, Identifiable {
     case general = "General", launcher = "Launcher", features = "Features", options = "Options", keywords = "Keywords", clipboard = "Clipboard", search = "Files", browser = "Browser",
          commands = "Commands", snippets = "Snippets", about = "About"
 
@@ -198,11 +199,11 @@ private struct SettingsView: View {
     let model: SettingsModel
     let showWelcome: @MainActor () -> Void
     let forget: @MainActor (SearchModel.Learned) -> Void
-    @State private var pane = Pane.general
+    private var pane: Pane { model.pane }
 
     var body: some View {
         NavigationSplitView {
-            List(Pane.shown(model.config.features), selection: $pane) { pane in
+            List(Pane.shown(model.config.features), selection: Binding(get: { model.pane }, set: { model.pane = $0 })) { pane in
                 Label { Text(pane.rawValue) } icon: { Tile(symbol: pane.symbol) }.tag(pane)
             }
             .navigationSplitViewColumnWidth(200)
@@ -374,20 +375,51 @@ private struct OptionsPane: View {
             Picker("Working hours end", selection: Binding(get: { hours.wrappedValue.upperBound }, set: { hours.wrappedValue = hours.wrappedValue.lowerBound..<$0 })) {
                 ForEach((hours.wrappedValue.lowerBound + 1)...24, id: \.self) { Text("\($0):00").tag($0) }
             }
+            Picker("Open in", selection: model.binding(\.meetings.openIn, "meetings", "open_in") { $0 == .calendar ? nil : .string($0.rawValue) }) {
+                ForEach(Config.Meetings.OpenIn.allCases, id: \.self) { Text(calendarAppName($0)).tag($0) }
+            }
+            let writable = allowed(.event) ? pickerNames(EKEventStore().calendars(for: .event).filter(\.allowsContentModifications).map(\.title)) : []
+            if !writable.isEmpty {
+                let addTo = model.binding(\.meetings.addTo, "meetings", "add_to") { $0.map(TOMLValue.string) }
+                Picker("Add events to", selection: Binding(get: { pickerChoice(addTo.wrappedValue, among: writable) }, set: { addTo.wrappedValue = $0 })) {
+                    Text("Default").tag(String?.none)
+                    ForEach(writable, id: \.self) { Text($0).tag(String?.some($0)) }
+                }
+            }
         } header: { Text("Calendar") } footer: {
             Note(EKEventStore.authorizationStatus(for: .event) == .fullAccess
-                 ? "The calendars that count, for meetings, week, month, free and the next meeting. Free looks within your working hours."
+                 ? "The calendars that count, for meetings, week, month, free and the next meeting. Free looks within your working hours. Open in is where Enter on week and month goes."
                  : "Type “meetings” in the launcher once to let Copperlight see your calendars; then pick the ones that count here. Free looks within your working hours.")
         }
     }
 
     private var reminders: some View {
         Section {
-            let names = EKEventStore.authorizationStatus(for: .reminder) == .fullAccess ? EKEventStore().calendars(for: .reminder).map(\.title).sorted() : []
-            Chooser(names: names, chosen: model.binding(\.reminders.lists, "reminders", "lists") { $0.isEmpty ? nil : .strings($0) })
-        } header: { Text("Reminders") } footer: {
-            Note(allowed(.reminder) ? "The lists whose reminders count, for “due” and the empty launcher."
-                 : "Type “due” in the launcher once to let Copperlight see your reminders; then pick the lists that count here.")
+            let app = model.config.reminders.app
+            Picker("Add to-dos to", selection: model.binding(\.reminders.app, "reminders", "app") { $0 == .reminders ? nil : .string($0.rawValue) }) {
+                ForEach(Config.Reminders.App.allCases, id: \.self) { Text(todoAppName($0)).tag($0) }
+            }
+            if app == .reminders || app == .ticktick { // `due` reads Reminders
+                let names = allowed(.reminder) ? pickerNames(EKEventStore().calendars(for: .reminder).map(\.title)) : []
+                if app == .reminders, !names.isEmpty {
+                    let addTo = model.binding(\.reminders.addTo, "reminders", "add_to") { $0.map(TOMLValue.string) }
+                    Picker("Reminders list", selection: Binding(get: { pickerChoice(addTo.wrappedValue, among: names) }, set: { addTo.wrappedValue = $0 })) {
+                        Text("Default").tag(String?.none)
+                        ForEach(names, id: \.self) { Text($0).tag(String?.some($0)) }
+                    }
+                }
+                Chooser(names: names, chosen: model.binding(\.reminders.lists, "reminders", "lists") { $0.isEmpty ? nil : .strings($0) })
+            }
+            if app == .todoist { TodoistKeyRow() }
+        } header: { Text("To-dos") } footer: {
+            switch model.config.reminders.app {
+            case .reminders:
+                Note(allowed(.reminder) ? "The list new to-dos go in, and the lists whose reminders count, for “due” and the empty launcher."
+                     : "Type “due” in the launcher once to let Copperlight see your reminders; then pick the lists that count here.")
+            case .things: Note("To-dos are added and read on your Mac. macOS asks once to let Copperlight control Things.")
+            case .ticktick: Note("To-dos are added in TickTick, without their date. “due” still reads Reminders.")
+            case .todoist: Note("Your key stays in your Mac's keychain. Copperlight asks Todoist only when you add a to-do, show what's due or complete one.")
+            }
         }
     }
 
@@ -494,6 +526,38 @@ private struct OptionsPane: View {
         Section("Pomodoro") {
             Minutes(title: "Focus", value: model.binding(\.pomodoro.defaultMinutes, "pomodoro", "default_minutes") { .int($0) })
             Minutes(title: "Break", value: model.binding(\.pomodoro.breakMinutes, "pomodoro", "break_minutes") { .int($0) })
+        }
+    }
+}
+
+/// The key from Todoist's settings, pasted once: saved to the keychain, never to config.toml.
+private struct TodoistKeyRow: View {
+    @State private var typed = ""
+    @State private var saved = TodoistKey.read() != nil
+    @State private var failed = false
+
+    var body: some View {
+        if saved {
+            LabeledContent("Todoist key") {
+                HStack {
+                    Text("Saved in your keychain").foregroundStyle(.secondary)
+                    Button("Forget Key") { TodoistKey.forget(); saved = false }
+                }
+            }
+        } else {
+            LabeledContent("Todoist key") {
+                HStack {
+                    SecureField("Todoist key", text: $typed, prompt: Text("Paste it here")).labelsHidden().frame(width: 240)
+                    Button("Save") {
+                        saved = TodoistKey.save(typed)
+                        failed = !saved
+                        if saved { typed = "" } // kept on a failure, to try again
+                    }.disabled(TodoistKey.cleaned(typed) == nil)
+                }
+            }
+            if failed { Text("Couldn't save it in your keychain. Try Save again.").foregroundStyle(.red) }
+            Link("Where to find it: Todoist › Settings › Integrations › Developer",
+                 destination: URL(string: "https://app.todoist.com/app/settings/integrations/developer")!)
         }
     }
 }
