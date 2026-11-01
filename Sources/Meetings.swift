@@ -30,6 +30,7 @@ struct CalendarItem: Sendable {
     var organizer: String?
     var allDay = false
     var id = ""
+    var busy = true // false for an event shown as free
 }
 
 extension CalendarItem {
@@ -37,7 +38,7 @@ extension CalendarItem {
         self.init(title: event.title ?? "Untitled", start: event.startDate, end: event.endDate,
                   link: joinLink(in: [event.url?.absoluteString, event.location, event.notes]), calendar: event.calendar?.title ?? "",
                   location: event.location, notes: event.notes, people: (event.attendees ?? []).compactMap(\.name),
-                  organizer: event.organizer?.name, allDay: event.isAllDay, id: event.eventIdentifier ?? "")
+                  organizer: event.organizer?.name, allDay: event.isAllDay, id: event.eventIdentifier ?? "", busy: event.availability != .free)
     }
 }
 
@@ -104,11 +105,77 @@ func monthCard(_ items: [CalendarItem], now: Date = .now, calendar: Calendar = .
 
 /// The meeting the empty launcher offers: one with a call to join, starting in the next 10 minutes or started in the
 /// last 10 and not over; the one about to start before one already going.
-func nextMeeting(_ items: [CalendarItem], now: Date = .now) -> CalendarItem? {
-    let window: TimeInterval = 10 * 60
+/// The free time on `days` within working hours (9 to 18), at least `minimum` long, outside `busy` (overlaps and all),
+/// and from `now` on, at the next quarter hour.
+func freeSlots(busy: [DateInterval], days: [Date], hours: Range<Int> = 9..<18, minimum: TimeInterval = 1800, now: Date = .now,
+               calendar: Calendar = .current) -> [DateInterval] {
+    let quarter = (now.timeIntervalSinceReferenceDate / 900).rounded(.up) * 900
+    let busy = busy.sorted { $0.start < $1.start }
+    return days.flatMap { day -> [DateInterval] in
+        guard let open = calendar.date(bySettingHour: hours.lowerBound, minute: 0, second: 0, of: day),
+              let close = calendar.date(bySettingHour: hours.upperBound, minute: 0, second: 0, of: day) else { return [] }
+        var cursor = max(open, Date(timeIntervalSinceReferenceDate: quarter))
+        var free: [DateInterval] = []
+        for event in busy where event.end > cursor && event.start < close {
+            if event.start.timeIntervalSince(cursor) >= minimum { free.append(DateInterval(start: cursor, end: event.start)) }
+            cursor = max(cursor, event.end)
+        }
+        if close.timeIntervalSince(cursor) >= minimum { free.append(DateInterval(start: cursor, end: close)) }
+        return free
+    }
+}
+
+/// The days `free …` asks about, at their start: `free` (today if its working hours aren't over, else the next
+/// workday), `free today`, `free tomorrow`, `free monday` (today, if it's Monday), `free this week` (the workdays left),
+/// `free next week`. nil for anything else.
+func freeDays(_ query: String, now: Date = .now, calendar: Calendar = .current, hours: Range<Int> = 9..<18) -> (label: String, days: [Date])? {
+    let words = query.lowercased().split(separator: " ").map(String.init)
+    guard words.first == "free", words.count <= 3 else { return nil }
+    let today = calendar.startOfDay(for: now)
+    let day = { (offset: Int) in calendar.date(byAdding: .day, value: offset, to: today)! }
+    let workday = { (date: Date) in !calendar.isDateInWeekend(date) }
+    let rest = words.dropFirst().joined(separator: " ")
+    switch rest {
+    case "":
+        let over = calendar.component(.hour, from: now) >= hours.upperBound || !workday(today)
+        let first = ((over ? 1 : 0)...).lazy.map(day).first(where: workday)!
+        return (calendar.isDateInToday(first) ? "Today" : calendar.isDateInTomorrow(first) ? "Tomorrow" : first.formatted(.dateTime.weekday(.wide)), [first])
+    case "today": return ("Today", [today])
+    case "tomorrow": return ("Tomorrow", [day(1)])
+    case "week", "this week", "next week":
+        let week = calendar.dateInterval(of: .weekOfYear, for: rest == "next week" ? day(7) : today)!
+        let days = (0..<7).map { calendar.date(byAdding: .day, value: $0, to: week.start)! }.filter { workday($0) && $0 >= today }
+        return (rest == "next week" ? "Next week" : "This week", days)
+    default:
+        let names = calendar.weekdaySymbols.map { $0.lowercased() } // in the Mac's language: Sunday first
+        guard let weekday = names.firstIndex(of: rest) else { return nil }
+        let first = (0..<7).map(day).first { calendar.component(.weekday, from: $0) == weekday + 1 }!
+        return (calendar.weekdaySymbols[weekday], [first])
+    }
+}
+
+/// Free slots as text to paste in a message, a line a day: "Wed, Nov 4: 9:00 – 10:00 AM, 1:00 – 5:40 PM".
+func freeText(_ slots: [DateInterval], calendar: Calendar = .current) -> String {
+    let locale = calendar.locale ?? .current
+    let dayStyle = Date.FormatStyle(locale: locale, calendar: calendar, timeZone: calendar.timeZone).weekday(.abbreviated).month(.abbreviated).day()
+    let hours = Date.IntervalFormatStyle(date: .omitted, time: .shortened, locale: locale, calendar: calendar, timeZone: calendar.timeZone)
+    let days = Dictionary(grouping: slots) { calendar.startOfDay(for: $0.start) }
+    return days.keys.sorted().map { day in
+        day.formatted(dayStyle) + ": " + days[day]!.map { ($0.start..<$0.end).formatted(hours) }.joined(separator: ", ")
+    }.joined(separator: "\n")
+}
+
+/// The ones of `all` named in `names` (any case), or nil, meaning all, when `names` is empty.
+func chosen<Item>(_ all: [Item], named names: [String], name: (Item) -> String = { "\($0)" }) -> [Item]? {
+    guard !names.isEmpty else { return nil }
+    let wanted = Set(names.map { $0.lowercased() })
+    return all.filter { wanted.contains(name($0).lowercased()) }
+}
+
+func nextMeeting(_ items: [CalendarItem], now: Date = .now, headsUp: TimeInterval = 10 * 60) -> CalendarItem? {
     let joinable = items.filter { item in
         let ahead = item.start.timeIntervalSince(now) // negative once it's started
-        return item.link != nil && item.end > now && ahead <= window && ahead >= -window
+        return item.link != nil && item.end > now && ahead <= headsUp && ahead >= -10 * 60
     }
     let upcoming = joinable.filter { $0.start > now }.min { $0.start < $1.start }
     return upcoming ?? joinable.max { $0.start < $1.start }
@@ -182,11 +249,18 @@ func joinRows(_ item: CalendarItem, now: Date = .now, browser: Config.Browser, s
 actor MeetingsProvider: ResultProvider {
     private var store: EKEventStore? // made once access is granted: one made before it sees no events
     private var browser = Config.Browser()
-    private var showsOnOpen = false
-    private var showsNext = true
+    private var options = Config.Meetings()
+    private var showsOnOpen: Bool { options.showOnOpen }
+    private var showsNext: Bool { options.showNext }
 
     func setBrowser(_ browser: Config.Browser) { self.browser = browser }
-    func setShowsOnOpen(_ on: Bool, next: Bool) { (showsOnOpen, showsNext) = (on, next) }
+    func setOptions(_ options: Config.Meetings) { self.options = options }
+    private var headsUp: TimeInterval { TimeInterval(options.headsUp * 60) }
+
+    /// `[meetings] calendars`, or all of them (nil).
+    private func calendars(_ store: EKEventStore) -> [EKCalendar]? {
+        chosen(store.calendars(for: .event), named: options.calendars, name: \.title)
+    }
 
     /// The events left today, and the ones started in the last 10 minutes (still worth joining). Only with access.
     private func today(now: Date) -> [CalendarItem]? {
@@ -194,7 +268,7 @@ actor MeetingsProvider: ResultProvider {
         let store = self.store ?? EKEventStore()
         self.store = store
         let endOfDay = Calendar.current.startOfDay(for: now).addingTimeInterval(86_400)
-        return store.events(matching: store.predicateForEvents(withStart: now - 600, end: endOfDay, calendars: nil))
+        return store.events(matching: store.predicateForEvents(withStart: now - 600, end: endOfDay, calendars: calendars(store)))
             .filter { !$0.isAllDay && $0.endDate > now }.sorted { $0.startDate < $1.startDate }.map(CalendarItem.init)
     }
 
@@ -203,7 +277,7 @@ actor MeetingsProvider: ResultProvider {
         guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return [] }
         let store = self.store ?? EKEventStore()
         self.store = store
-        return store.events(matching: store.predicateForEvents(withStart: interval.start, end: interval.end, calendars: nil)).map(CalendarItem.init)
+        return store.events(matching: store.predicateForEvents(withStart: interval.start, end: interval.end, calendars: calendars(store))).map(CalendarItem.init)
     }
 
     private func row(_ item: CalendarItem, score: Double, now: Date) -> LauncherResult {
@@ -221,7 +295,7 @@ actor MeetingsProvider: ResultProvider {
 
     /// The meeting to join now on its band, then the other events.
     private func rows(_ items: [CalendarItem], base: Double, now: Date) -> [LauncherResult] {
-        guard let next = nextMeeting(items, now: now) else { return items.enumerated().map { row($1, score: base - Double($0) / 100, now: now) } }
+        guard let next = nextMeeting(items, now: now, headsUp: headsUp) else { return items.enumerated().map { row($1, score: base - Double($0) / 100, now: now) } }
         let others = items.filter { $0.id != next.id || $0.start != next.start }
         return joinRows(next, now: now, browser: browser, score: base) + others.enumerated().map { row($1, score: base - Double($0 + 1) / 100, now: now) }
     }
@@ -232,13 +306,13 @@ actor MeetingsProvider: ResultProvider {
         let now = Date.now
         guard showsOnOpen || showsNext, let items = today(now: now) else { return [] }
         if showsOnOpen { return rows(Array(items.prefix(5)), base: 100, now: now) }
-        return nextMeeting(items, now: now).map { joinRows($0, now: now, browser: browser, score: 100) } ?? []
+        return nextMeeting(items, now: now, headsUp: headsUp).map { joinRows($0, now: now, browser: browser, score: 100) } ?? []
     }
 
     /// The meeting to join now, as its Join row (what Enter does after `camera`); nil without one. Never asks for access.
     func joinable() -> LauncherResult? {
         let now = Date.now
-        return today(now: now).flatMap { nextMeeting($0, now: now) }.map { joinRows($0, now: now, browser: browser, score: 100)[0] }
+        return today(now: now).flatMap { nextMeeting($0, now: now, headsUp: headsUp) }.map { joinRows($0, now: now, browser: browser, score: 100)[0] }
     }
 
     func results(for query: String) async -> [LauncherResult] {
@@ -247,13 +321,15 @@ actor MeetingsProvider: ResultProvider {
         let week: Bool? = lower == "next week" ? true : lower == "this week" || lower.count >= 3 && "week".hasPrefix(lower) ? false : nil
         let month: Bool? = lower == "next month" ? true : lower == "this month" || lower.count >= 4 && "month".hasPrefix(lower) ? false : nil
         let span = week != nil ? "week" : month != nil ? "month" : nil // the card asked for, if any
+        let free = freeDays(query, hours: options.workHours)
         if span != nil { base = 50 }
+        else if free != nil { base = lower == "free" ? 1 : 50 } // alone, under the apps it starts (Freeform)
         else if lower.count >= 3, "meetings".hasPrefix(lower) || "agenda".hasPrefix(lower) { base = 50 }
         else if lower == "event" || lower == "events" { base = 50 }
         else if lower == "calendar" { base = 1 } // the app first: it's what "calendar" opens
         else { return [] }
         let message = { (title: String, subtitle: String, actionTitle: String, action: @escaping @MainActor @Sendable () -> Void) in
-            LauncherResult(id: span.map { "builtin:\($0)" } ?? "builtin:meetings", title: title, subtitle: subtitle, icon: .symbol("calendar"),
+            LauncherResult(id: free != nil ? "builtin:free" : span.map { "builtin:\($0)" } ?? "builtin:meetings", title: title, subtitle: subtitle, icon: .symbol("calendar"),
                            score: base, actionTitle: actionTitle, action: action)
         }
         switch EKEventStore.authorizationStatus(for: .event) {
@@ -263,14 +339,20 @@ actor MeetingsProvider: ResultProvider {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!)
             })]
         default: // not asked yet, or add-only (for `add event`)
-            return [message(span.map { "See Your \($0.capitalized)" } ?? "See Today's Meetings", "Asks to read your calendars, once", "Allow", {
+            let asked = free != nil ? "See When You're Free" : span.map { "See Your \($0.capitalized)" } ?? "See Today's Meetings"
+            return [message(asked, "Asks to read your calendars, once", "Allow", {
                 Task {
                     guard (try? await EKEventStore().requestFullAccessToEvents()) == true else { return notify("Copperlight can't see your calendars") }
-                    notify(span.map { "Type “\($0)” again to see it" } ?? "Type “meetings” again to see them")
+                    notify(free != nil ? "Type “\(lower)” again to see it" : span.map { "Type “\($0)” again to see it" } ?? "Type “meetings” again to see them")
                 }
             })]
         }
         let now = Date.now
+        if let free, let first = free.days.first, let last = free.days.last {
+            let busy = events(in: DateInterval(start: first, end: last.addingTimeInterval(86_400)))
+                .filter { $0.busy && !$0.allDay }.map { DateInterval(start: $0.start, end: max($0.start, $0.end)) }
+            return freeRows(freeSlots(busy: busy, days: free.days, hours: options.workHours, now: now), label: free.label, hours: options.workHours, base: base)
+        }
         if let next = month {
             let card = monthCard(events(in: monthGrid(monthInterval(now: now, next: next))), now: now, next: next)
             return [LauncherResult(id: "builtin:month", title: "\(card.range): \(card.count == 1 ? "1 event" : "\(card.count) events")",
@@ -286,6 +368,27 @@ actor MeetingsProvider: ResultProvider {
         let items = today(now: now) ?? []
         guard !items.isEmpty else { return [message("No more meetings today", "", "Open Calendar", openCalendar)] }
         return rows(items, base: base, now: now)
+    }
+}
+
+/// `free tomorrow`: all of it to copy first, then a row a slot, each copied as "Wed, Nov 4, 9:00 – 10:00 AM".
+private func freeRows(_ slots: [DateInterval], label: String, hours: Range<Int>, base: Double) -> [LauncherResult] {
+    let icon = LauncherResult.Icon.symbol("calendar.badge.checkmark")
+    guard !slots.isEmpty else {
+        return [LauncherResult(id: "builtin:free", title: "No free time \(label.lowercased())", subtitle: "Between \(hours.lowerBound):00 and \(hours.upperBound):00, 30 minutes or more",
+                               icon: icon, score: base, actionTitle: "Open Calendar", action: openCalendar)]
+    }
+    let all = freeText(slots)
+    let lengths = Duration.UnitsFormatStyle(allowedUnits: [.hours, .minutes], width: .narrow)
+    let whole = LauncherResult(id: "builtin:free", title: "Free \(label.lowercased()): \(slots.count == 1 ? "1 slot" : "\(slots.count) slots")",
+                               subtitle: all.replacing("\n", with: " · "), icon: icon, score: base, actionTitle: "Copy All",
+                               action: { copyToClipboard(all) }, preview: all, previewStyle: .prose)
+    return [whole] + slots.enumerated().map { index, slot in
+        let text = freeText([slot]).replacing(": ", with: ", ", maxReplacements: 1)
+        return LauncherResult(id: "free:\(index)", title: (slot.start..<slot.end).formatted(.interval.hour().minute()),
+                              subtitle: slot.start.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()) + " · "
+                                  + Duration.seconds(slot.duration).formatted(lengths),
+                              icon: icon, score: base - Double(index + 1) / 100, actionTitle: "Copy", action: { copyToClipboard(text) })
     }
 }
 

@@ -57,13 +57,21 @@ break_minutes = 5              # default, 1–240
 show_on_open = false           # default. true: the empty launcher lists today's next events. false: only a meeting
                                # with a call, from 10 minutes before it starts. Settings › Launcher › Calendar.
 show_next = true               # default. false (with show_on_open false): not even that meeting
+calendars = ["Work", "Family"] # optional: the calendars that count, by name, for meetings, week, month, free and the
+                               # next meeting. Unset: all of them. Settings › Options › Calendar.
+heads_up = 10                  # default: minutes before a meeting with a call that it waits in the empty launcher, 1–60
+work_start = 9                 # default: the hours `free` looks in, 0–24
+work_end = 18                  # default
 
 [reminders]
 show_due = true                # default: reminders that are due wait in the empty launcher. Settings › Launcher.
+lists = ["Groceries", "Work"]  # optional: the lists whose reminders count. Unset: all of them. Settings › Options.
 
 [timers]
 show_running = true            # default: a pomodoro, timer, stopwatch or :awake waits in the empty launcher while it
                                # runs, its time ticking. Settings › Launcher.
+sound = "default"              # default: what a pomodoro or a timer plays when it ends: the notification's sound,
+                               # "none", or a macOS sound by name ("Glass", "Ping"). Settings › Options.
 
 [learning]
 picked = true                  # default: the rows you pick rise, and come first for what you typed (ss → Slack)
@@ -76,16 +84,27 @@ cards = true                   # default: an answer that reads better big takes 
 
 [weather]
 city = "Lisbon"                # optional: "weather" with nothing typed, when Location Services is off for Copperlight.
-                               # Unset: it asks for your location. Settings › General › Weather.
+                               # Unset: it asks for your location. Settings › Options › Weather.
+units = "auto"                 # default: °C or °F (and km/h or mph) like this Mac; "celsius" or "fahrenheit"
+
+[time_zones]
+cities = ["New York", "Tokyo"] # optional: `time` shows the time now in each. Settings › Options › Time zones.
+
+[colors]
+copy = "hex"                   # default: what Pick Color and your colors copy: "hex", "rgb" or "hsl"
+
+[contacts]
+enter = "message"              # default: what Enter does on a person: "message", "call", "facetime" or "email" (a
+                               # message when they have no number or address for it). Settings › Options › Contacts.
 
 [notes]
 markdown = true                # default: style Markdown in notes as you type (# headings, **bold**, - [ ] checkboxes,
-                               # links). The files stay plain text. Settings › General › Notes.
+                               # links). The files stay plain text. Settings › Options › Notes.
 
 [translate]
 default_target = "german"      # optional: "translate bom dia" without "to …" goes here (an English name or a code,
                                # "de"). Unset: the first of your Mac's languages the text isn't in, which is also
-                               # used when the text is already in this one. Settings › General › Translate to.
+                               # used when the text is already in this one. Settings › Options › Translate to.
 
 [browser]                      # where web links open: typed URLs, the search row, url commands without their own
 name = "Google Chrome"         # optional: name or bundle id; the default browser if missing
@@ -157,24 +176,28 @@ switches. Finding apps, the search row and Copperlight's own rows are always on.
 | `qr` | `qr` codes |
 | `stocks` | `stock aapl` |
 | `weather` | `weather lisbon`, and its Location Services ask |
-| `define` | `define serendipity` |
+| `wikipedia` | `wiki lisbon` |
+| `define` | `define serendipity`, `synonyms happy` |
 | `spelling` | `spell recieve` |
 | `translate` | `translate bom dia` |
 | `emoji` | `emoji heart` |
-| `text_tools` | `uuid`, `password`, `lowercase`, `paste plain`… |
+| `text_tools` | `uuid`, `password`, `fake name`, `lowercase`, `paste plain`… |
 | `large_type` | `large` and any text |
 | `mac_info` | `ip`, `battery`, `disk` |
 | `speed_test` | `speed` |
 | `processes` | `cpu`, `memory`, `port 3000` |
 | `clipboard` | Clipboard history: nothing is recorded while it's off |
+| `clean_links` | Links you copy lose their tracking (`utm_`, `fbclid`…) |
 | `notes` | `note`, `add note`, `:delete note` |
 | `snippets` | Your `[[snippet]]`s |
 | `scripts` | The scripts folder |
 | `commands` | Your `[[command]]`s |
 | `contacts` | `contact ana` |
-| `calendar` | The next meeting, `meetings`, `week`, `month`, `add event` |
+| `message_codes` | `codes`, verification codes from Messages |
+| `calendar` | The next meeting, `meetings`, `week`, `month`, `free`, `add event` |
 | `reminders` | Reminders that are due, `add todo` |
 | `files` | Files and folders, `f invoice`, `~/` and `/` paths, `:reveal`, `:copy path`, `:open with`, `:trash`, `:terminal` |
+| `latest_files` | `screenshots`, `downloads`: the newest first |
 | `browser_tabs` | Your open tabs |
 | `bookmarks` | Bookmarks and history from your browser |
 | `system_settings` | System Settings' pages as rows |
@@ -189,6 +212,7 @@ switches. Finding apps, the search row and Copperlight's own rows are always on.
 | `sound` | `:play`, `:next track`, `:volume 30`, `:mute`, `:mute mic`, `:output` |
 | `keep_awake` | `:awake`, `:awake 2h` |
 | `bluetooth` | `:connect airpods` |
+| `wifi_password` | `wifi password`, with a QR code to join |
 | `camera` | `camera`, a look at yourself before a call |
 | `shortcuts` | `:shortcut` |
 | `shell` | `:!` shell lines |
@@ -219,11 +243,12 @@ Settings › Keywords has a field for each.
 | `speed`, `cpu`, `memory`, `port` | The same words |
 | `clip` | Clipboard history |
 | `note`, `add_note` | `note`, `add note` |
-| `contact`, `tabs`, `timer`, `pomo`, `stopwatch`, `camera` | The same words |
-| `meetings`, `week`, `month`, `add_event` | `meetings`, `week`, `month`, `add event` |
+| `contact`, `tabs`, `timer`, `pomo`, `stopwatch`, `camera`, `wifi_password` | The same words |
+| `meetings`, `week`, `month`, `free`, `add_event` | `meetings`, `week`, `month`, `free`, `add event` |
 | `due`, `add_todo` | `due`, `add todo` |
 | `f` | `f` for files |
 | `copy_text` | `copy text` from the screen |
+| `wiki`, `synonyms`, `codes`, `screenshots`, `downloads` | The same words |
 
 **Clipboard:** a screenshot is 1–5 MB, so `max_images` keeps the database small; images over 25 MB aren't
 recorded. `ignore_apps` replaces the default list, so keep the password managers in it. To find an

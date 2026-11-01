@@ -16,6 +16,7 @@ enum Answer: Sendable {
     case week(WeekCard)
     case camera(CameraCard)
     case month(MonthCard)
+    case wiki(WikiCard)
 }
 
 /// A forecast, its text ready to show; the days' temperatures as numbers, for their bars.
@@ -558,6 +559,31 @@ private struct MonthDayCell: View {
         .frame(maxWidth: .infinity, minHeight: 40)
         .background(Color.primary.opacity(day.today ? 0.06 : day.inMonth ? 0.03 : 0), in: .rect(cornerRadius: 8))
         .opacity(!day.inMonth ? 0.3 : day.past ? 0.45 : 1)
+    }
+}
+
+/// `wiki`: the article's picture beside its title, what it is in a few words, and its first sentences.
+struct WikiCardView: View {
+    let card: WikiCard
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 20) {
+            if let image = card.image {
+                Image(decorative: image, scale: 1).resizable().scaledToFill()
+                    .frame(width: 150, height: 190).clipShape(.rect(cornerRadius: 12, style: .continuous))
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Kicker(text: "Wikipedia")
+                    Spacer()
+                    EnterHint(action: "Open in Wikipedia")
+                }
+                Text(card.title).font(.system(size: 26, weight: .semibold, design: .serif)).lineLimit(2)
+                if !card.description.isEmpty { Text(card.description).font(.system(size: 13)).foregroundStyle(.secondary).lineLimit(1) }
+                Text(card.extract).font(.system(size: 13)).lineSpacing(3).lineLimit(7).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .modifier(Loading(active: card.loading))
     }
 }
 

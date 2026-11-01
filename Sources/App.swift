@@ -188,31 +188,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var verbs = VerbProvider(
         verbs: Verb.launcher(files: files) + Verb.notes(release: { [unowned self] in releaseNote($0) }),
         more: { frontMenuRows($0) })
-    // Each provider with the feature it belongs to (none: always on, or it asks per row); Settings › Features turns
-    // them off.
     private lazy var model = SearchModel(
-        providers: ([(commands, .commands), (ScriptProvider(), .scripts), (snippets, .snippets), (builtins, nil),
-                     (EmojiProvider(), .emoji), (DefineProvider(), .define), (SpellProvider(), .spelling),
-                     (translate, .translate), (StockProvider(), .stocks), (weather, .weather), (meetings, .calendar), (reminders, .reminders),
-                     (contacts, .contacts), (TextToolProvider(), .textTools),
-                     (CameraProvider(join: Self.joinable(meetings)), .camera),
-                     (ColorProvider(show: { [unowned self] in panel.show(typing: $0) }, store: .shared), .colors), (QRCodeProvider(), .qr),
-                     (LargeTypeProvider(), .largeType), (ScreenTextProvider(show: { [unowned self] in panel.show(typing: $0) }), .screenText),
-                     (capture, nil), (apps, nil), (SettingsProvider(), .systemSettings), (CalculatorProvider(), .calculator),
-                     (currency, .currency), (UnitProvider(), .units), (TimeZoneProvider(), .timeZones), (DateMathProvider(), .dates),
-                     (PomodoroProvider(pomodoro: pomodoro), .pomodoro), (TimerProvider(clock: countdown), .timers),
-                     (StopwatchProvider(watch: stopwatch), .stopwatch), (LookupProvider(), nil), (files, .files),
-                     (FileContentProvider(files: files), .fileContent), (tabs, .browserTabs), (pages, .bookmarks), (web, nil)] as [(any ResultProvider, Feature?)])
-            .map { provider, feature in feature.map { Gated($0, provider) } ?? provider } + (photoText.map { [PhotoTextProvider(store: $0)] } ?? []),
+        providers: providers(),
         exclusive: [FileSearchProvider.prefix: Gated(.files, files), VerbProvider.prefix: verbs,
                     ShellProvider.prefix: Gated(.shell, ShellProvider(state: .shared)),
                     "~": Gated(.files, PathProvider(terminal: Self.terminal(files))), "/": Gated(.files, PathProvider(terminal: Self.terminal(files)))],
-        frecency: .shared, idle: Self.upNext(meetings, reminders, showsDue: { [unowned self] in showsDue }, clocks: { [unowned self] in
-            (showsRunning ? runningClocks(pomodoro: pomodoro, timer: countdown, stopwatch: stopwatch) : [])
-                + (suggestsApps ? suggestionRows(StateStore.shared.get(AppOpen.stateSection, as: [AppOpen].self) ?? []) : [])
-        }))
+        frecency: .shared, idle: Self.upNext(meetings, reminders, showsDue: { [unowned self] in showsDue }, clocks: { [unowned self] in idleRows() }))
     // What the empty launcher shows besides the meeting (config.toml; the meeting is MeetingsProvider's).
     private var (suggestsApps, showsDue, showsRunning) = (true, true, true)
+
+    /// Each provider with the feature it belongs to (none: always on, or it asks per row), gated by it. In two typed
+    /// halves: as one literal, it slows the compiler down.
+    private func providers() -> [any ResultProvider] {
+        let first: [(any ResultProvider, Feature?)] = [
+            (commands, .commands), (ScriptProvider(), .scripts), (snippets, .snippets), (builtins, nil),
+            (EmojiProvider(), .emoji), (DefineProvider(), .define), (SynonymsProvider(), .define), (SpellProvider(), .spelling),
+            (WikipediaProvider(), .wikipedia), (MessageCodeProvider(), .messageCodes), (LatestFilesProvider(), .latestFiles),
+            (translate, .translate), (StockProvider(), .stocks), (weather, .weather), (meetings, .calendar), (reminders, .reminders),
+            (contacts, .contacts), (TextToolProvider(), .textTools),
+            (CameraProvider(join: Self.joinable(meetings)), .camera), (WiFiProvider(show: { [unowned self] in panel.show(typing: $0) }), .wifiPassword),
+        ]
+        let second: [(any ResultProvider, Feature?)] = [
+            (ColorProvider(show: { [unowned self] in panel.show(typing: $0) }, store: .shared), .colors), (QRCodeProvider(), .qr),
+            (LargeTypeProvider(), .largeType), (ScreenTextProvider(show: { [unowned self] in panel.show(typing: $0) }), .screenText),
+            (capture, nil), (apps, nil), (SettingsProvider(), .systemSettings), (CalculatorProvider(), .calculator),
+            (currency, .currency), (UnitProvider(), .units), (TimeZoneProvider(), .timeZones), (DateMathProvider(), .dates),
+            (PomodoroProvider(pomodoro: pomodoro), .pomodoro), (TimerProvider(clock: countdown), .timers),
+            (StopwatchProvider(watch: stopwatch), .stopwatch), (LookupProvider(), nil), (files, .files),
+            (FileContentProvider(files: files), .fileContent), (tabs, .browserTabs), (pages, .bookmarks), (web, nil),
+        ]
+        let gated: [any ResultProvider] = (first + second).map { provider, feature in feature.map { Gated($0, provider) } ?? provider }
+        return gated + (photoText.map { [PhotoTextProvider(store: $0)] } ?? [])
+    }
+
+    /// The empty launcher's rows besides meetings and reminders: Finder's selection, the next item to paste in order,
+    /// what's running, and the apps you open around now. Its own function: inline, it slows the compiler down.
+    private func idleRows() -> [LauncherResult] {
+        var rows = finderIdle
+        if let history { rows += pasteNextRows(.shared, store: history.store, paste: { [unowned self] in pasteFromLauncher($0) }) }
+        if showsRunning { rows += runningClocks(pomodoro: pomodoro, timer: countdown, stopwatch: stopwatch) }
+        if suggestsApps { rows += suggestionRows(StateStore.shared.get(AppOpen.stateSection, as: [AppOpen].self) ?? []) }
+        return rows
+    }
+    /// The files selected in Finder when the hotkey was pressed over it (or the row asking to see them), on top.
+    private var finderIdle: [LauncherResult] = []
     private lazy var panel: LauncherPanel = LauncherPanel(model: model, placeholder: "Type anything")
 
     /// The meeting to join now, for Enter after `camera`.
@@ -264,7 +283,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // while clipboard history is on (apply).
             history = ClipboardHistory(store: try ClipboardStore(path: ClipboardStore.file.path))
             try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: ClipboardStore.file.path)
-            history?.recording = Feature.clipboard.isOn
+            history?.recording = Feature.clipboard.isOn || Feature.cleanLinks.isOn
         } catch {
             historyError = error.localizedDescription
         }
@@ -299,6 +318,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func toggleLauncher() {
         if panel.isVisible { return panel.orderOut(nil) }
         let selection = frontSelection() // before the panel takes the keys, so it's still the app's
+        panel.model.fileDialog = frontFileDialog()
+        finderIdle = []
+        if Feature.files.isOn, NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.apple.finder" {
+            if automationPermission("com.apple.finder", ask: false) == OSStatus(errAEEventWouldRequireUserConsent) {
+                finderIdle = [finderAskRow()]
+            } else {
+                Task { [weak self] in
+                    let paths = await finderSelection()
+                    guard let self, !paths.isEmpty, panel.isVisible, panel.model.query.isEmpty else { return }
+                    finderIdle = finderRows(paths)
+                    panel.model.query = "" // shows them
+                }
+            }
+        }
         refresh()
         panel.show(typing: selection)
         // A browser asked to share its text just now answers a moment later: in time, unless you've typed already.
@@ -336,6 +369,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                            actionTitle: "", action: {})
         }
         clipboardPanel.show()
+    }
+
+    /// Enter on Paste Next in the launcher: onto the clipboard, and into the app in front.
+    private func pasteFromLauncher(_ content: ClipboardContent) {
+        history?.restore(content)
+        if hasAccessibility("paste") { sendPaste() }
     }
 
     /// Enter in the clipboard panel. Without Accessibility it can only copy, so it says how to fix that.
@@ -402,7 +441,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Palette.shared.use(config.look.accent)
         KeyboardShortcuts.setShortcut(config.hotkeys.launcher.shortcut, for: .toggleLauncher)
         history?.settings = config.clipboard
-        history?.recording = Feature.clipboard.isOn
+        history?.recording = Feature.clipboard.isOn || Feature.cleanLinks.isOn
         NotePanel.stylesMarkdown = config.notes.markdown
         notes.values.forEach { $0.restyle() }
         pomodoro.defaultMinutes = config.pomodoro.defaultMinutes
@@ -415,6 +454,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         clipboardModel.keywords = model.keywords.filter { $0.value == VerbProvider.prefix } // its search is for what you copied
         // Chained so back-to-back reloads reach the providers in order.
         weather.setCity(config.weather.city ?? "")
+        weather.setUnits(config.weather.units)
+        RemindersProvider.chosenLists.withLock { $0 = config.reminders.lists }
+        TimeZoneProvider.chosenCities.withLock { $0 = config.timeZones.cities }
+        ColorProvider.chosenNotation.withLock { $0 = config.colors.copy }
+        chosenEndSound.withLock { $0 = config.timers.sound }
+        ContactsProvider.chosenEnter.withLock { $0 = config.contacts.enter }
         configUpdate = Task { [previous = configUpdate, commands, currency, translate, files, apps, web, snippets] in
             await previous?.value
             await commands.setCommands(config.commands, browser: config.browser)
@@ -422,7 +467,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             await web.setBrowser(config.browser)
             await pages.setBrowser(config.browser)
             await meetings.setBrowser(config.browser)
-            await meetings.setShowsOnOpen(config.meetings.showOnOpen, next: config.meetings.showNext)
+            await meetings.setOptions(config.meetings)
             if Feature.bookmarks.isOn { await pages.refresh() }
             await currency.setDefaultTarget(config.currency.defaultTarget)
             translate.setDefaultTarget(config.translate.defaultTarget)

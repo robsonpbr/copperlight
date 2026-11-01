@@ -218,6 +218,23 @@ private struct Echo: ResultProvider {
     #expect(typed.ran == ["saf"]) // not "sa", the row that was showing
 }
 
+@MainActor @Test func fileDialogGoesThere() async throws {
+    #expect(isFileDialog("open-panel") && isFileDialog("save-panel") && !isFileDialog("main") && !isFileDialog(nil))
+    #expect(dialogPath(forRow: "file:/Users/ana/Documents") == "/Users/ana/Documents")
+    #expect(dialogPath(forRow: "latest:/Users/ana/Desktop/Screenshot.png") == "/Users/ana/Desktop/Screenshot.png")
+    #expect(dialogPath(forRow: "app:/Applications/Notes.app") == nil && dialogPath(forRow: "builtin:free") == nil)
+
+    let model = SearchModel(providers: [Fixed(rows: [("file:/Users/ana/Documents", 1), ("builtin:week", 0)])])
+    model.fileDialog = true // an Open or Save dialog was in front when the hotkey was pressed
+    model.query = "doc"
+    try await Task.sleep(for: .milliseconds(200))
+    #expect(model.results.map(\.actionTitle) == ["Go There", "Open"])
+    model.fileDialog = false
+    model.query = "docs"
+    try await Task.sleep(for: .milliseconds(200))
+    #expect(model.results.map(\.actionTitle) == ["Open", "Open"])
+}
+
 private struct Fixed: ResultProvider {
     let rows: [(id: String, score: Double)]
     func results(for query: String) async -> [LauncherResult] {
@@ -834,6 +851,45 @@ private func testPNG(width: Int, height: Int, red: CGFloat = 1) -> Data {
                                bytesPerRow: 0, bitsPerPixel: 0)!
     for x in 0..<width { for y in 0..<height { rep.setColor(NSColor(red: red, green: 0, blue: 0, alpha: 1), atX: x, y: y) } }
     return rep.representation(using: .png, properties: [:])!
+}
+
+@Test func clipboardPins() throws {
+    let store = try ClipboardStore()
+    let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+    for (index, text) in ["address", "name", "email", "phone"].enumerated() { try store.record(text, app: nil, at: t0 + Double(index)) }
+    let address = try #require(try store.items().last)
+    try store.pin(address.id, true)
+    #expect(try store.items().map(\.text) == ["address", "phone", "email", "name"]) // pinned first
+    #expect(try store.items().map(\.pinned) == [true, false, false, false])
+    try store.prune(maxItems: 1, maxDays: 1, now: t0 + 30 * 86_400) // pruning spares it
+    #expect(try store.items().map(\.text) == ["address"])
+    try store.record("one more", app: nil, at: t0 + 31 * 86_400)
+    try store.clear() // and so does Clear History
+    #expect(try store.items().map(\.text) == ["address"])
+    try store.pin(address.id, false)
+    try store.clear()
+    #expect(try store.items().isEmpty)
+}
+
+/// Pasting in order: from the item picked, then each one copied after it, oldest first.
+@MainActor @Test func clipboardPastesInOrder() throws {
+    let store = try ClipboardStore()
+    let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+    for (index, text) in ["name", "email", "phone"].enumerated() { try store.record(text, app: nil, at: t0 + Double(index)) }
+    let ids = Dictionary(uniqueKeysWithValues: try store.items().map { ($0.text, $0.id) })
+    #expect(try store.copied(after: ids["name"]!) == [ids["email"]!, ids["phone"]!])
+    #expect(try store.copied(after: ids["phone"]!).isEmpty)
+
+    let queue = PasteQueue()
+    #expect(pasteNextRows(queue, store: store, paste: { _ in }).isEmpty)
+    queue.ids = try store.copied(after: ids["name"]!)
+    let rows = pasteNextRows(queue, store: store, paste: { _ in })
+    #expect(rows.map(\.title) == ["Paste Next: email"])
+    #expect(rows[0].subtitle == "1 more after it, in the order you copied them")
+    rows[0].action()
+    #expect(queue.ids == [ids["phone"]!])
+    pasteNextRows(queue, store: store, paste: { _ in })[0].action()
+    #expect(queue.ids.isEmpty)
 }
 
 @Test func clipboardStoresImages() throws {
@@ -1825,6 +1881,8 @@ private struct Sized: ResultProvider {
     #expect(convert("1 gb in mb") == "1000 MB")
     #expect(convert("90 min in h") == "1.5 hr")
     #expect(convert("1 day in hours") == "24 hr")
+    #expect(convert("2rem in px") == "32 px" && convert("24px") == "1.5 rem" && convert("1.5 em") == "24 px") // 16 px a rem
+    #expect(convert("96 px in in") == "1 in")
     for text in ["10 km in kg", "10 km in km", "10 apples", "km", "25 usd to eur", "3 s"] { #expect(parseUnits(text) == nil, "\(text)") }
 }
 
@@ -2581,6 +2639,9 @@ private struct Speak: ResultProvider {
     #expect(nextMeeting([item("Long ago", in: -20, for: 60)], now: now) == nil)
     #expect(nextMeeting([item("No call", in: 5, link: nil)], now: now) == nil) // nothing to join
     #expect(nextMeeting([item("Late", in: -4), item("Soon", in: 3)], now: now)?.title == "Soon") // the one about to start
+    #expect(nextMeeting([item("Later", in: 25)], now: now, headsUp: 30 * 60)?.title == "Later") // `[meetings] heads_up = 30`
+    #expect(chosen(["Work", "Family", "Holidays"], named: []) == nil) // all of them
+    #expect(chosen(["Work", "Family", "Holidays"], named: ["work", "Family"]) == ["Work", "Family"])
     #expect(callService(call) == "Google Meet" && callService(URL(string: "https://acme.zoom.us/j/123")!) == "Zoom")
 }
 
@@ -2672,6 +2733,87 @@ private struct Speak: ResultProvider {
 /// `month`: the month you're in as a grid of whole weeks from your first weekday, each day with how many events it
 /// has (the view draws up to 3 dots); today, the days before it and the days of the months around it marked.
 /// `next month`: the one after.
+@Test func featureOptions() throws {
+    let empty = try Config.parse("")
+    #expect(empty.meetings.calendars.isEmpty && empty.meetings.headsUp == 10 && empty.meetings.workHours == 9..<18)
+    #expect(empty.reminders.lists.isEmpty && empty.weather.units == .auto && empty.timeZones.cities.isEmpty)
+    #expect(empty.colors.copy == .hex && empty.timers.sound == "default" && empty.contacts.enter == .message)
+
+    let set = try Config.parse("""
+        [meetings]
+        calendars = ["Work", "Family"]
+        heads_up = 5
+        work_start = 8
+        work_end = 17
+        [reminders]
+        lists = ["Groceries"]
+        [weather]
+        units = "fahrenheit"
+        [time_zones]
+        cities = ["New York", "Tokyo"]
+        [colors]
+        copy = "rgb"
+        [timers]
+        sound = "Ping"
+        [contacts]
+        enter = "call"
+        """)
+    #expect(set.meetings.calendars == ["Work", "Family"] && set.meetings.headsUp == 5 && set.meetings.workHours == 8..<17)
+    #expect(set.reminders.lists == ["Groceries"] && set.weather.units == .fahrenheit && set.timeZones.cities == ["New York", "Tokyo"])
+    #expect(set.colors.copy == .rgb && set.timers.sound == "Ping" && set.contacts.enter == .call)
+
+    for wrong in ["[meetings]\nheads_up = 0", "[meetings]\nwork_start = 18\nwork_end = 9", "[weather]\nunits = \"kelvin\"",
+                  "[colors]\ncopy = \"cmyk\"", "[contacts]\nenter = \"fax\""] {
+        #expect(throws: (any Error).self, "\(wrong)") { try Config.parse(wrong) }
+    }
+}
+
+@Test func yourCities() {
+    let provider = TimeZoneProvider(cities: { ["Tokyo", "New York", "Atlantis"] }) // a place it can't find is left out
+    let rows = provider.results(for: "time")
+    #expect(rows.count == 2 && rows[0].title.hasSuffix(" in Tokyo") && rows[1].title.hasSuffix(" in New York"))
+    #expect(rows[0].subtitle.contains("ahead") || rows[0].subtitle.contains("behind") || rows[0].subtitle.contains("same time"))
+    #expect(provider.results(for: "times").count == 2 && provider.results(for: "tim").isEmpty)
+    #expect(TimeZoneProvider(cities: { [] }).results(for: "time").isEmpty)
+    #expect(provider.results(for: "now in tokyo").count == 1) // as before
+}
+
+@Test func timerSounds() {
+    #expect(endSound("default") == .notification && endSound("none") == .silent && endSound("Ping") == .named("Ping"))
+    #expect(endSound("") == .notification)
+    #expect(macSounds().contains("Glass") && macSounds() == macSounds().sorted())
+}
+
+@Test func freeTime() {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "UTC")!
+    calendar.locale = Locale(identifier: "en_US")
+    let at = { (day: Int, hour: Int, minute: Int) in calendar.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour, minute: minute))! }
+    let slot = { (day: Int, from: (Int, Int), to: (Int, Int)) in DateInterval(start: at(day, from.0, from.1), end: at(day, to.0, to.1)) }
+    // Wednesday, November 4: overlapping events merge, a gap under 30 minutes isn't free, the day ends at 18:00.
+    let busy = [slot(4, (10, 0), (11, 0)), slot(4, (10, 30), (12, 0)), slot(4, (12, 15), (13, 0)), slot(4, (17, 40), (19, 0))]
+    #expect(freeSlots(busy: busy, days: [at(4, 0, 0)], now: at(3, 12, 0), calendar: calendar) == [slot(4, (9, 0), (10, 0)), slot(4, (13, 0), (17, 40))])
+    // Today starts now, at the next quarter hour.
+    #expect(freeSlots(busy: [], days: [at(4, 0, 0)], now: at(4, 16, 7), calendar: calendar) == [slot(4, (16, 15), (18, 0))])
+    #expect(freeSlots(busy: [], days: [at(4, 0, 0)], now: at(4, 17, 50), calendar: calendar).isEmpty)
+
+    let evening = at(4, 19, 0)
+    let days = { (query: String) in freeDays(query, now: evening, calendar: calendar)?.days }
+    #expect(days("free") == [at(5, 0, 0)]) // after hours: the next workday
+    #expect(freeDays("free", now: at(4, 11, 0), calendar: calendar)?.days == [at(4, 0, 0)])
+    #expect(freeDays("free", now: at(7, 11, 0), calendar: calendar)?.days == [at(9, 0, 0)]) // Saturday: Monday
+    #expect(days("free today") == [at(4, 0, 0)] && days("free tomorrow") == [at(5, 0, 0)])
+    #expect(days("free monday") == [at(9, 0, 0)] && days("Free Wednesday") == [at(4, 0, 0)])
+    #expect(days("free this week") == [at(4, 0, 0), at(5, 0, 0), at(6, 0, 0)]) // the workdays left
+    #expect(days("free next week") == (9...13).map { at($0, 0, 0) })
+    #expect(freeDays("free tomorrow", now: evening, calendar: calendar)?.label == "Tomorrow")
+    #expect(days("freeform") == nil && days("free pizza") == nil)
+
+    let text = freeText([slot(4, (9, 0), (10, 0)), slot(4, (13, 0), (17, 40)), slot(5, (9, 0), (18, 0))], calendar: calendar)
+    #expect(text.split(separator: "\n").count == 2)
+    #expect(text.hasPrefix("Wed, Nov 4: ") && text.contains("\nThu, Nov 5: "))
+}
+
 @Test func monthCardDays() {
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = TimeZone(identifier: "Europe/Lisbon")!
@@ -2938,6 +3080,10 @@ private let unknownTicker = Data(#"{"chart":{"result":null,"error":{"code":"Not 
     #expect(messageURL(ana)?.absoluteString == "sms:+351912345678")
     #expect(messageURL(bob)?.absoluteString == "imessage:bob@example.com")
     #expect(messageURL(carla) == nil)
+    // `[contacts] enter`: a call, FaceTime or an email instead, when they have what it takes; else a message.
+    #expect(enterAction(ana, .call)?.title == "Call" && enterAction(ana, .call)?.url.absoluteString == "tel:+351912345678")
+    #expect(enterAction(ana, .email)?.url.absoluteString == "mailto:ana@acme.com" && enterAction(bob, .facetime)?.url.absoluteString == "facetime:bob@example.com")
+    #expect(enterAction(bob, .call)?.title == "Message" && enterAction(carla, .email) == nil)
     #expect(await contacts.results(for: "carla").first?.actionTitle == "Open in Contacts")
     #expect(contactCardURL("410FE041-5C4E-48DA-B4DE-04C15EA3DBAC:ABPerson") != nil)
 
@@ -3116,6 +3262,9 @@ private let unknownTicker = Data(#"{"chart":{"result":null,"error":{"code":"Not 
     #expect(await provider.results(for: "due", now: now).map(\.title) == ["Renew passport", "Call the bank", "Send the invoice",
                                                                            "Book flights", "Water the plants"])
     #expect(await provider.results(for: "du", now: now).isEmpty)
+    // `[reminders] lists`: only those lists' reminders.
+    let travel = RemindersProvider(calendar: calendar, fetch: { items }, lists: { ["Travel"] })
+    #expect(await travel.results(for: "due", now: now).map(\.title) == ["Renew passport", "Book flights"])
 }
 
 // MARK: Calculator phrases
@@ -3244,7 +3393,8 @@ private let unknownTicker = Data(#"{"chart":{"result":null,"error":{"code":"Not 
     try "first line\nsecond".write(to: file, atomically: true, encoding: .utf8)
 
     let rows = fileActionRows(file.path, terminal: nil)
-    #expect(rows.map(\.title) == ["Open", "Open With…", "Reveal in Finder", "Copy Path", "Copy File", "Open in Terminal", "Move to Trash"])
+    #expect(rows.map(\.title) == ["Open", "Open With…", "Quick Look", "Reveal in Finder", "Copy Path", "Copy File", "AirDrop", "Send in Messages",
+                                   "Send in Mail", "Open in Terminal", "Move to Trash"])
     #expect(rows[1].completion == ":open with \(file.path) " && rows.last?.confirm == "Move “notes.txt” to the Trash?")
     #expect(rows.allSatisfy { $0.details.map(\.0) == ["Where", "Kind", "Size", "Modified"] })
     #expect(await rows[0].loadPreview?() == "first line\nsecond") // a text file's text beside them
@@ -3266,8 +3416,9 @@ private let unknownTicker = Data(#"{"chart":{"result":null,"error":{"code":"Not 
     try store.record("https://copperlight.app", app: nil, at: .now)
     let clipboard = ClipboardProvider(store: store, paste: { _ in }, copy: { _ in })
     let item = try #require(await clipboard.results(for: "").first)
-    let actions = try #require(await item.actions?()).map(\.title)
-    #expect(Array(actions.suffix(4)) == ["Open Link", "Large Type", "QR Code", "Delete from History"])
+    let actions: [String] = try #require(await item.actions?()).map(\.title)
+    let last: [String] = Array(actions.suffix(4))
+    #expect(last == ["Open Link", "Large Type", "QR Code", "Delete from History"])
     #expect(actions.contains("Copy Without Pasting") == AXIsProcessTrusted()) // without Accessibility, Enter copies already
 }
 
@@ -3402,6 +3553,10 @@ private let unknownTicker = Data(#"{"chart":{"result":null,"error":{"code":"Not 
     #expect(answerColor(rows[0]) == RGBColor(red: 200, green: 117, blue: 51)) // the one you're on, on a band over the list
     #expect(await colors.results(for: "colours").count == 2)
     #expect(await colors.results(for: "my colors").count == 2)
+    // `[colors] copy = "rgb"`: what Enter copies, as the title.
+    let rgb = await ColorProvider(store: store, copies: { .rgb }).results(for: "colors")
+    #expect(rgb[0].title == "rgb(200, 117, 51)" && rgb[0].subtitle == "#c87533")
+    #expect(RGBColor(red: 200, green: 117, blue: 51).text(.hsl) == RGBColor(red: 200, green: 117, blue: 51).hsl)
     for gray in 0..<40 { rememberColor(RGBColor(red: gray, green: gray, blue: gray), in: store, at: now) }
     #expect(store.get(PickedColor.stateSection, as: [PickedColor].self)?.count == PickedColor.limit) // the last 30
 }
@@ -3450,6 +3605,11 @@ private let unknownTicker = Data(#"{"chart":{"result":null,"error":{"code":"Not 
     #expect(shown.place == "Lisbon")
     // °F where the Mac uses US units, whatever this machine uses (CI's does).
     #expect(await provider(.refused, fahrenheit: true).modeResults(for: "weather lisbon").first?.title == "65° · Clear")
+    let chosen = provider(.refused) // `[weather] units` over what the Mac uses
+    chosen.setUnits(.fahrenheit)
+    #expect(await chosen.modeResults(for: "weather lisbon").first?.title == "65° · Clear")
+    chosen.setUnits(.celsius)
+    #expect(await chosen.modeResults(for: "weather lisbon").first?.title == "19° · Clear")
     // Only a rounded place goes to the forecast: about a kilometer.
     #expect(asked.withLock { $0.last }?.contains("latitude=38.73&longitude=-9.15") == true)
 
@@ -3693,7 +3853,7 @@ private struct Carded: ResultProvider {
     let providers: [any ResultProvider] = [TranslateProvider(), DefineProvider(), SpellProvider(), EmojiProvider(), StockProvider(),
                                            QRCodeProvider(), LargeTypeProvider(), TimerProvider(clock: Countdown(store: store)),
                                            PomodoroProvider(pomodoro: Pomodoro()), LookupProvider(), CaptureProvider(addToNote: { _ in }),
-                                           ShellProvider(state: store), FileSearchProvider()]
+                                           ShellProvider(state: store), FileSearchProvider(), SynonymsProvider(), WikipediaProvider()]
     let chips = providers.flatMap(\.modes).map { $0.prefix.trimmingCharacters(in: .whitespaces) }.filter { !$0.hasPrefix("translate to ") }
     #expect(Set(chips).isSubset(of: Keyword.all), "\(Set(chips).subtracting(Keyword.all))")
     #expect(Keyword.key(":") == "commands" && Keyword.key(":!") == "shell" && Keyword.key("add todo") == "add_todo")
@@ -3951,4 +4111,269 @@ private struct Asking: ResultProvider {
     #expect(await CameraProvider(status: { .authorized }, device: { nil }, join: { nil }).results(for: "camera").map(\.title) == ["This Mac has no camera"])
     #expect(await CameraProvider(status: { .notDetermined }, device: { "FaceTime HD Camera" }, join: { nil }).results(for: "camera").map(\.actionTitle) == ["Allow"])
     #expect(await CameraProvider(status: { .denied }, device: { "FaceTime HD Camera" }, join: { nil }).results(for: "camera").map(\.actionTitle) == ["Open System Settings"])
+}
+
+// MARK: Codes from Messages
+
+/// A message's verification code: 4 to 8 digits (or two groups of 3) in a message that says it's a code; never a
+/// time, an amount or an order number.
+@Test func verificationCodes() {
+    #expect(verificationCode(in: "Your Apple Account code is: 482913. Don't share it with anyone.") == "482913")
+    #expect(verificationCode(in: "G-736251 is your Google verification code.") == "736251")
+    #expect(verificationCode(in: "Seu código de verificação é 1234") == "1234")
+    #expect(verificationCode(in: "Your login code: 123 456") == "123456")
+    #expect(verificationCode(in: "Use 8841 to verify your login. It expires in 10 minutes.") == "8841")
+    #expect(verificationCode(in: "Your order #48219 has shipped") == nil) // not a code
+    #expect(verificationCode(in: "Lunch at 12:30? The door code is the usual") == nil)
+    #expect(verificationCode(in: "Use code SAVE10 for $1234.56 off") == nil)
+}
+
+/// An attributed string archived the old way, as Messages keeps one. NSArchiver is deprecated but it's the only way to
+/// make one, so it's asked for by name.
+private func typedStream(_ text: String) -> Data {
+    let archiver = NSClassFromString("NSArchiver") as! NSObject.Type
+    return archiver.perform(NSSelectorFromString("archivedDataWithRootObject:"), with: NSAttributedString(string: text))!.takeUnretainedValue() as! Data
+}
+
+/// Newer messages keep their text only in `attributedBody`, an archived attributed string, short or long.
+@Test func messageTextFromItsArchive() {
+    for text in ["Your code is 482913", String(repeating: "x", count: 300) + " 482913"] {
+        let archived = typedStream(text)
+        #expect(messageText(fromAttributedBody: archived) == text)
+    }
+    #expect(messageText(fromAttributedBody: Data("nothing archived".utf8)) == nil)
+}
+
+/// `codes`: the codes in the last 15 minutes' messages, newest first, read from Messages' own database; Enter copies
+/// one, Tab shows its message. Without Full Disk Access, a row says where to give it.
+@Test func codesFromMessages() async throws {
+    let file = FileManager.default.temporaryDirectory.appending(path: "chat-\(UUID().uuidString).db")
+    defer { try? FileManager.default.removeItem(at: file) }
+    let nanos = { (date: Date) -> Int64 in Int64(date.timeIntervalSinceReferenceDate * 1_000_000_000) }
+    let archived = typedStream("Your Lisbon Bank code: 7731")
+    let (apple, bank, mine, old) = (nanos(.now - 120), nanos(.now - 30), nanos(.now - 10), nanos(.now - 3600))
+    try await DatabaseQueue(path: file.path).write { db in
+        try db.execute(sql: "CREATE TABLE handle (ROWID INTEGER PRIMARY KEY, id TEXT)")
+        try db.execute(sql: "CREATE TABLE message (ROWID INTEGER PRIMARY KEY, text TEXT, attributedBody BLOB, date INTEGER, is_from_me INTEGER, handle_id INTEGER)")
+        try db.execute(sql: "INSERT INTO handle VALUES (1, 'Apple'), (2, '+15550100')")
+        try db.execute(sql: "INSERT INTO message VALUES (1, 'Your Apple Account code is: 482913.', NULL, ?, 0, 1)", arguments: [apple])
+        try db.execute(sql: "INSERT INTO message VALUES (2, NULL, ?, ?, 0, 2)", arguments: [archived, bank])
+        try db.execute(sql: "INSERT INTO message VALUES (3, 'My code is 999999', NULL, ?, 1, 2)", arguments: [mine]) // yours
+        try db.execute(sql: "INSERT INTO message VALUES (4, 'Your code is 111111', NULL, ?, 0, 1)", arguments: [old]) // too old
+    }
+    let messages = try recentMessages(in: file.path, since: .now - 900)
+    #expect(messages.map(\.sender) == ["+15550100", "Apple"])
+    let codes = MessageCodeProvider(read: { try recentMessages(in: file.path, since: $0) })
+    let rows = await codes.results(for: "codes")
+    #expect(rows.map(\.title) == ["7731", "482913"])
+    #expect(rows.allSatisfy { $0.actionTitle == "Copy" })
+    #expect(rows[0].subtitle.hasPrefix("+15550100") && rows[0].preview == "Your Lisbon Bank code: 7731")
+    #expect(await codes.results(for: "code").isEmpty) // Visual Studio Code's
+    let none = await MessageCodeProvider(read: { _ in [] }).results(for: "codes")
+    #expect(none.map(\.title) == ["No codes in the last 15 minutes"])
+    let locked = await MessageCodeProvider(read: { _ in throw CocoaError(.fileReadNoPermission) }).results(for: "codes")
+    #expect(locked.map(\.actionTitle) == ["Open System Settings"])
+}
+
+// MARK: Links without tracking
+
+/// A copied link loses what's only there to track where it was shared, and comes out of a redirect; anything else
+/// copied stays as it is.
+@Test func cleanLinks() {
+    #expect(cleanLink("https://example.com/post?utm_source=news&utm_medium=email&id=7#top") == "https://example.com/post?id=7#top")
+    #expect(cleanLink("https://example.com/?fbclid=IwAR0abc") == "https://example.com/")
+    #expect(cleanLink("https://shop.example.com/item?gclid=x&color=red%20dark") == "https://shop.example.com/item?color=red%20dark")
+    #expect(cleanLink("https://youtu.be/dQw4w9WgXcQ?si=AbCdEf") == "https://youtu.be/dQw4w9WgXcQ")
+    #expect(cleanLink("https://www.youtube.com/watch?v=dQw4w9WgXcQ&si=AbCdEf&t=42") == "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42")
+    #expect(cleanLink("https://x.com/someone/status/1?s=20&t=abc") == "https://x.com/someone/status/1")
+    #expect(cleanLink("https://www.google.com/url?q=https://example.com/a%3Fb%3D1&sa=D") == "https://example.com/a?b=1")
+    #expect(cleanLink("https://example.com/search?s=shoes&t=1") == nil) // `s` and `t` track only on X
+    #expect(cleanLink("https://example.com/page") == nil)
+    #expect(cleanLink("see https://example.com/?utm_source=x") == nil) // a link inside text stays as it is
+}
+
+// MARK: Sharing
+
+/// Tab on a file shares it too: AirDrop, Messages, Mail.
+@Test func latestFiles() async throws {
+    let folder = FileManager.default.temporaryDirectory.appending(path: "latest-\(UUID().uuidString)")
+    let shots = folder.appending(path: "shots"), downloads = folder.appending(path: "downloads")
+    for dir in [shots, downloads] { try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true) }
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let made = Date(timeIntervalSinceReferenceDate: 800_000_000)
+    // Oldest first; a hidden file and a download still coming are left out.
+    for (index, name) in ["Screenshot 1.png", "photo.jpg", "Screenshot 2.png"].enumerated() {
+        let file = shots.appending(path: name)
+        try Data([1, 2, 3]).write(to: file)
+        try FileManager.default.setAttributes([.creationDate: made + Double(index) * 60], ofItemAtPath: file.path)
+    }
+    for (index, name) in ["invoice.pdf", ".DS_Store", "talk.mov.download", "notes.zip"].enumerated() {
+        let file = downloads.appending(path: name)
+        try Data(count: 2048).write(to: file)
+        try FileManager.default.setAttributes([.creationDate: made + Double(index) * 60], ofItemAtPath: file.path)
+    }
+    #expect(latestFiles(in: downloads, limit: 10).map(\.lastPathComponent) == ["notes.zip", "invoice.pdf"])
+
+    let provider = LatestFilesProvider(screenshots: { shots }, downloads: { downloads }, isScreenshot: { $0.lastPathComponent.hasPrefix("Screenshot") })
+    #expect(await provider.results(for: "screenshots").map(\.title) == ["Screenshot 2.png", "Screenshot 1.png"])
+    #expect(await provider.results(for: "Latest Screenshot").map(\.title) == ["Screenshot 2.png"])
+    let rows = await provider.results(for: "downloads")
+    #expect(rows.map(\.title) == ["notes.zip", "invoice.pdf"])
+    #expect(rows[0].subtitle.components(separatedBy: " · ").last?.lowercased() == "2 kb")
+    #expect(rows[0].actions != nil)
+    let folderOrToolbar = await provider.results(for: "download") + provider.results(for: "screenshot")
+    #expect(folderOrToolbar.isEmpty) // the Downloads folder, the screenshot toolbar
+}
+
+@Test func wifiPassword() async {
+    #expect(wifiJoinText(network: "Casa; 5G", password: #"a:b\c"#) == #"WIFI:T:WPA;S:Casa\; 5G;P:a\:b\\c;;"#)
+    #expect(wifiJoinText(network: "Café", password: "") == "WIFI:T:nopass;S:Café;;")
+
+    let provider = WiFiProvider(network: { "Northwind Guest" }, located: { .allowed },
+                                password: { $0 == "Northwind Guest" ? "tea-and-scones" : nil }, show: { _ in })
+    #expect(await provider.results(for: "wifi password").map(\.title) == ["Show the Password for “Northwind Guest”"])
+    #expect(await provider.results(for: "Wi-Fi password Office").map(\.title) == ["Show the Password for “Office”"])
+    #expect(await provider.results(for: "wifi").isEmpty)
+    #expect(await provider.reveal("Northwind Guest"))
+    let shown = await provider.results(for: "wifi password")
+    #expect(shown.map(\.title) == ["tea-and-scones", "Copy QR Code"])
+    if case .picture(_, let kicker, let title, _)? = shown.first?.answer { #expect(kicker.contains("Wi-Fi") && title == "Northwind Guest") }
+    else { Issue.record("no QR code card") }
+    #expect(await !provider.reveal("Office")) // macOS said no, or there's none
+
+    let away = WiFiProvider(network: { nil }, located: { .unasked }, password: { _ in nil }, show: { _ in })
+    #expect(await away.results(for: "wifi password").first?.actionTitle == "Allow")
+    let refused = WiFiProvider(network: { nil }, located: { .refused }, password: { _ in nil }, show: { _ in })
+    #expect(await refused.results(for: "wifi password").first?.title == "Type the network's name: wifi password Home")
+}
+
+@Test func finderSelectionRows() {
+    #expect(finderPaths("/Users/ana/Documents/report.pdf\n/Users/ana/Projects/\n\n") == ["/Users/ana/Documents/report.pdf", "/Users/ana/Projects"])
+    #expect(finderPaths("/\n") == ["/"] && finderPaths("").isEmpty)
+    let rows = finderRows(["/Users/ana/Documents/report.pdf", "/Users/ana/Projects"])
+    #expect(rows.map(\.title) == ["report.pdf", "Projects"])
+    #expect(rows.map(\.id) == ["file:/Users/ana/Documents/report.pdf", "file:/Users/ana/Projects"]) // a dialog can go there too
+    #expect(rows[0].subtitle.hasPrefix("Selected in Finder") && rows[0].actions != nil && rows[0].score > rows[1].score)
+}
+
+@Test func fileSharing() throws {
+    let file = FileManager.default.temporaryDirectory.appending(path: "share-\(UUID().uuidString).txt")
+    try "hi".write(to: file, atomically: true, encoding: .utf8)
+    defer { try? FileManager.default.removeItem(at: file) }
+    let titles = fileActionRows(file.path, terminal: nil).map(\.title)
+    #expect(Array(titles[6...8]) == ["AirDrop", "Send in Messages", "Send in Mail"])
+}
+
+// MARK: Made-up test data
+
+/// `fake name`, `fake email`…: test data that's never anyone's: names from lists, example.com addresses, the 555-01xx
+/// numbers kept for fiction, an IBAN whose check digits hold.
+@Test func fakeData() {
+    let run = { (name: String) -> String in runTextTool(name, typed: nil, clip: Clip(text: nil)) ?? "" }
+    #expect(run("fake name").split(separator: " ").count == 2)
+    let email = run("fake email")
+    #expect(email.hasSuffix("@example.com") && email.allSatisfy(\.isASCII) && email == email.lowercased())
+    #expect(run("fake phone").wholeMatch(of: /\(\d{3}\) 555-01\d\d/) != nil)
+    #expect(run("fake address").wholeMatch(of: /\d+ .+, .+, [A-Z]{2} \d{5}/) != nil)
+    #expect(!run("fake company").isEmpty)
+    let iban = run("fake iban")
+    #expect(iban.hasPrefix("DE") && iban.count == 22)
+    let moved = iban.dropFirst(4) + iban.prefix(4) // the IBAN check: as a number, it leaves 1 divided by 97
+    let digits = moved.map { $0.isLetter ? String(Int($0.asciiValue!) - 55) : String($0) }.joined()
+    #expect(digits.reduce(0) { ($0 * 10 + $1.wholeNumberValue!) % 97 } == 1)
+}
+
+/// Tab on something made up (a password, a UUID, fake data) makes another in its place; the same text made again
+/// has nothing new to offer.
+@Test func tabMakesAnother() async {
+    let provider = TextToolProvider()
+    let password = await provider.results(for: "password 32").first
+    #expect(password?.more?.label == "Another" && password?.more?.fill == "password 32")
+    #expect(await provider.results(for: "uuid").first?.more?.fill == "uuid")
+    let upper = await provider.results(for: "upper hi").first
+    #expect(upper != nil && upper?.more == nil)
+    let fakes = await provider.results(for: "fake")
+    #expect(fakes.count == 6 && fakes.allSatisfy { $0.more?.fill.hasPrefix("fake ") == true })
+}
+
+@MainActor @Test func tabRemakesInPlace() async throws {
+    let model = SearchModel(providers: [TextToolProvider()])
+    model.query = "password"
+    try await Task.sleep(for: .milliseconds(150))
+    let first = try #require(model.rows.first?.title)
+    model.complete()
+    try await Task.sleep(for: .milliseconds(150))
+    #expect(model.query == "password" && model.rows.first?.title.count == 20 && model.rows.first?.title != first)
+}
+
+// MARK: Wikipedia
+
+private let wikiSerendipity = try! Data(contentsOf: URL(filePath: #filePath).deletingLastPathComponent().appending(path: "Fixtures/wiki-serendipity.json"))
+
+/// `wiki serendipity`, in its chip: Wikipedia's summary across the card, its picture beside it, asked only once typing
+/// pauses. Enter opens the article.
+@Test func wikipediaSummary() async throws {
+    let card = try #require(parseWikipedia(wikiSerendipity, language: "en"))
+    #expect(card.title == "Serendipity" && card.description == "Unplanned, fortunate discovery")
+    #expect(card.extract.hasPrefix("Serendipity is an unplanned fortunate discovery."))
+    #expect(card.url.absoluteString == "https://en.wikipedia.org/wiki/Serendipity" && card.imageURL?.host() == "thumb.wikimedia.org")
+    #expect(parseWikipedia(Data(#"{"batchcomplete":true}"#.utf8), language: "en") == nil)
+
+    let wiki = WikipediaProvider(pause: .zero, language: "en", fetch: { _, _ in wikiSerendipity }, image: { _ in nil })
+    let loading = try #require(await wiki.modeResults(for: "wiki serendipity").first)
+    guard case .wiki(let shape)? = loading.answer else { Issue.record("no card while it loads"); return }
+    #expect(shape.loading)
+    let row = try #require(await loading.later?().first)
+    guard case .wiki(let answer)? = row.answer else { Issue.record("no card"); return }
+    #expect(row.title == "Serendipity" && answer.title == "Serendipity" && !answer.loading && row.actionTitle == "Open")
+
+    let nothing = WikipediaProvider(pause: .zero, language: "en", fetch: { _, _ in Data(#"{"batchcomplete":true}"#.utf8) }, image: { _ in nil })
+    let empty = await nothing.modeResults(for: "wiki xqzzv").first?.later?()
+    #expect(empty?.map(\.title) == ["Nothing on Wikipedia for “xqzzv”"])
+    let offline = WikipediaProvider(pause: .zero, language: "en", fetch: { _, _ in nil }, image: { _ in nil })
+    let unreachable = await offline.modeResults(for: "wiki lisbon").first?.later?()
+    #expect(unreachable?.map(\.title) == ["Couldn't reach Wikipedia"])
+    #expect(await wiki.results(for: "wik").first?.completion == "wiki ") // its start offers the chip
+}
+
+// MARK: Synonyms
+
+private let thesaurusHappy = "happy adjective 1 Melissa came in looking happy and excited. contented, content, cheerful, cheery, merry; cock-a-hoop, in good spirits; informal chirpy, on top of the world; dated gay. ANTONYMS sad. 2 we will be happy to advise you. willing, glad, ready, pleased; disposed, inclined; informal game. ANTONYMS unwilling. 3 by a happy coincidence the date was Richard's birthday | a happy choice of venue. fortunate, lucky, favorable. ANTONYMS unfortunate."
+
+/// The thesaurus's entry as senses: each one's example, and its words without the informal, dated or regional ones.
+@Test func thesaurusSenses() {
+    let senses = parseThesaurus(thesaurusHappy)
+    #expect(senses.map(\.example) == ["Melissa came in looking happy and excited", "we will be happy to advise you",
+                                      "by a happy coincidence the date was Richard's birthday"])
+    #expect(senses[0].words == ["contented", "content", "cheerful", "cheery", "merry", "cock-a-hoop", "in good spirits"])
+    #expect(senses[1].words == ["willing", "glad", "ready", "pleased", "disposed", "inclined"])
+    let noun = parseThesaurus("serendipity noun technical innovation may be the result of pure serendipity. chance, happy chance, accident; luck, good luck. ")
+    #expect(noun.count == 1 && noun.first?.words == ["chance", "happy chance", "accident", "luck", "good luck"])
+    let run = parseThesaurus("run verb 1 she ran across the road. sprint, race; informal tear. ANTONYMS dawdle. 2 the men ran. flee, bolt. noun 1 a six-mile run. jog, sprint. ")
+    #expect(run.map(\.words) == [["sprint", "race"], ["flee", "bolt"], ["jog", "sprint"]])
+}
+
+/// `synonyms happy`: a row per word, under its sense's example; Enter copies it.
+@Test func synonymRows() async {
+    let synonyms = SynonymsProvider(lookUp: { $0 == "happy" ? thesaurusHappy : nil })
+    let rows = await synonyms.modeResults(for: "synonyms happy")
+    #expect(rows.count == 16 && rows.first?.title == "contented" && rows.first?.actionTitle == "Copy")
+    #expect(rows.first?.section == "“Melissa came in looking happy and excited”")
+    #expect(await synonyms.modeResults(for: "synonyms qwxz").map(\.title) == ["No synonyms for “qwxz”"])
+    #expect(await synonyms.results(for: "syno").first?.completion == "synonyms ")
+    let none = await SynonymsProvider(lookUp: { _ in nil }, hasThesaurus: false).modeResults(for: "synonyms happy")
+    #expect(none.map(\.title) == ["This Mac has no thesaurus turned on"])
+}
+
+/// With the preview open the list is about 296 points wide: a selected row's hints give way to its title instead of
+/// pushing the row past both edges ("Actions ⇥ Paste to Google Chrome ↵" was wider than the room left).
+@MainActor @Test func aSelectedRowFitsBesideThePreview() {
+    let row = LauncherResult(id: "clip", title: "git checkout -b release/0.13", icon: .symbol("doc"), score: 1,
+                             actionTitle: "Paste to Google Chrome", action: {}, actions: { [] })
+    for width: CGFloat in [296, 220] {
+        let size = NSHostingController(rootView: ResultRow(result: row, selected: true)).sizeThatFits(in: CGSize(width: width, height: 46))
+        #expect(size.width <= width, "\(size.width) in \(width)")
+    }
+    let wide = NSHostingController(rootView: ResultRow(result: row, selected: true)).sizeThatFits(in: CGSize(width: 680, height: 46))
+    #expect(wide.width <= 680)
 }

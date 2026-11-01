@@ -128,6 +128,7 @@ extension Verb {
                 NSWorkspace.shared.activateFileViewerSelecting([URL(filePath: $0)])
             },
             fileVerb("copy path", "Copy Path", icon: .symbol("doc.on.doc"), files: files) { copyToClipboard($0) },
+            fileVerb("look", "Quick Look", icon: .symbol("eye"), files: files) { quickLook($0) },
             Verb(keyword: "open with", title: "Open With", icon: .symbol("arrow.up.forward.app"), targets: { await openWithRows($0, files: files) }),
             fileVerb("trash", "Move to Trash", icon: .symbol("trash"), files: files, confirm: { "Move “\($0)” to the Trash?" }) { moveToTrash($0) },
             fileVerb("terminal", "Open in Terminal", icon: .symbol("terminal"), files: files) { path in
@@ -649,6 +650,38 @@ func windowRows(_ filter: String) -> [LauncherResult] {
         }
     }
     return rows
+}
+
+/// Whether an Open or Save dialog is in the app in front, as its window or a sheet on it. AppKit names them for
+/// Accessibility ("open-panel", "save-panel"), whatever the app and its language.
+@MainActor func frontFileDialog() -> Bool {
+    guard AXIsProcessTrusted(), let app = NSWorkspace.shared.frontmostApplication, app.processIdentifier != getpid() else { return false }
+    let element = AXUIElementCreateApplication(app.processIdentifier)
+    AXUIElementSetMessagingTimeout(element, 0.1)
+    guard let window = axElement(element, kAXFocusedWindowAttribute) else { return false }
+    var children: CFTypeRef?
+    AXUIElementCopyAttributeValue(window, kAXChildrenAttribute as CFString, &children)
+    let sheets = (children as? [AXUIElement] ?? []).filter { axString($0, kAXRoleAttribute) == kAXSheetRole }
+    return ([window] + sheets).contains { isFileDialog(axString($0, kAXIdentifierAttribute)) }
+}
+
+func isFileDialog(_ identifier: String?) -> Bool { identifier == "open-panel" || identifier == "save-panel" }
+
+/// The file or folder a row stands for, when it's one a dialog can go to.
+func dialogPath(forRow id: String) -> String? {
+    ["file:", "latest:"].first { id.hasPrefix($0) }.map { String(id.dropFirst($0.count)) }
+}
+
+/// Takes the dialog in front to `path`: its Go to Folder field (⌘⇧G), the path pasted in, Return. A file is selected
+/// in its folder; the dialog's own button still opens or saves.
+@MainActor func goInDialog(to path: String) {
+    guard hasAccessibility("go there in the dialog") else { return }
+    sendKeystroke(kVK_ANSI_G, [.maskCommand, .maskShift], after: .milliseconds(150))
+    Task {
+        // ponytail: fixed waits for the sheet to open and take the paste; longer if a slow Mac ever misses them.
+        try? await Task.sleep(for: .milliseconds(500))
+        await pasteKeepingClipboard(path, paste: { sendPaste(); sendKeystroke(kVK_Return, [], after: .milliseconds(350)) })
+    }
 }
 
 func axString(_ element: AXUIElement, _ attribute: String) -> String? {

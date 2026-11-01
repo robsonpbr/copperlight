@@ -17,14 +17,13 @@ you leaves your Mac. Ideas are welcome: [open an issue](https://github.com/ramos
 with VoiceOver.
 
 - **Updates:** tell you when a new version is out, and install it, checking that it's really Copperlight first.
-- **Settings for everything:** set each feature's options, in Settings and in config.toml. Turning any feature off
-  and your own words for its keyword (even the `:` prefix) are done.
+- **Settings for everything:** the options still missing (decimals and separators for math, a stock watchlist,
+  which dictionary), a search over all of Settings, and resetting a feature to its defaults. Turning any feature off,
+  your own words for its keyword (even the `:` prefix) and Settings › Options are done.
 - **Settings that last:** every config.toml key and the saved state settled before 1.0; after it, old keys keep
   working.
 - **Other languages:** the whole interface, rows, Settings and docs in other languages; what you type stays as it is.
 - **VoiceOver:** every row, chip and answer card read out properly.
-- **A privacy page:** every permission Copperlight can ask for, what each one turns on, and every server it ever
-  contacts.
 - **Sturdier:** with permissions refused, on several screens, in other number and date formats, on Intel, and after
   weeks of clipboard history; Copy Diagnostics in About, for reporting a problem without crash reports.
 - **If it's ready:** `brew install` through Copperlight's own tap.
@@ -32,46 +31,48 @@ with VoiceOver.
 Roughly in that order, then a few weeks of daily use with fixes only.
 
 ## Later
-
-- **Calculating:** `2rem in px`.
-- **Finding:** `:look` for a full-size preview; kinds, dates and tags in the files chip (`f pdf invoice`, `f last
-  week`); folders listed newest first; symbols by name (→, ⌘, ™) and a default emoji skin tone; songs, albums and
-  playlists from your Music library; Safari's Reading List and iCloud Tabs; recent files; the text inside files back, as its own
-  chip; `wiki`, an article's summary and picture, fetched only when you pause.
-- **Clipboard:** pin items; copied files; copied images found by their text, and QR codes read from them; `:plain` and
-  `:clear 15 min` in clipboard history; save an item as a snippet; paste in sequence, one older item each time; an
-  item floating above every window while you work from it; typing an item out key by key, where pasting is blocked
-  (a virtual machine, a remote screen); pasting text or a picture as a file; the last two items compared, line by
-  line; links copied without their tracking (`utm_`, `fbclid`); history and previews kept hidden while you share
-  your screen.
+- **Finding:** kinds, dates and tags in the files chip (`f pdf invoice`, `f last week`); folders listed newest first;
+  symbols by name (→, ⌘, ™) and a default emoji skin tone; songs, albums and playlists from your Music library;
+  Safari's Reading List and iCloud Tabs; recent files; the text inside files back, as its own chip.
+- **Clipboard:** copied files; copied images found by their text, and QR codes read from them; `:plain` and `:clear 15
+  min` in clipboard history; save an item as a snippet; an item floating above every window while you work from it;
+  typing an item out key by key, where pasting is blocked (a virtual machine, a remote screen); pasting text or a
+  picture as a file; the last two items compared, line by line; history and previews kept hidden while you share your
+  screen.
 - **Text:** more placeholders (`{uuid}`, `{clipboard 1}`, a snippet inside another) with modifiers (`|upper`), and
   several named arguments; Markdown snippets pasted as rich text; title, kebab and sentence case, random numbers, and
-  the links pulled out of text; `synonyms happy`, from the Mac's thesaurus; made-up names, emails, addresses and
-  phone numbers for testing (`fake name`); the front browser tab as a Markdown link (`link`).
+  the links pulled out of text; the front browser tab as a Markdown link (`link`).
 - **Windows:** sixths, fourths, the full height or width, `:size 1280x800`, gaps between windows; layouts that open
   their apps too.
-- **Files and apps:** `:move to`, `:rename`, `:duplicate`, `:compress`, `:info` and sharing (AirDrop, Messages,
-  Mail) on a file; `:new file notes.md` in the folder you're in; over an Open or Save dialog, Enter on a folder takes
-  the dialog there; the files selected in Finder as what the hotkey acts on; several rows at once, opened, trashed or
-  zipped together; `:click send`, the buttons, links and tabs of the window you're in, by name; `:uninstall` (asks
-  first); `:upgrade`; volume per app.
+- **Files and apps:** `:move to`, `:rename`, `:duplicate`, `:compress`, `:info` on a file; `:new file notes.md` in the
+  folder you're in; several rows at once, opened, trashed or zipped together; `:click send`, the buttons, links and
+  tabs of the window you're in, by name; `:uninstall` (asks first); `:upgrade`; volume per app.
 - **Sports and flights:** scores and the next games of your teams; a flight's status from its number.
-- **Your day:** free slots to copy, and the next meeting in the menu bar; lists, priorities and
-  places in `add todo` and `add event`; what's playing in the empty launcher; screenshots and downloads by date, and
-  pasting the latest; several timers at once; a line of your own in the menu bar until you clear it; the latest
-  verification code from Messages, to copy.
-- **The Mac:** `:input` for the microphone; the Wi-Fi password, and a QR code for guests; Stage Manager on and off; dismiss notifications;
-  `:vpn`; `:resolution` and `:mirror` for displays; the menu bar's icons by name, even the ones hidden behind the
-  notch; what keeps a disk from ejecting, to quit it; `clean keyboard`, the keys locked for 30 seconds while you
-  wipe them.
-- **Extending it:** script rows with live output and a choice of arguments; `copperlight choose`, lines from a
-  pipe as rows; a URL scheme and Shortcuts actions; a
-  starter library of commands, and importers for snippets and quicklinks from other apps.
-- **Look and feel:** themes; text size, and which screen it opens on; switching the keyboard layout from the field; a double-tapped modifier as the hotkey (still one hotkey).
+- **Your day:** the next meeting in the menu bar; lists, priorities and places in `add todo` and `add event`; what's
+  playing in the empty launcher; several timers at once; a line of your own in the menu bar until you clear it.
+- **The Mac:** `:input` for the microphone; Stage Manager on and off; dismiss notifications; `:vpn`; `:resolution` and
+  `:mirror` for displays; the menu bar's icons by name, even the ones hidden behind the notch; what keeps a disk from
+  ejecting, to quit it; `clean keyboard`, the keys locked for 30 seconds while you wipe them.
+- **Extending it:** script rows with live output and a choice of arguments; `copperlight choose`, lines from a pipe as
+  rows; a URL scheme and Shortcuts actions; a starter library of commands, and importers for snippets and quicklinks
+  from other apps.
+- **Look and feel:** themes; text size, and which screen it opens on; switching the keyboard layout from the field; a
+  double-tapped modifier as the hotkey (still one hotkey).
 - **Usage stats**, kept on your Mac.
+- **Ask:** `ask` ⇥, a question, and the answer on a card, written on your Mac by Apple Intelligence's on-device model
+  or an open model you run yourself; nothing sent to an AI service.
 
 ## Done
 
+- **v0.13:** a privacy page: every server Copperlight contacts, every permission and every file it keeps. `free
+  tomorrow`, your free time to paste in an email; `month`, the month as a grid; `camera`, yourself before a call;
+  `screenshots` and `downloads`, the newest pasted where you are; `wifi password`, with a QR code that joins a phone;
+  `codes` from Messages; `wiki lisbon`; `synonyms happy`; `fake name` and other test data, Tab for another (a
+  password or a UUID too); links copied without their tracking; clipboard pins, and pasting in the order you copied;
+  the files selected in Finder on top when it opens, and over an Open or Save dialog, Enter takes the dialog to a file
+  or folder; AirDrop, Messages, Mail and Quick Look on a file (`:look`); `2rem in px`. Settings › Options: the
+  calendars and reminder lists that count, how early the next meeting shows, working hours, what Enter does on a
+  person, °C or °F, your cities for `time`, how a color is copied, and the sound a timer ends with.
 - **v0.12:** settings for everything: Settings › Features turns any feature off, Settings › Launcher sets what the
   empty launcher shows and what it learns (with Forget) and whether answers take their own shape, Settings ›
   Keywords gives any keyword words of your own (`t` for translate, even `;` for `:`), and Settings › General › Look

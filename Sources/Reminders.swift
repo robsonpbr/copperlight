@@ -1,5 +1,6 @@
 import AppKit
 import EventKit
+import Synchronization
 
 /// A reminder with a due date, as the launcher shows it.
 struct ReminderItem: Equatable, Sendable {
@@ -64,6 +65,15 @@ func fetchDueReminders() async -> [ReminderItem]? {
 struct RemindersProvider: ResultProvider {
     var calendar = Calendar.current
     var fetch: @Sendable () async -> [ReminderItem]? = fetchDueReminders
+    /// `[reminders] lists`: only these lists' reminders count; none, all of them.
+    var lists: @Sendable () -> [String] = { RemindersProvider.chosenLists.withLock { $0 } }
+    static let chosenLists = Mutex<[String]>([])
+
+    /// The reminders that are due, from the lists that count.
+    private func due() async -> [ReminderItem]? {
+        let names = lists()
+        return await fetch().map { items in chosen(items, named: names, name: \.list) ?? items }
+    }
 
     private func row(_ item: ReminderItem, score: Double, now: Date) -> LauncherResult {
         let when = item.allDay ? (calendar.isDate(item.due, inSameDayAs: now) ? "Today" : item.due.formatted(.dateTime.weekday().day().month()))
@@ -77,14 +87,14 @@ struct RemindersProvider: ResultProvider {
 
     /// For the empty launcher. Nothing without access.
     func upNext(now: Date = .now) async -> [LauncherResult] {
-        dueNow(await fetch() ?? [], now: now, calendar: calendar).enumerated().map { row($1, score: 99.5 - Double($0) / 100, now: now) }
+        dueNow(await due() ?? [], now: now, calendar: calendar).enumerated().map { row($1, score: 99.5 - Double($0) / 100, now: now) }
     }
 
     func results(for query: String) async -> [LauncherResult] { await results(for: query, now: .now) }
 
     func results(for query: String, now: Date) async -> [LauncherResult] {
         guard ["due", "overdue", "todos"].contains(query.lowercased().trimmingCharacters(in: .whitespaces)) else { return [] }
-        guard let items = await fetch() else {
+        guard let items = await due() else {
             let status = EKEventStore.authorizationStatus(for: .reminder)
             return [status == .denied || status == .restricted
                 ? LauncherResult(id: "builtin:due", title: "Allow Copperlight to see your reminders", subtitle: "Privacy & Security → Reminders",

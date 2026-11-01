@@ -1,3 +1,4 @@
+import Synchronization
 import AppKit
 
 /// A color in sRGB, 0–255 a channel, in the notations CSS and design apps write.
@@ -81,7 +82,14 @@ extension RGBColor {
     }
 }
 
-enum ColorNotation: CaseIterable { case hex, rgb, hsl }
+enum ColorNotation: String, CaseIterable, Sendable { case hex, rgb, hsl }
+
+extension RGBColor {
+    /// The color written in `notation`.
+    func text(_ notation: ColorNotation) -> String {
+        switch notation { case .hex: hex; case .rgb: rgb; case .hsl: hsl }
+    }
+}
 
 /// "#ff8800", "#f80", "rgb(255, 136, 0)", "hsl(32, 100%, 50%)" (spaces for commas too): the color, and how it was
 /// written. nil for anything else: a bare "ff8800" may be a file's name or a hash.
@@ -127,6 +135,9 @@ struct ColorProvider: ResultProvider {
     var show: @MainActor @Sendable (String) -> Void = { _ in }
     /// Where picked colors are kept; nil: not kept.
     var store: StateStore? = nil
+    /// `[colors] copy`: the notation a picked color is copied in.
+    var copies: @Sendable () -> ColorNotation = { ColorProvider.chosenNotation.withLock { $0 } }
+    static let chosenNotation = Mutex(ColorNotation.hex)
 
     func results(for query: String) async -> [LauncherResult] {
         if let (color, typed) = parseColor(query) {
@@ -146,12 +157,13 @@ struct ColorProvider: ResultProvider {
     }
 
     private func pickRow(subtitle: String, score: Double) -> LauncherResult {
-        LauncherResult(id: "builtin:pick color", title: "Pick Color", subtitle: subtitle, icon: .symbol("eyedropper"), score: score,
-                       actionTitle: "Pick", action: { [show, store] in
+        let notation = copies()
+        return LauncherResult(id: "builtin:pick color", title: "Pick Color", subtitle: subtitle, icon: .symbol("eyedropper"), score: score,
+                              actionTitle: "Pick", action: { [show, store] in
             NSColorSampler().show { picked in
                 guard let color = picked.flatMap(RGBColor.init) else { return } // Esc: nothing picked
                 Task { @MainActor in
-                    copyToClipboard(color.hex)
+                    copyToClipboard(color.text(notation))
                     if let store { rememberColor(color, in: store) }
                     show(color.hex)
                 }
@@ -163,18 +175,20 @@ struct ColorProvider: ResultProvider {
     /// you're on shows on a band over the list. None yet: Pick Color.
     private func keptRows() async -> [LauncherResult] {
         let kept = await MainActor.run { [store] in store?.get(PickedColor.stateSection, as: [PickedColor].self) ?? [] }
-        let now = Date.now
+        let now = Date.now, notation = copies()
         let rows = kept.enumerated().compactMap { index, picked -> LauncherResult? in
             guard let color = parseColor(picked.hex)?.color else { return nil }
-            return LauncherResult(id: "color:kept:\(picked.hex)", title: picked.hex, subtitle: color.rgb, accessory: shortAge(picked.at, now: now),
-                                  icon: .color(color), score: 50 - Double(index) / 1000, actionTitle: "Copy", action: { copyToClipboard(picked.hex) },
+            let text = color.text(notation)
+            return LauncherResult(id: "color:kept:\(picked.hex)", title: text, subtitle: notation == .hex ? color.rgb : color.hex,
+                                  accessory: shortAge(picked.at, now: now), icon: .color(color), score: 50 - Double(index) / 1000,
+                                  actionTitle: "Copy", action: { copyToClipboard(text) },
                                   answer: .color(color))
         }
         return rows.isEmpty ? [pickRow(subtitle: "Your colors show here once you’ve picked some", score: 50)] : rows
     }
 
     private func row(_ color: RGBColor, _ notation: ColorNotation, score: Double) -> LauncherResult {
-        let text = switch notation { case .hex: color.hex; case .rgb: color.rgb; case .hsl: color.hsl }
+        let text = color.text(notation)
         return LauncherResult(id: "color:\(notation)", title: text, accessory: notation == .hex ? "Hex" : "\(notation)".uppercased(),
                               icon: .color(color), score: score, actionTitle: "Copy", action: { copyToClipboard(text) }, answer: .color(color))
     }

@@ -205,7 +205,7 @@ final class WeatherProvider: ResultProvider {
     private let status: @Sendable () -> LocationStatus
     private let locate: @Sendable () async -> Place?
     private let fetch: @Sendable (URL) async -> Data?
-    private let fahrenheit: Bool
+    private let fahrenheit: Mutex<Bool> // [weather] units, or what the Mac uses
     var modes: [Mode] { [Mode(prefix: "weather ", title: "Weather", icon: .symbol(Self.icon), hint: "A city, or nothing for where you are")] }
 
     init(pause: Duration = .milliseconds(350), city: String = "", status: @escaping @Sendable () -> LocationStatus = { Locator.status },
@@ -217,10 +217,15 @@ final class WeatherProvider: ResultProvider {
              return data
          }) {
         self.city = Mutex(city) // a Mutex can't go in a tuple
-        (self.pause, self.status, self.locate, self.fahrenheit, self.fetch) = (pause, status, locate, fahrenheit, fetch)
+        self.fahrenheit = Mutex(fahrenheit)
+        (self.pause, self.status, self.locate, self.fetch) = (pause, status, locate, fetch)
     }
 
     func setCity(_ name: String) { city.withLock { $0 = name.trimmingCharacters(in: .whitespaces) } }
+
+    func setUnits(_ units: Config.Weather.Units) {
+        fahrenheit.withLock { $0 = units == .auto ? Locale.current.measurementSystem == .us : units == .fahrenheit }
+    }
 
     func results(for query: String) async -> [LauncherResult] {
         startRow(query, keyword: "weather", title: "Weather", hint: "Where you are, or a city: weather lisbon", symbol: Self.icon).map { [$0] } ?? []
@@ -272,7 +277,7 @@ final class WeatherProvider: ResultProvider {
     }
 
     private func row(_ forecast: Forecast, place: String, updated: Date) -> LauncherResult {
-        let card = weatherCard(forecast, place: place, updated: updated, fahrenheit: fahrenheit)
+        let card = weatherCard(forecast, place: place, updated: updated, fahrenheit: fahrenheit.withLock { $0 })
         let today = card.days.first.map { " · H \(Int($0.high.rounded()))° L \(Int($0.low.rounded()))°" } ?? ""
         return LauncherResult(id: "weather:\(place)", title: "\(card.temperature) · \(card.conditions)", subtitle: place + today,
                               icon: .symbol(Self.icon), score: 50, actionTitle: "Open", action: {

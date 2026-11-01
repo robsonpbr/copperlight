@@ -1,3 +1,4 @@
+import Synchronization
 import AppKit
 import Contacts
 
@@ -21,6 +22,20 @@ struct Person: Equatable, Sendable {
 
 /// A number as links take it: "+351 912 345 678" → "+351912345678".
 private func dialable(_ phone: String) -> String { phone.filter { $0.isNumber || $0 == "+" } }
+
+/// What Enter does on a person, `[contacts] enter`: message, call, FaceTime or email them; a message when they lack
+/// what it takes; nil when there's no way at all (Enter opens their card).
+func enterAction(_ person: Person, _ enter: Config.Contacts.Enter) -> (title: String, url: URL)? {
+    let phone = person.phones.first.map { dialable($0.value) }, email = person.emails.first?.value
+    let chosen: (String, URL?)? = switch enter {
+    case .message: nil
+    case .call: phone.map { ("Call", URL(string: "tel:" + $0)) }
+    case .facetime: (phone ?? email).map { ("FaceTime", URL(string: "facetime:" + $0)) }
+    case .email: email.map { ("Email", URL(string: "mailto:" + $0)) }
+    }
+    if let (title, url) = chosen, let url { return (title, url) }
+    return messageURL(person).map { ("Message", $0) }
+}
 
 /// Messages with them: their first mobile number (else their first number), else their first email. nil: neither.
 func messageURL(_ person: Person) -> URL? {
@@ -162,11 +177,15 @@ actor ContactsProvider: ResultProvider {
         })
     }
 
+    /// `[contacts] enter`.
+    static let chosenEnter = Mutex(Config.Contacts.Enter.message)
+
     private func personRow(_ person: Person, score: Double) -> LauncherResult {
-        let open = messageURL(person) ?? contactCardURL(person.id)
+        let enter = enterAction(person, Self.chosenEnter.withLock { $0 })
+        let open = enter?.url ?? contactCardURL(person.id)
         return LauncherResult(id: "contact:\(person.id)", title: person.name,
                               subtitle: [person.phones.first?.value, person.emails.first?.value].compactMap(\.self).joined(separator: " · "),
-                              icon: .symbol("person"), score: score, actionTitle: messageURL(person) == nil ? "Open in Contacts" : "Message",
+                              icon: .symbol("person"), score: score, actionTitle: enter?.title ?? "Open in Contacts",
                               action: { if let open { NSWorkspace.shared.open(open) } }, more: ("Actions", Self.prefix + person.name))
     }
 

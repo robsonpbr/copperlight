@@ -65,6 +65,7 @@ struct ClipboardStore: Sendable {
         let imageSize: (width: Int, height: Int)? // nil for text
         let app: String? // bundle id of the app in front when it was copied
         let copiedAt: Date
+        var pinned = false // kept first, and never pruned or cleared
     }
 
     private let db: DatabaseQueue
@@ -94,6 +95,9 @@ struct ClipboardStore: Sendable {
                 ALTER TABLE item ADD COLUMN height INTEGER;
                 """)
         }
+        migrator.registerMigration("v3: pins") { db in
+            try db.execute(sql: "ALTER TABLE item ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
+        }
         try migrator.migrate(db)
     }
 
@@ -122,17 +126,18 @@ struct ClipboardStore: Sendable {
     func items(matching query: String = "", limit: Int = 200) throws -> [Item] {
         let rows = try db.read { db in
             try Row.fetchAll(db, sql: """
-                SELECT id, app, copiedAt, width, height,
+                SELECT id, app, copiedAt, width, height, pinned,
                        CASE WHEN image IS NULL THEN substr(text, 1, ?) ELSE 'Image ' || width || '×' || height END AS head,
                        CASE WHEN image IS NULL THEN length(text) ELSE length(image) END AS length,
                        CASE WHEN image IS NULL THEN instr(lower(text), lower(?)) ELSE instr('image', lower(?)) END > 0 AS hit
-                FROM item ORDER BY copiedAt DESC, id DESC
+                FROM item ORDER BY pinned DESC, copiedAt DESC, id DESC
                 """, arguments: [Self.previewLength, query, query])
         }
         let item = { (row: Row) in
             let (width, height) = (row["width"] as Int?, row["height"] as Int?)
             return Item(id: row["id"], text: row["head"], length: row["length"],
-                        imageSize: width.flatMap { w in height.map { (w, $0) } }, app: row["app"], copiedAt: row["copiedAt"])
+                        imageSize: width.flatMap { w in height.map { (w, $0) } }, app: row["app"], copiedAt: row["copiedAt"],
+                        pinned: row["pinned"])
         }
         guard !query.isEmpty else { return rows.prefix(limit).map(item) }
         // ponytail: fuzzy runs over every row on each keystroke; fine for ~1000 items, an FTS index if it isn't.
@@ -164,18 +169,34 @@ struct ClipboardStore: Sendable {
         try db.write { try $0.execute(sql: "DELETE FROM item WHERE id = ?", arguments: [id]) }
     }
 
+    /// Everything but the pinned items.
     func clear() throws {
-        try db.write { try $0.execute(sql: "DELETE FROM item") }
+        try db.write { try $0.execute(sql: "DELETE FROM item WHERE pinned = 0") }
+    }
+
+    func pin(_ id: Int64, _ pinned: Bool) throws {
+        try db.write { try $0.execute(sql: "UPDATE item SET pinned = ? WHERE id = ?", arguments: [pinned, id]) }
+    }
+
+    /// The items copied after `id`'s, in the order they were copied.
+    func copied(after id: Int64) throws -> [Int64] {
+        try db.read { db in
+            try Int64.fetchAll(db, sql: """
+                SELECT id FROM item WHERE copiedAt > (SELECT copiedAt FROM item WHERE id = ?) ORDER BY copiedAt, id
+                """, arguments: [id])
+        }
     }
 
     func prune(maxItems: Int, maxDays: Int, maxImages: Int = .max, now: Date = .now) throws {
         try db.write { db in
-            try db.execute(sql: "DELETE FROM item WHERE copiedAt < ?", arguments: [now.addingTimeInterval(-Double(maxDays) * 86_400)])
-            try db.execute(sql: "DELETE FROM item WHERE id NOT IN (SELECT id FROM item ORDER BY copiedAt DESC, id DESC LIMIT ?)",
-                           arguments: [maxItems])
+            // Pinned items are kept, and don't count.
+            try db.execute(sql: "DELETE FROM item WHERE pinned = 0 AND copiedAt < ?", arguments: [now.addingTimeInterval(-Double(maxDays) * 86_400)])
             try db.execute(sql: """
-                DELETE FROM item WHERE image IS NOT NULL AND id NOT IN
-                    (SELECT id FROM item WHERE image IS NOT NULL ORDER BY copiedAt DESC, id DESC LIMIT ?)
+                DELETE FROM item WHERE pinned = 0 AND id NOT IN (SELECT id FROM item WHERE pinned = 0 ORDER BY copiedAt DESC, id DESC LIMIT ?)
+                """, arguments: [maxItems])
+            try db.execute(sql: """
+                DELETE FROM item WHERE pinned = 0 AND image IS NOT NULL AND id NOT IN
+                    (SELECT id FROM item WHERE pinned = 0 AND image IS NOT NULL ORDER BY copiedAt DESC, id DESC LIMIT ?)
                 """, arguments: [maxImages])
         }
     }
@@ -213,8 +234,9 @@ func clipboardSection(_ date: Date, now: Date = .now, calendar: Calendar = .curr
     var settings: Config.Clipboard? { didSet { prune() } }
     private var lastChange = NSPasteboard.general.changeCount // what's on the pasteboard at launch isn't new
     private var timer: Timer?
-    /// Clipboard history on (Settings › Features): the pasteboard is looked at twice a second, every 2 s while you're
-    /// away. Off, not at all, and what's copied meanwhile is never seen.
+    /// Clipboard history or links without tracking on (Settings › Features): the pasteboard is looked at twice a second,
+    /// every 2 s while you're away. Both off, not at all, and what's copied meanwhile is never seen. A copied link loses
+    /// its tracking (`cleanLink`) before it's recorded.
     var recording = false {
         didSet {
             guard recording != oldValue else { return }
@@ -251,7 +273,15 @@ func clipboardSection(_ date: Date, now: Date = .now, calendar: Calendar = .curr
         lastChange = pasteboard.changeCount
         let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         let settings = settings ?? .init()
-        guard let content = clipboardContent(pasteboard, app: app, ignoreApps: settings.ignoreApps) else { return }
+        guard var content = clipboardContent(pasteboard, app: app, ignoreApps: settings.ignoreApps) else { return }
+        if Feature.cleanLinks.isOn, case .text(let text) = content, let clean = cleanLink(text) {
+            pasteboard.clearContents()
+            pasteboard.setString(clean, forType: .string)
+            pasteboard.setString(clean, forType: .URL)
+            lastChange = pasteboard.changeCount
+            content = .text(clean)
+        }
+        guard Feature.clipboard.isOn else { return } // watching only for links
         do {
             switch content {
             case .text(let text):
@@ -308,7 +338,7 @@ actor ClipboardProvider: ResultProvider {
             Verb(keyword: "delete", title: "Delete from History", icon: .symbol("trash"),
                  targets: { [self] in await rows(for: $0, mode: .delete) }),
             Verb(keyword: "clear", title: "Clear History", icon: .symbol("trash.fill"),
-                 confirm: "Delete all clipboard history? This can't be undone.", run: { [store] in
+                 confirm: "Delete all clipboard history but the pinned items? This can't be undone.", run: { [store] in
                 do { try store.clear() } catch { notify("Couldn't clear clipboard history", error.localizedDescription) }
             }),
         ]
@@ -347,9 +377,9 @@ actor ClipboardProvider: ResultProvider {
             let shown = image != nil ? "" : more > 0 ? item.text + "\n\n… \(more) more characters" : item.text
             var actions: (@Sendable () async -> [LauncherResult])?
             if mode == .paste {
-                let (id, picture, itemDetails) = (item.id, image, details)
+                let (id, pinned, picture, itemDetails) = (item.id, item.pinned, image, details)
                 actions = { [self] in
-                    await actionRows(id, pasteTitle: actionTitle, trusted: trusted, preview: shown, image: picture, details: itemDetails)
+                    await actionRows(id, pinned: pinned, pasteTitle: actionTitle, trusted: trusted, preview: shown, image: picture, details: itemDetails)
                 }
             }
             return LauncherResult(
@@ -361,7 +391,7 @@ actor ClipboardProvider: ResultProvider {
                 action: action(mode, item.id),
                 actions: actions,
                 staysOpen: mode == .delete,
-                section: query.isEmpty ? clipboardSection(item.copiedAt, now: now) : nil, // filtered: not in date order
+                section: query.isEmpty ? item.pinned ? "Pinned" : clipboardSection(item.copiedAt, now: now) : nil, // filtered: not in date order
                 preview: shown,
                 previewImage: image,
                 details: details)
@@ -370,7 +400,7 @@ actor ClipboardProvider: ResultProvider {
 
     /// Tab on an item: paste it, or only copy it; text that's a link opens, shows in Large Type, or as a QR code beside
     /// the list (Enter copies the picture); a picture opens in Preview or goes to Downloads; and deleting it.
-    private func actionRows(_ id: Int64, pasteTitle: String, trusted: Bool, preview: String,
+    private func actionRows(_ id: Int64, pinned: Bool, pasteTitle: String, trusted: Bool, preview: String,
                             image: (@MainActor @Sendable () -> NSImage?)?, details: [(String, String)]) -> [LauncherResult] {
         guard let content = try? store.content(id) else { return [] }
         let (paste, copy, store) = (paste, copy, store)
@@ -378,6 +408,13 @@ actor ClipboardProvider: ResultProvider {
             (pasteTitle, "doc.on.clipboard", pasteTitle, nil, { paste(content) }),
         ]
         if trusted { rows.append(("Copy Without Pasting", "doc.on.doc", "Copy", nil, { copy(content) })) } // else Enter copies already
+        if let after = try? store.copied(after: id), !after.isEmpty {
+            rows.append(("Paste in Order from Here", "list.number", "Paste", nil, {
+                PasteQueue.shared.ids = after // the next ones wait in the empty launcher
+                paste(content)
+            }))
+        }
+        rows.append((pinned ? "Unpin" : "Pin", pinned ? "pin.slash" : "pin", pinned ? "Unpin" : "Pin", nil, { try? store.pin(id, !pinned) }))
         switch content {
         case .text(let text):
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -426,6 +463,34 @@ actor ClipboardProvider: ResultProvider {
         apps[bundleID] = found
         return found
     }
+}
+
+/// Clipboard items waiting to be pasted one after another, in the order they were copied: the next one waits on top
+/// of the empty launcher, so it's the hotkey and Enter each time (nothing watches ⌘V).
+@MainActor final class PasteQueue {
+    static let shared = PasteQueue()
+    var ids: [Int64] = []
+}
+
+/// The empty launcher's row for the next item in `queue`: Enter pastes it, Tab stops. Items deleted since are skipped.
+@MainActor func pasteNextRows(_ queue: PasteQueue, store: ClipboardStore,
+                              paste: @escaping @MainActor @Sendable (ClipboardContent) -> Void) -> [LauncherResult] {
+    while let id = queue.ids.first, (try? store.content(id)) == nil { queue.ids.removeFirst() }
+    guard let id = queue.ids.first, let content = try? store.content(id) else { return [] }
+    let shown = switch content {
+    case .text(let text): String(oneLine(text).prefix(80))
+    case .image: "a picture"
+    }
+    let left = queue.ids.count - 1
+    return [LauncherResult(id: "paste-queue:\(id)", title: "Paste Next: \(shown)",
+                           subtitle: left == 0 ? "The last one" : "\(left) more after it, in the order you copied them",
+                           icon: .symbol("list.number"), score: 210, actionTitle: "Paste", action: {
+        queue.ids.removeFirst()
+        paste(content)
+    }, actions: {
+        [LauncherResult(id: "paste-queue:stop", title: "Stop Pasting in Order", icon: .symbol("stop"), score: 50, actionTitle: "Stop",
+                        action: { queue.ids = [] })]
+    })]
 }
 
 /// Sends ⌘V to whichever app has focus once the panel is gone. Needs Accessibility.

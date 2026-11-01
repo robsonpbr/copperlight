@@ -25,6 +25,9 @@ struct Config: Decodable, Equatable {
     var learning = Learning()
     var answers = Answers()
     var weather = Weather()
+    var timeZones = TimeZones()
+    var colors = Colors()
+    var contacts = Contacts()
     var commands: [Command] = []
     var snippets: [Snippet] = []
 
@@ -155,15 +158,54 @@ struct Config: Decodable, Equatable {
     }
 
     /// `weather` with nothing typed: the city when Location Services is off for Copperlight. nil: it asks for the location.
+    /// `units`: °C and km/h, °F and mph, or (auto) what the Mac uses.
     struct Weather: Decodable, Equatable {
+        enum Units: String, CaseIterable { case auto, celsius, fahrenheit }
         var city: String?
+        var units = Units.auto
 
         init() {}
         init(from decoder: any Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             city = try c.decodeIfPresent(String.self, forKey: .city)
+            units = try choice(c, .units, units)
         }
-        private enum CodingKeys: String, CodingKey { case city }
+        private enum CodingKeys: String, CodingKey { case city, units }
+    }
+
+    /// `time` alone: the time now in each of these cities.
+    struct TimeZones: Decodable, Equatable {
+        var cities: [String] = []
+
+        init() {}
+        init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            cities = try c.decodeIfPresent([String].self, forKey: .cities) ?? cities
+        }
+        private enum CodingKeys: String, CodingKey { case cities }
+    }
+
+    /// What Enter copies for a color: hex, rgb() or hsl().
+    struct Colors: Decodable, Equatable {
+        var copy = ColorNotation.hex
+
+        init() {}
+        init(from decoder: any Decoder) throws {
+            copy = try choice(try decoder.container(keyedBy: CodingKeys.self), .copy, copy)
+        }
+        private enum CodingKeys: String, CodingKey { case copy }
+    }
+
+    /// What Enter does on a person.
+    struct Contacts: Decodable, Equatable {
+        enum Enter: String, CaseIterable { case message, call, facetime, email }
+        var enter = Enter.message
+
+        init() {}
+        init(from decoder: any Decoder) throws {
+            enter = try choice(try decoder.container(keyedBy: CodingKeys.self), .enter, enter)
+        }
+        private enum CodingKeys: String, CodingKey { case enter }
     }
 
     /// The floating notes. `markdown`: style Markdown as you type (headings, bold, checkboxes); the files stay plain text.
@@ -180,41 +222,66 @@ struct Config: Decodable, Equatable {
 
     /// Today's events. `show_on_open`: the empty launcher lists them; otherwise, with `show_next`, it shows a meeting
     /// about to start.
+    /// `calendars`: the ones that count, by name (none: all). `heads_up`: how many minutes before a meeting with a
+    /// call it waits in the empty launcher. `work_start`, `work_end`: the hours `free` looks in.
     struct Meetings: Decodable, Equatable {
         var showOnOpen = false
         var showNext = true
+        var calendars: [String] = []
+        var headsUp = 10
+        var workHours = 9..<18
 
         init() {}
         init(from decoder: any Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             showOnOpen = try c.decodeIfPresent(Bool.self, forKey: .showOnOpen) ?? showOnOpen
             showNext = try c.decodeIfPresent(Bool.self, forKey: .showNext) ?? showNext
+            calendars = try c.decodeIfPresent([String].self, forKey: .calendars) ?? calendars
+            headsUp = try c.decodeIfPresent(Int.self, forKey: .headsUp) ?? headsUp
+            guard (1...60).contains(headsUp) else {
+                throw DecodingError.dataCorruptedError(forKey: .headsUp, in: c, debugDescription: "must be 1 to 60 minutes")
+            }
+            let start = try c.decodeIfPresent(Int.self, forKey: .workStart) ?? workHours.lowerBound
+            let end = try c.decodeIfPresent(Int.self, forKey: .workEnd) ?? workHours.upperBound
+            guard 0 <= start, start < end, end <= 24 else {
+                throw DecodingError.dataCorruptedError(forKey: .workEnd, in: c, debugDescription: "work_start must come before work_end, 0 to 24")
+            }
+            workHours = start..<end
         }
-        private enum CodingKeys: String, CodingKey { case showOnOpen = "show_on_open", showNext = "show_next" }
+        private enum CodingKeys: String, CodingKey {
+            case showOnOpen = "show_on_open", showNext = "show_next", calendars, headsUp = "heads_up", workStart = "work_start", workEnd = "work_end"
+        }
     }
 
     /// `show_due`: reminders that are due wait in the empty launcher.
+    /// `lists`: the lists whose reminders count, by name (none: all).
     struct Reminders: Decodable, Equatable {
         var showDue = true
+        var lists: [String] = []
 
         init() {}
         init(from decoder: any Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             showDue = try c.decodeIfPresent(Bool.self, forKey: .showDue) ?? showDue
+            lists = try c.decodeIfPresent([String].self, forKey: .lists) ?? lists
         }
-        private enum CodingKeys: String, CodingKey { case showDue = "show_due" }
+        private enum CodingKeys: String, CodingKey { case showDue = "show_due", lists }
     }
 
     /// `show_running`: a pomodoro, timer, stopwatch or `:awake` waits in the empty launcher while it runs.
+    /// `sound`: what a pomodoro or a timer plays when it's done: "default" (the notification's), "none", or a macOS
+    /// sound by name ("Glass", "Ping").
     struct Timers: Decodable, Equatable {
         var showRunning = true
+        var sound = "default"
 
         init() {}
         init(from decoder: any Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             showRunning = try c.decodeIfPresent(Bool.self, forKey: .showRunning) ?? showRunning
+            sound = try c.decodeIfPresent(String.self, forKey: .sound) ?? sound
         }
-        private enum CodingKeys: String, CodingKey { case showRunning = "show_running" }
+        private enum CodingKeys: String, CodingKey { case showRunning = "show_running", sound }
     }
 
     /// What the launcher learns from you, in state.json. `picked`: the rows you pick rise, and come first for what you
@@ -387,10 +454,24 @@ struct Config: Decodable, Equatable {
         learning = try c.decodeIfPresent(Learning.self, forKey: .learning) ?? learning
         answers = try c.decodeIfPresent(Answers.self, forKey: .answers) ?? answers
         weather = try c.decodeIfPresent(Weather.self, forKey: .weather) ?? weather
+        timeZones = try c.decodeIfPresent(TimeZones.self, forKey: .timeZones) ?? timeZones
+        colors = try c.decodeIfPresent(Colors.self, forKey: .colors) ?? colors
+        contacts = try c.decodeIfPresent(Contacts.self, forKey: .contacts) ?? contacts
         commands = try c.decodeIfPresent([Command].self, forKey: .commands) ?? []
         snippets = try c.decodeIfPresent([Snippet].self, forKey: .snippets) ?? []
     }
-    private enum CodingKeys: String, CodingKey { case hotkeys, features, keywords, look, currency, clipboard, files, apps, pomodoro, translate, browser, notes, meetings, reminders, timers, learning, answers, weather, commands = "command", snippets = "snippet" }
+    private enum CodingKeys: String, CodingKey { case hotkeys, features, keywords, look, currency, clipboard, files, apps, pomodoro, translate, browser, notes, meetings, reminders, timers, learning, answers, weather, timeZones = "time_zones", colors, contacts, commands = "command", snippets = "snippet" }
+
+    /// One of a fixed set of words, like `units = "celsius"`: what's there, or `fallback` when it isn't.
+    private static func choice<Key: CodingKey, Value: RawRepresentable & CaseIterable>(_ c: KeyedDecodingContainer<Key>, _ key: Key,
+                                                                                        _ fallback: Value) throws -> Value where Value.RawValue == String {
+        guard let word = try c.decodeIfPresent(String.self, forKey: key) else { return fallback }
+        guard let value = Value(rawValue: word.lowercased()) else {
+            throw DecodingError.dataCorruptedError(forKey: key, in: c, debugDescription:
+                "expected " + Value.allCases.map { "\"\($0.rawValue)\"" }.joined(separator: ", "))
+        }
+        return value
+    }
 
     static func parse(_ text: String) throws -> Config {
         try TOMLDecoder().decode(Config.self, from: text)
@@ -473,12 +554,18 @@ struct Config: Decodable, Equatable {
         show_on_open = false           # true: the empty launcher lists today's events. false: only a meeting with a call,
                                        # from 10 minutes before it starts. Needs Calendars access ("meetings" asks).
         show_next = true               # false (with show_on_open false): not even that one
+        # calendars = ["Work"]         # the calendars that count; unset: all
+        heads_up = 10                  # minutes before a meeting with a call that it waits in the empty launcher
+        work_start = 9                 # the hours "free" looks in
+        work_end = 18
 
         [reminders]
         show_due = true                # reminders that are due wait in the empty launcher
+        # lists = ["Groceries"]        # the lists whose reminders count; unset: all
 
         [timers]
         show_running = true            # a pomodoro, timer, stopwatch or :awake waits in the empty launcher while it runs
+        sound = "default"              # when one ends: the notification's sound, "none", or a macOS sound ("Glass")
 
         [learning]
         picked = true                  # the rows you pick rise, and come first for what you typed (ss → Slack)
@@ -489,6 +576,16 @@ struct Config: Decodable, Equatable {
 
         [weather]
         # city = "Lisbon"              # for "weather" when Location Services is off for Copperlight
+        units = "auto"                 # like this Mac; "celsius" or "fahrenheit"
+
+        [time_zones]
+        # cities = ["New York", "Tokyo"] # "time" shows the time now in each
+
+        [colors]
+        copy = "hex"                   # what Pick Color and your colors copy: "hex", "rgb" or "hsl"
+
+        [contacts]
+        enter = "message"              # Enter on a person: "message", "call", "facetime" or "email"
 
         [notes]
         markdown = true                # style Markdown as you type: # headings, **bold**, - [ ] checkboxes, links.

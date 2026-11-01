@@ -56,7 +56,7 @@ The little tools you'd otherwise install one by one, a keystroke away. No extra 
 
 | Tool | What it does |
 |---|---|
-| **Clipboard history**<br>`clip` | Everything you copy, text and images, searchable. Enter pastes it into the app you were in. Passwords are never recorded. |
+| **Clipboard history**<br>`clip` | Everything you copy, text and images, searchable. Enter pastes it into the app you were in; pin what you reuse, or paste several in the order you copied them. Passwords are never recorded. |
 | **Floating notes**<br>`note`, `note milk` | Glass notes that float above your windows and save as you type, as many as you like, each titled by its first line. `note` lists them, last edited first; Markdown is styled as you type, and checkboxes tick with a click. |
 | **Pomodoro**<br>`pomo`, `pomo 50` | A focus timer that counts down in the menu bar and tells you when it's done. |
 | **Timer**<br>`timer 10 min tea`, `timer until 15:30` | A countdown for anything else, with what it's for: in the menu bar, with a sound when it's done. |
@@ -66,11 +66,14 @@ The little tools you'd otherwise install one by one, a keystroke away. No extra 
 | **Meetings**<br>`meetings`, `agenda` | The rest of today's calendar, a copper badge on what starts within the hour, and Tab for the details. A few minutes before a call, it's already there when you open Copperlight: Enter joins. |
 | **Your week**<br>`week`, `next week` | The whole week at a glance, a column a day with its events and their times, today on copper. |
 | **Your month**<br>`month`, `next month` | The month as a grid, a dot under each day for each of its events, today on copper. |
+| **Free time**<br>`free tomorrow` | The gaps in your calendar between 9:00 and 18:00, a line a day, ready to paste into an email when someone asks when you can meet. |
+| **Codes from Messages**<br>`codes` | The verification codes you got in the last 15 minutes. Enter copies one. |
 | **Before a call**<br>`camera` | See yourself, mirrored, before you join. With a call about to start, Enter joins it. |
 | **Contacts**<br>`ana` | People from your contacts as you type their name. Enter messages them; Tab lists every way to reach them: call, FaceTime, WhatsApp, email, or copy their number. |
 | **Due reminders**<br>`due` | What's overdue or due within the hour waits when you open Copperlight, with a copper badge. Enter completes it. |
 | **Browser tabs**<br>`tabs`, `inbox` | The tabs open in your browsers, found by their title or address. Enter switches to the tab instead of opening the page again. |
-| **Dictionary and translation**<br>`define`, `translate` | The Mac's dictionary and on-device translation, without opening an app. Copy something and type `translate`. |
+| **Dictionary and translation**<br>`define`, `synonyms`, `translate` | The Mac's dictionary, its thesaurus and on-device translation, without opening an app. Copy something and type `translate`. |
+| **Wikipedia**<br>`wiki lisbon` | The article's picture, what it is and its first sentences across the card. Enter opens the article. |
 | **Music and sound**<br>`:play`, `:mute`, `:output` | Play, pause and skip whatever is playing, mute, set the volume, and switch between speakers and headphones. |
 | **Stocks**<br>`stock AAPL` | The price now, today's change and the week's chart across the whole card. Enter opens the stock on Yahoo Finance. |
 | **Weather**<br>`weather` | Now, the next hours and five days across the card, for where you are or any city. Enter opens Weather. |
@@ -78,7 +81,7 @@ The little tools you'd otherwise install one by one, a keystroke away. No extra 
 | **Speed test**<br>`speed` | Your internet's download and upload speed and its latency, measured by macOS's own tool against Apple's servers, when you press Enter. |
 | **Processes**<br>`cpu`, `memory` | What's using the processor or memory, the busiest first, with each one's app icon. Enter ends a process, or quits an app, after asking. |
 | **Keep awake**<br>`:awake`, `:awake 2h` | Keeps your Mac and its displays awake until you say so, or for a while (`:awake 2h`, `:awake until 18:00`), with a sun in the menu bar while it's on. |
-| **Text tools**<br>`json`, `uuid`, `b64`, `hex` | Format JSON, make a UUID or a password, encode text, convert colors and timestamps. |
+| **Text tools**<br>`json`, `uuid`, `fake name`, `b64` | Format JSON, make a UUID, a password or made-up test data (Tab for another), encode text, convert colors and timestamps. |
 | **Colors**<br>`#c87533`, `pick color`, `colors` | A color on a band, with how it reads on white and black, in hex, RGB and HSL and a step lighter and darker. Pick one off the screen and its hex is copied; `colors` lists the ones you picked. |
 | **QR codes**<br>`qr` | A QR code of a link or any text, or of what you copied, big, with copy, save to Downloads and copy the link beside it. |
 | **Text from the screen**<br>`copy text` | Drag over anything, a video, a picture, an error you can't select, and its text is copied, read on your Mac. A link in a QR code opens. |
@@ -86,6 +89,8 @@ The little tools you'd otherwise install one by one, a keystroke away. No extra 
 | **Large Type**<br>`large 555-0100` | Any text across the screen, big enough to read from across the room. |
 | **Emoji**<br>`emoji party` | Every emoji by name, pasted where you are. |
 | **Screenshots**<br>`screenshot`, `record` | The macOS screenshot toolbar, ready to capture or record. |
+| **Latest screenshots and downloads**<br>`screenshots`, `downloads` | Your newest ones first. Enter pastes the file into the chat or email you were writing. |
+| **Wi-Fi password**<br>`wifi password` | The password of the network you're on, with a QR code a guest's phone joins from. macOS asks for your password first. |
 
 ## A closer look
 
@@ -156,10 +161,12 @@ A taste of what the field understands. Enter does the obvious thing: opens, copi
 | Type | You get |
 |---|---|
 | `saf` | Safari; Enter opens it |
-| `invoice` ⇥, `saf` ⇥ | What you can do with it: open with, reveal, copy the path or the file itself, trash; an app's recent documents, hide, quit or relaunch it. Its preview beside, Esc goes back |
+| `invoice` ⇥, `saf` ⇥ | What you can do with it: open with, Quick Look, reveal, copy the path or the file itself, AirDrop, trash; an app's recent documents, hide, quit or relaunch it. Its preview beside, Esc goes back |
 | `figma`, an app you don't have | Install Figma with Homebrew, its output beside the row; then Enter opens it |
 | `invoice` | Files and folders, from Spotlight's index (`f invoice`: files only) |
 | `~/Downloads`, `/Applications` | That folder's contents, to go into or open |
+| `downloads`, over an Open dialog | Enter takes the dialog there, for any file or folder you find |
+| The hotkey, over Finder | The files you selected, on top: Enter opens one, Tab shows the rest |
 | `copperlight git` | Bookmarks and recent pages from your browser, opened in their profile |
 | `inbox`, `tabs` ⇥ | The tabs open in your browsers; Enter switches to it |
 | `ana` | People from your contacts: Enter messages them, Tab for call, FaceTime, WhatsApp, email |
@@ -176,7 +183,7 @@ The answer appears big as you type, with what a percentage hid beside it; Enter 
 | `30 is what % of 150`, `10k * 3` | `20%`, `30000`; Tab puts the answer in the field, to keep going |
 | `255 in hex` | `0xFF` |
 | `25 usd to eur`, `39*8 usd`, `0.1 btc in eur` | The amount in euros at the live rate, big, with both flags behind it |
-| `10 km in mi`, `30c` | `6.21 mi`, `86 °F` |
+| `10 km in mi`, `30c`, `2rem in px` | `6.21 mi`, `86 °F`, `32 px` |
 | `3pm lisbon in sf`, `now in tokyo` | The time there |
 | `days until dec 25`, `in 3 weeks` | `58 days`, the date in 3 weeks; `dec 25` alone says it's a Friday |
 | `stock AAPL`, `stock MGLU3.SA` | The price now, today's change and the last 7 days as a chart (from Yahoo Finance) |
@@ -197,12 +204,15 @@ The answer appears big as you type, with what a percentage hid beside it; Enter 
 
 | Type | You get |
 |---|---|
-| `clip` | Everything you copied, text and images, searchable; Enter pastes it into the app you were in, Tab shows the rest: open a link, Large Type, a QR code, save a picture |
+| `clip` | Everything you copied, text and images, searchable; Enter pastes it into the app you were in, Tab shows the rest: pin it, paste from it in the order you copied, open a link, Large Type, a QR code, save a picture |
+| `screenshots`, `downloads`, `latest screenshot` | Your newest screenshots or downloads; Enter pastes the file into your app |
 | `paste plain`, `paste markdown` | The clipboard without its formatting, or as Markdown (from web pages, Google Docs, Slack) |
 | `json`, `upper`, `snake`, `b64`, `sha256` | The clipboard formatted, converted or hashed; or type the text after it: `upper hello` |
-| `uuid`, `password 32`, `lorem 3` | A UUID, a password, placeholder text |
+| `uuid`, `password 32`, `lorem 3` | A UUID, a password, placeholder text; Tab makes another |
+| `fake name`, `fake email`, `fake iban` | Made-up test data that's never anyone's; Tab makes another |
 | `unix 1700000000`, `#ff8800` | `2023-11-14T22:13:20Z`, `rgb(255, 136, 0)` and `hsl(32, 100%, 50%)` |
 | `pick color`, `colors` | A color off the screen, its hex copied; `colors` lists the ones you picked, newest first |
+| A link you copy | Without its tracking (`utm_…`, `fbclid`), ready to paste |
 | `qr`, `qr https://copperlight.app` | A QR code of what you copied, or of what you type, beside the results |
 | `copy text` | The text in any part of the screen you drag over, copied; a QR code's link opens |
 | `large 555-0100`, `large` | The text across the screen, huge; `large` alone shows what you copied |
@@ -225,6 +235,7 @@ The answer appears big as you type, with what a percentage hid beside it; Enter 
 | `:shortcut name`, `:shortcut name some text` | Your Shortcuts, Focus modes included; text after the name is its input |
 | `bluetooth`, `displays`, `dark mode` | That page of System Settings |
 | `ip`, `battery`, `disk`, `port 3000` | Your IP addresses, the battery, free space, and what's listening on a port (Enter ends it) |
+| `wifi password` | The Wi-Fi password, and a QR code that joins a phone; macOS asks for your password first |
 | `speed` | Your internet speed: download and upload big, and the latency, about 20 seconds after Enter |
 | `cpu`, `memory`, `cpu chrome` | Your processes, the busiest first; Enter ends one (an app quits), after asking. Tab lists them all |
 
@@ -234,7 +245,9 @@ The answer appears big as you type, with what a percentage hid beside it; Enter 
 |---|---|
 | `week`, `next week` | Your week across the card, a column a day, each day's events with their times; Enter opens Calendar |
 | `month`, `next month` | The month as a grid, a dot for each event; Enter opens Calendar |
+| `free`, `free tomorrow`, `free next week` | Your free time between 9:00 and 18:00, a line a day; Enter copies it |
 | `camera` | You, mirrored, before a call; Enter joins the call about to start, or opens Photo Booth |
+| `codes` | Verification codes from Messages, the last 15 minutes; Enter copies one |
 | `meetings`, `agenda`, `events` | The rest of today's events, a copper badge on what's soon; Tab shows the details (call link, people, notes), Enter joins the call. A few minutes before a call, it's already there when you open the launcher (or all of today, with Settings › Launcher › Calendar) |
 | `add todo call mom tomorrow 5pm` | A reminder, due and alerting then |
 | `due` | Reminders due today and overdue; Enter completes one. What's due soon waits when you open the launcher |
@@ -312,29 +325,21 @@ few features. The welcome window asks for them in one place; otherwise macOS ask
 | Camera | `camera` (seeing yourself before a call; nothing is recorded) |
 | Notifications | The end of a pomodoro or a timer, shell lines that finish in the background, errors |
 | Automation | Your browser's open tabs (asked once per browser, from `tabs` ⇥); `:empty trash`, `:dark`, `:restart`, `:shut down`, `:log out` (asking Finder, System Events or loginwindow) |
-| Full Disk Access, by hand | Safari's bookmarks and history only |
+| Full Disk Access, by hand | Safari's bookmarks and history, and `codes` from Messages |
 
 ## Privacy
 
-- **No account, no analytics, no crash reports.** Nothing about you is sent anywhere.
-- **Few network requests, none about you:** currency rates (Coinbase's public rates, every currency at once, so it
-  never learns which one you convert) at most every 5 minutes, when you open the launcher, and for
-  finding apps by what they do, Homebrew's public app list (downloaded whole, weekly, so it doesn't reveal which apps
-  you have), each listed app's homepage once, and the App Store's description of apps you got there.
-  `[apps] online = false` turns those off. Links and searches open in your browser.
-- **Stock prices and weather only when you ask:** in the Stock chip (`stock aapl`, then Tab), the ticker goes to
-  Yahoo Finance once you pause typing, and nothing else. In the Weather chip, the city, or where you are rounded to
-  about a kilometer, goes to Open-Meteo the same way; Location Services is asked once, and a city in Settings does
-  without it. Typing alone never sends it. Likewise your public IP: the `ip` row asks
-  api.ipify.org only when you press Enter on Public IP, `speed` tests against Apple's servers only when you press
-  Enter on it, and Homebrew downloads an app only when you press Enter on Install.
-- **What it keeps stays on your Mac**, in `~/.config/copperlight/`: your config, notes, state and clipboard history
-  (SQLite, readable only by you; deleted items are overwritten). Copies marked as passwords, and copies made in
-  password managers, are never recorded.
-- **Contacts, tabs and reminders are read on your Mac** when you open the launcher, and kept in memory only. The apps
-  it suggests are learned from what you open with it, kept in `state.json`.
-- **No AI service.** With Apple Intelligence on, the Mac's own on-device model writes search words for your apps.
-  Nothing leaves the Mac.
+- **No account, no analytics, no crash reports, no AI service.** What you type stays on your Mac.
+- **Public lists, nothing about you:** currency rates (every currency at once, so no one learns which you convert)
+  and, for finding apps by what they do, Homebrew's whole app list and each app's description. `[apps] online =
+  false` turns the app descriptions off.
+- **The rest only when you ask:** a ticker in the Stock chip, a city or a rounded location in the Weather chip, a
+  subject in the Wikipedia chip, each once you pause typing; your public IP, a speed test or a Homebrew install on
+  Enter. Typing alone never sends anything.
+- **What it keeps stays on your Mac,** in `~/.config/copperlight/`. Copies made in password managers are never
+  recorded, and copied links lose their tracking.
+
+[PRIVACY.md](PRIVACY.md) lists every server it contacts, every permission it can ask for, and every file it keeps.
 
 ## Make it yours
 
@@ -371,6 +376,7 @@ included. Every setting is in
 | [Guide](docs/guide.md) | Everything you can type, in detail |
 | [Configuration](docs/configuration.md) | config.toml and every setting in it |
 | [Everything it does](FEATURES.md) | Every feature on one page |
+| [Privacy](PRIVACY.md) | Every server, permission and file |
 | [Why it works this way](SPEC.md) | The principles behind it |
 | [Developing](DEVELOPMENT.md) | Building, testing, releasing, and the rules a change has to fit |
 | [Roadmap](ROADMAP.md) | What's next, what's later, and what's maybe someday |

@@ -1,3 +1,4 @@
+import Synchronization
 import AppKit
 import UserNotifications
 
@@ -273,16 +274,38 @@ actor CommandProvider: ResultProvider {
 
 /// `sound`: with the default sound; if notifications aren't allowed, the sound plays anyway.
 @MainActor func notify(_ title: String, _ body: String = "", sound: Bool = false) {
+    let ending = sound ? endSound(chosenEndSound.withLock { $0 }) : .silent
+    if case .named(let name) = ending { NSSound(named: name)?.play() }
     Task {
         let center = UNUserNotificationCenter.current()
         guard (try? await center.requestAuthorization(options: [.alert, .sound])) == true else {
-            if sound { NSSound(named: "Glass")?.play() }
+            if ending == .notification { NSSound(named: "Glass")?.play() }
             return
         }
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
-        if sound { content.sound = .default }
+        if ending == .notification { content.sound = .default }
         try? await center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }
+}
+
+/// `[timers] sound`: what a pomodoro or a timer plays when it's done.
+let chosenEndSound = Mutex("default")
+
+enum EndSound: Equatable { case notification, silent, named(String) }
+
+/// "default" (or nothing): the notification's own sound; "none": silence; anything else, a macOS sound by name.
+func endSound(_ choice: String) -> EndSound {
+    switch choice.lowercased() {
+    case "", "default": .notification
+    case "none": .silent
+    default: .named(choice)
+    }
+}
+
+/// The sounds macOS comes with ("Glass", "Ping"), by name, for Settings.
+func macSounds() -> [String] {
+    ((try? FileManager.default.contentsOfDirectory(atPath: "/System/Library/Sounds")) ?? [])
+        .map { ($0 as NSString).deletingPathExtension }.sorted()
 }

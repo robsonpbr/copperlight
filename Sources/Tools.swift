@@ -85,7 +85,7 @@ func runTool(_ tool: URL, _ arguments: [String], in folder: URL? = nil, input: S
             process.terminationHandler = { done.resume(returning: $0.terminationStatus) }
             guard !Task.isCancelled, (try? process.run()) != nil else {
                 process.terminationHandler = nil
-                if inTerminal { (close(masterFD), close(slaveFD)) }
+                if inTerminal { close(masterFD); close(slaveFD) }
                 return done.resume(returning: -1)
             }
             if inTerminal {

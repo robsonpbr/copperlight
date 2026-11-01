@@ -12,6 +12,12 @@ struct TextTool: Sendable {
 let textTools = [
     TextTool(name: "paste markdown", title: "Paste as Markdown", icon: "doc.richtext", pastes: true),
     TextTool(name: "paste plain", title: "Paste as Plain Text", icon: "doc.plaintext", pastes: true),
+    TextTool(name: "fake address", title: "Fake Address", icon: "house"),
+    TextTool(name: "fake company", title: "Fake Company", icon: "building.2"),
+    TextTool(name: "fake email", title: "Fake Email", icon: "envelope"),
+    TextTool(name: "fake phone", title: "Fake Phone Number", icon: "phone"),
+    TextTool(name: "fake name", title: "Fake Name", icon: "person"),
+    TextTool(name: "fake iban", title: "Fake IBAN", icon: "banknote"),
     TextTool(name: "b64 decode", title: "Base64 Decode", icon: "lock.open"),
     TextTool(name: "url encode", title: "URL Encode", icon: "link"),
     TextTool(name: "url decode", title: "URL Decode", icon: "link"),
@@ -68,6 +74,7 @@ func runTextTool(_ name: String, typed: String?, clip: Clip, now: Date = .now, t
     case "unix": return unixTime(input, now: now, timeZone: timeZone)
     case "paste markdown": return clip.html.flatMap(markdown(fromHTML:)) ?? clip.text
     case "paste plain": return clip.text
+    case _ where name.hasPrefix("fake "): return fakeData(String(name.dropFirst(5)))
     default: break
     }
     guard let input, !input.isEmpty else { return nil }
@@ -265,7 +272,8 @@ struct TextToolProvider: ResultProvider {
             return LauncherResult(id: id, title: tool.title, subtitle: how, icon: icon, score: score,
                                   actionTitle: "", action: {})
         }
-        let fromClipboard = typed == nil && !tool.pastes && !["uuid", "password", "lorem", "unix"].contains(tool.name)
+        let madeUp = ["uuid", "password"].contains(tool.name) || tool.name.hasPrefix("fake ") // new each time: Tab makes another
+        let fromClipboard = typed == nil && !tool.pastes && !madeUp && !["lorem", "unix"].contains(tool.name)
         let long = output.contains(where: \.isNewline) || output.count > 80
         // A long result shows in the preview pane, so the row names the tool ("paste plain" and "paste markdown"
         // looked alike, cut short beside the pane). A short one is the row, with the tool's name at the right edge;
@@ -275,6 +283,39 @@ struct TextToolProvider: ResultProvider {
                               actionTitle: tool.pastes ? (long ? "Paste" : tool.title) : "Copy", action: {
             copyToClipboard(output)
             if tool.pastes, hasAccessibility("paste") { sendPaste() }
-        }, preview: long ? output : nil)
+        }, more: madeUp ? (label: "Another", fill: tool.name + (typed.map { " " + $0 } ?? "")) : nil, preview: long ? output : nil)
+    }
+}
+
+// MARK: Made-up test data
+
+private let firstNames = ["Ana", "Mario", "Bia", "Rui", "Sofia", "Lucas", "Maya", "Noah", "Lena", "Omar", "Priya", "Kenji", "Elena", "Tomás",
+                          "Chloe", "Ravi", "Inês", "Leo", "Nadia", "Hugo", "Amara", "Felix", "Yara", "Jonas", "Clara", "Mateo", "Iris", "Theo"]
+private let lastNames = ["Ribeiro", "Costa", "Moreau", "Keller", "Novak", "Tanaka", "Okafor", "Lindqvist", "Haddad", "Fischer", "Rossi",
+                         "Mendes", "Kowalski", "Nakamura", "Duarte", "Larsen", "Petrov", "Alvarez", "Brennan", "Varga", "Dubois", "Quinn"]
+private let streets = ["Maple", "Cedar", "Willow", "Harbor", "Orchard", "Juniper", "Linden", "Birch", "Meadow", "Summit", "Chestnut"]
+private let towns = [("Springfield", "IL"), ("Riverton", "WY"), ("Fairview", "OR"), ("Lakewood", "CO"), ("Franklin", "TN"), ("Salem", "MA")]
+private let companies = (["Bluefin", "Northwind", "Brightside", "Quietwater", "Redwood", "Lumen", "Harborview", "Silverline", "Oakridge"],
+                         ["Labs", "Studio", "Partners", "Supply Co.", "Systems", "Foods", "Works", "Group"])
+
+/// Test data that's never anyone's: a name from the lists above, an address at example.com (kept for examples), a
+/// 555-01xx number (kept for fiction), a street in a common town, a company, a German IBAN whose check digits hold.
+func fakeData(_ kind: String) -> String? {
+    let first = firstNames.randomElement()!, last = lastNames.randomElement()!
+    let digits = { (count: Int) in String((0..<count).map { _ in Character(String(Int.random(in: 0...9))) }) }
+    switch kind {
+    case "name": return "\(first) \(last)"
+    case "email": return "\(first).\(last)@example.com".folding(options: .diacriticInsensitive, locale: nil).lowercased()
+    case "phone": return "(\(["202", "212", "312", "415", "617", "702"].randomElement()!)) 555-01\(digits(2))"
+    case "address":
+        let (town, state) = towns.randomElement()!
+        return "\(Int.random(in: 1...999)) \(streets.randomElement()!) \(["Street", "Avenue", "Road", "Lane"].randomElement()!), \(town), \(state) \(Int.random(in: 10000...99999))"
+    case "company": return "\(companies.0.randomElement()!) \(companies.1.randomElement()!)"
+    case "iban":
+        let account = digits(18)
+        // The check digits make the whole, moved to "account DE00" with letters as numbers (D 13, E 14), leave 1 by 97.
+        let rest = (account + "131400").reduce(0) { ($0 * 10 + $1.wholeNumberValue!) % 97 }
+        return "DE" + String(format: "%02d", 98 - rest) + account
+    default: return nil
     }
 }

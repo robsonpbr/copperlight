@@ -9,7 +9,7 @@ config.toml.
 
 | Key | Action |
 |---|---|
-| ⌥Space | Show / hide the launcher. With text selected in the app you're in, it opens with that text typed and selected |
+| ⌥Space | Show / hide the launcher. With text selected in the app you're in, it opens with that text typed and selected; over Finder, the files you selected wait on top; over an Open or Save dialog, Enter on a file or folder takes the dialog there |
 | ↑ ↓ | Move selection. ↑ in the empty field: the last query you ran (↑ again for the one before) |
 | Enter | Run: open app or file, copy a calculator, currency or text tool result, run command, open URL, search the web. Clipboard: paste the item |
 | Tab | Fill in: on a row that says Tab (Translate, Quit Application, a folder), or with a name typed whole (`translate`), it types the name, which becomes a chip. On a row that names what Tab does beside Enter, it steps into it: a person's Actions, a calculation's Keep Going, and on a file, an app or a clipboard item what you can do with it (Esc goes back). On a row with something to show (a note, a snippet), it opens its preview beside the list, and Tab again closes it. In clipboard history and in chips the preview is open already |
@@ -34,6 +34,12 @@ Mac (`:left`, `:quit`, `:lock`, `:play`…). Off means off: no rows, no chip, no
 background, nothing sent, no permission asked for, and its section leaves Settings. It's saved in config.toml as
 `name = false` under `[features]` ([configuration.md](configuration.md) lists the names). Finding apps, the search
 row and Copperlight's own rows are always on.
+
+**Each feature's options:** Settings › Options has what you can set for the features that are on. Which calendars
+count (a holidays calendar needn't make you busy) and how early the next meeting shows; your working hours, for
+`free`; which reminder lists count; what Enter does on a person (message, call, FaceTime, email); °C or °F for the
+weather; your cities, for `time` alone (the time now in each); whether a picked color is copied as hex, RGB or HSL; and
+the sound a pomodoro or a timer ends with. Each is a key in config.toml ([configuration.md](configuration.md)).
 
 **Your own keywords:** Settings › Keywords has a field beside each keyword (`translate`, `weather`, `:`…) for words of
 your own. With `t` for translate, `t bom dia` translates, and `t` then Tab makes the Translate chip; `translate` still
@@ -158,7 +164,8 @@ From 3 letters, the start of a name shows the tool too (`pas` → the paste tool
 
 | Type | Gives |
 |---|---|
-| `uuid`, `password`, `password 32`, `lorem`, `lorem 3` | A new UUID, a 20-character password (or 4–256), Lorem Ipsum paragraphs |
+| `uuid`, `password`, `password 32`, `lorem`, `lorem 3` | A new UUID, a 20-character password (or 4–256), Lorem Ipsum paragraphs. Tab makes another UUID or password, in place |
+| `fake name`, `fake email`, `fake phone`, `fake address`, `fake company`, `fake iban` | Made-up test data that's never anyone's: names from a list, example.com addresses, the 555-01xx numbers kept for fiction, a German IBAN whose check digits hold. `fake` lists them all; Tab makes another |
 | `json`, `json min` | The JSON formatted (2 spaces) or minified, keys in their original order |
 | `b64`, `b64 decode`, `url encode`, `url decode` | Encoded or decoded text (`b64 decode` takes URL-safe Base64 and missing padding too) |
 | `upper`, `lower`, `snake`, `camel` | The text in that case, line by line (`fooBar baz` → `foo_bar_baz`) |
@@ -288,7 +295,7 @@ from the field too. Anywhere else, from 3 letters, a note with the words you typ
 **Markdown in notes:** as you type, `# headings` (to `###`), `**bold**`, `*italic*`, `` `code` ``, lists, `> quotes`
 and links (`[text](url)`, or a bare `https://…`) show styled, the syntax dimmed beside them. `- [ ]` is a checkbox:
 click it to tick it (`- [x]`, struck through), and ⌘Z to undo. A click on a link opens it. Only the look changes:
-the file stays plain text. Settings › General › Notes turns it off (`[notes] markdown`).
+the file stays plain text. Settings › Options › Notes turns it off (`[notes] markdown`).
 
 **System Settings:** a page by name from 3 letters (`bluetooth`, `displays`, `keyboard`, `privacy`), or by
 something on it (`dark mode`, `night shift`, `dock`, `default browser`, `login items`). Enter opens that page.
@@ -301,13 +308,18 @@ in a serif and its pronunciation, its meanings (three of the first part of speec
 first example, and where the word comes from. Enter opens the whole entry, phrases and derived words included, in
 Dictionary.
 
+**Synonyms:** `synonyms happy` (`syn` Tab is its chip) lists the words the Mac's thesaurus has for it, offline, a row
+each under the example of its sense: up to 8 a sense, 5 senses. The informal, dated and regional ones are left out,
+so what's there is safe to write. Enter copies one. The thesaurus is Dictionary's; turn one on in Dictionary ›
+Settings if the row says there's none.
+
 **Spell:** `spell definately` gives the word spelled right and the other guesses, the best first; `spell` with a
 sentence gives it back with each misspelled word corrected. A word that's right says so. Enter copies it. It's the
 Mac's own spelling, in the languages System Settings › Keyboard › Text Input has for it.
 
 **Translate:** `translate bom dia`, `translate good morning to spanish` (`to`, `in` or `into`, then a language's
 English name or code). Apple's on-device translation (macOS 26): the source language is detected, and without a
-target it goes to the language in Settings › General › Translate to (`[translate] default_target`), or, set to
+target it goes to the language in Settings › Options › Translate to (`[translate] default_target`), or, set to
 Automatic or when the text is already in it, to your first language in System Settings that isn't the text's. With no text, `translate` (or
 `translate to spanish`) translates what's on the clipboard: copy, ⌥Space, `translate`, Enter. The language joins the
 chip (Translate to German) when you press Tab with it first (`to ger` ⇥) or at the end of the text
@@ -323,7 +335,30 @@ fuzzily ("gco" → "git checkout origin"). Not recorded: copies marked concealed
 (password managers mark theirs), copies made while an `ignore_apps` app is in front, and the items you
 paste from the list itself. Enter pastes into the app you were in, which needs Accessibility (see Signing).
 Without it, Enter copies only and the panel shows a row that takes you to the setting. Tab on an item shows what
-else you can do with it: open a link, Large Type, a QR code, save a picture, delete it.
+else you can do with it: open a link, Large Type, a QR code, save a picture, pin it, paste from it in order, delete it.
+
+**Pins:** Tab on an item, then Pin. It stays on top of the history, under Pinned, through pruning and `:clear`; Tab
+on it again unpins it.
+
+**Pasting in order:** to paste several things in the order you copied them (a name, then an email, then a phone
+number, into a form), Tab on the first one, then Paste in Order from Here. It's pasted, and the next one waits on top
+of the empty launcher as Paste Next: press the hotkey and Enter for each. Tab on Paste Next stops. Nothing watches
+your ⌘V: the hotkey is the only key Copperlight hears.
+
+**Latest screenshots and downloads:** `screenshots` lists your newest screenshots (the files macOS marked as
+screenshots, in the folder the screenshot toolbar saves to), `downloads` your newest downloads, by when they arrived;
+`latest screenshot` and `last download` give the newest alone. Enter pastes the file into the app you were in (copies
+it, without Accessibility); Tab shows what else you can do with it.
+
+**Links without tracking:** a link you copy loses what's only there to track where it was shared (`utm_source`
+and the other `utm_` ones, `fbclid`, `gclid`, YouTube's and Spotify's `si`, X's `s` and `t`), and a Google or
+Facebook redirect gives up the link inside it, before you paste. Only a copy that's a single link changes. Turn it
+off in Settings › Features › Links without tracking (`clean_links = false`).
+
+**Codes from Messages:** `codes` (or `2fa`, `otp`) lists the verification codes in the messages you got in the last
+15 minutes, newest first, with who sent them. Enter copies the code; Tab shows the whole message. They're read from
+Messages' own database on this Mac, which takes Full Disk Access: the row says where to give it (Privacy & Security
+› Full Disk Access).
 
 **File search:** after 2 letters, files and folders in the `[files]` scopes whose name has a word starting with
 what you typed (each word, any order of words: `inv 2026`). Uses the Spotlight index, so anything Spotlight
@@ -335,15 +370,16 @@ Start with `f ` for files only, with up to 60 results instead of 20.
 **What you can do with it (Tab):** on a file, an app or a clipboard item, Tab puts what you can do with it in place
 of the list, under its name, with its preview beside it. Esc goes back to the list, the item still selected; typing
 searches again. A file (in a search, or a folder's listing): Open (the row says in which app), Open With… (fills in
-`:open with`, to pick the app), Reveal in Finder, Copy Path, Copy File (the file itself, to paste in Finder, an email
-or a chat), Open in Terminal (its folder, in `[files] terminal`), Move to Trash (asks first); beside them a text
+`:open with`, to pick the app), Quick Look (full size, as Space shows it in Finder; `:look readme` too), Reveal in Finder, Copy Path, Copy File (the file itself, to paste in Finder, an email
+or a chat), AirDrop, Send in Messages, Send in Mail (the file attached), Open in Terminal (its folder, in `[files] terminal`), Move to Trash (asks first); beside them a text
 file's start, a picture or a PDF's first page, and where it is, its kind, size and when it changed. An app: its recent
 documents first, then Open, and while it runs Hide, Quit, Force Quit (asks first) and Relaunch; Reveal in Finder, Copy
 Path; beside them its icon, version and where it is. Its recent documents are the files in your home folder of the
 kinds the Mac opens in it (TextEdit: text and Word files; Preview: pictures and PDFs, unless they open elsewhere), the
 most recently opened first, five at most, from Spotlight: each says how long ago, its preview beside it, and Enter
 opens it in that app. The app's own Open Recent list is kept where macOS lets in only apps with Full Disk Access, which
-Copperlight doesn't ask for; an app's own files in `~/Library` are left out, but not your cloud drives there. A clipboard item: Paste (Copy, without Accessibility), Copy Without Pasting; for text, Open
+Copperlight doesn't ask for; an app's own files in `~/Library` are left out, but not your cloud drives there. A clipboard item: Paste (Copy, without Accessibility), Copy Without Pasting, Paste in Order from Here (when you copied
+something after it), Pin or Unpin; for text, Open
 Link if it's a web address, Large Type, and QR Code, the code beside the list (Enter copies the picture); for a
 picture, Open in Preview and Save to Downloads; and Delete from History.
 
@@ -389,12 +425,14 @@ Ecosia or Kagi.
 **Units:** `10 km in mi`, `10km mi`, `100 f to c`, `2,5 kg`, `1 gb in mb`, `90 min in h`. Length, weight,
 temperature, volume, speed, data (`kb`… decimal, `kib`… binary), time and area, by symbol or name (`km`, `miles`,
 `°c`, `lbs`, `kmh`, `cups`, `floz`). With no target, metric and US units convert to each other (`30c` → °F, `5 lb`
-→ kg). `10 in cm` and `10 in in cm` both work. Enter copies the number.
+→ kg). `10 in cm` and `10 in in cm` both work. CSS lengths too: `2rem in px` (16 px a rem), `24px` (in rem), `96 px
+in in`. Enter copies the number.
 
 **Time zones:** `now in tokyo` (or `time in tokyo`), `3pm in sf` (3pm here), `15:30 lisbon in new york`, `noon utc
 to sf`, also with `to`. A place is any time zone's city (`lisbon`, `new york`, `são paulo`), an alias (`sf`, `la`,
 `nyc`, `india`, `china`, `uk`) or an abbreviation (`pst`, `utc`, `cet`). The row shows the time there, the day
-and the difference in hours. Enter copies the time.
+and the difference in hours. Enter copies the time. `time` alone (or `times`) shows the time now in each of your cities,
+set in Settings › Options › Time zones (`[time_zones] cities`).
 
 **Dates:** `days until dec 25` (or `how many days until christmas?`), `weeks until dec 25` (8 weeks, 2 days), `days
 since jan 1`; `in 3 weeks`, `3 weeks from now`, `100 days from today`, `3 days ago`, `in 2 months`, `30 days after dec
@@ -414,9 +452,13 @@ It says what you asked for, so it waits for you: only in the Stock chip, and onl
 pause typing, does the ticker go to Yahoo; the answer is kept for a minute. Typed without the chip, `stock aapl` asks
 nothing: below the files, a row offers it (Stock Price of AAPL), and Tab or Enter on it makes the chip.
 
+**Wikipedia:** `wiki lisbon`, in the Wikipedia chip (`wik` Tab), shows the article's picture beside its title, what
+it is in a few words and its first three sentences, in the language your Mac reads first. Like a stock, it waits
+for you: what you typed goes to Wikipedia only in the chip, once you pause typing. Enter opens the article.
+
 **Weather:** `weather` ⇥ is the Weather chip. With nothing after it, it's the weather where you are: the first time, a
-row asks for your location (Location Services), once. If you'd rather not share it, set a city in Settings › General
-› Weather (`[weather] city`). Type a city after the chip (`weather lisbon`) for that city. The card shows the
+row asks for your location (Location Services), once. If you'd rather not share it, set a city in Settings › Options
+› Weather (`[weather] city`), where °C or °F is set too (`[weather] units`). Type a city after the chip (`weather lisbon`) for that city. The card shows the
 temperature now with its symbol, the conditions, today's high and low, how it feels and the wind, the next five days
 with their lows and highs on bars of one scale, and the next seven hours. Enter opens the Weather app. It comes from
 Open-Meteo, free and without an account: only in the chip and once you pause typing, and where you are goes rounded to
@@ -485,9 +527,22 @@ opens Calendar.
 a dot under each day for each of its events, up to three. Today's date sits on copper; the days already over and
 those of the months around it fade. `next month` shows the one after. Enter opens Calendar.
 
+**Free time:** `free tomorrow` lists the gaps in your calendars between 9:00 and 18:00, 30 minutes or more, to offer
+someone a time. Events shown as free and all-day events don't count. Also `free today`, `free friday` (the next
+Friday, or today), `free this week` (the workdays left) and `free next week`; `free` alone is today, or the next
+workday once today's hours are over, and comes under apps whose names start with "free". The first row has them all, a
+line a day ("Wed, Nov 4: 9:00 – 10:00 AM, 1:00 – 5:40 PM"); Enter copies it. Then a row for each slot, Enter copying
+that one.
+
 **Before a call:** `camera` (from `came`) shows what your camera sees across the card, mirrored like a mirror. When
 a meeting with a call is about to start, the card says which one and Enter joins it; otherwise Enter opens Photo
 Booth. The first time, the row asks to use the camera. It's on only while the card shows, and nothing is recorded.
+
+**Wi-Fi password:** `wifi password` offers the password of the network you're on (`wifi password Office` for another
+one this Mac has joined). Enter asks macOS, which wants your Mac's password in its own window, then the launcher
+shows the password beside a QR code: a phone's camera joins the network from it. Enter copies the password, Copy QR
+Code the picture. It's kept in memory for 10 minutes. macOS tells apps which network you're on only with Location
+Services, so without it a row asks for it, or you type the name.
 
 **The next meeting:** a few minutes before a meeting with a call, there's no need to type: from 10 minutes before it
 starts until 10 minutes after, the empty launcher shows that meeting on a band: how soon it starts, its title, times

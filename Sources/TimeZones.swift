@@ -1,3 +1,4 @@
+import Synchronization
 import Foundation
 
 /// Places people say that aren't the city in their time zone's name.
@@ -60,10 +61,23 @@ func parseTimeZones(_ query: String, now: Date = .now, here: TimeZone = .current
 /// "SF", "Tokyo", "New York": how a typed place shows.
 private func displayName(_ place: String) -> String { place.count <= 3 ? place.uppercased() : place.capitalized }
 
-/// Times in other places, ranked with math and currency. Enter copies the time.
+/// Times in other places, ranked with math and currency. Enter copies the time. `time` alone: the time now in each
+/// of `[time_zones] cities`.
 struct TimeZoneProvider: ResultProvider {
+    var cities: @Sendable () -> [String] = { TimeZoneProvider.chosenCities.withLock { $0 } }
+    static let chosenCities = Mutex<[String]>([])
+
     func results(for query: String) -> [LauncherResult] {
-        guard let parsed = parseTimeZones(query) else { return [] }
+        if ["time", "times"].contains(query.lowercased().trimmingCharacters(in: .whitespaces)) {
+            let now = Date.now
+            return cities().compactMap { city in timeZoneNamed(city).map { (city, $0) } }.enumerated().map { index, found in
+                row(TimeZoneQuery(date: now, from: .current, to: found.1, toName: found.0), id: "timezone:\(found.0)", score: 10 - Double(index) / 100)
+            }
+        }
+        return parseTimeZones(query).map { [row($0, id: "timezone", score: 10)] } ?? []
+    }
+
+    private func row(_ parsed: TimeZoneQuery, id: String, score: Double) -> LauncherResult {
         let time = { (zone: TimeZone) in
             var style = Date.FormatStyle(date: .omitted, time: .shortened)
             style.timeZone = zone
@@ -74,8 +88,8 @@ struct TimeZoneProvider: ResultProvider {
         let hours = Double(parsed.to.secondsFromGMT(for: parsed.date) - parsed.from.secondsFromGMT(for: parsed.date)) / 3600
         let gap = hours == 0 ? "same time" : "\(formatNumber(abs(hours), decimals: 0...2)) h \(hours > 0 ? "ahead" : "behind")"
         let target = time(parsed.to)
-        return [LauncherResult(id: "timezone", title: "\(target) in \(displayName(parsed.toName))",
-                               subtitle: "\(parsed.date.formatted(day)) · \(time(parsed.from)) \(parsed.fromName.map(displayName) ?? "here") · \(gap)",
-                               icon: .symbol("globe.europe.africa"), score: 10, actionTitle: "Copy", action: { copyToClipboard(target) })]
+        return LauncherResult(id: id, title: "\(target) in \(displayName(parsed.toName))",
+                              subtitle: "\(parsed.date.formatted(day)) · \(time(parsed.from)) \(parsed.fromName.map(displayName) ?? "here") · \(gap)",
+                              icon: .symbol("globe.europe.africa"), score: score, actionTitle: "Copy", action: { copyToClipboard(target) })
     }
 }

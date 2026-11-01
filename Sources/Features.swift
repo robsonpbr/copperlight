@@ -5,14 +5,14 @@ import Synchronization
 /// config.toml says otherwise. Finding apps, the search row and Copperlight's own rows can't be turned off.
 enum Feature: String, CaseIterable, Sendable {
     // Answers
-    case calculator, currency, units, timeZones = "time_zones", dates, colors, qr, stocks, weather, define, spelling,
+    case calculator, currency, units, timeZones = "time_zones", dates, colors, qr, stocks, weather, wikipedia, define, spelling,
          translate, emoji, textTools = "text_tools", largeType = "large_type", macInfo = "mac_info", speedTest = "speed_test",
          processes
     // Yours
-    case clipboard, notes, snippets, scripts, commands, contacts, calendar, reminders, files, browserTabs = "browser_tabs",
+    case clipboard, cleanLinks = "clean_links", notes, snippets, scripts, commands, contacts, messageCodes = "message_codes", calendar, reminders, files, latestFiles = "latest_files", browserTabs = "browser_tabs",
          bookmarks, systemSettings = "system_settings", menus, timers, pomodoro, stopwatch, screenText = "screen_text"
     // Windows and the Mac
-    case windows, runningApps = "running_apps", mac, sound, keepAwake = "keep_awake", bluetooth, camera, shortcuts, shell, homebrew
+    case windows, runningApps = "running_apps", mac, sound, keepAwake = "keep_awake", bluetooth, wifiPassword = "wifi_password", camera, shortcuts, shell, homebrew
     // Not offered yet
     case fileContent = "file_content", photoText = "photo_text"
 
@@ -30,9 +30,9 @@ enum Feature: String, CaseIterable, Sendable {
 
     var group: Group {
         switch self {
-        case .calculator, .currency, .units, .timeZones, .dates, .colors, .qr, .stocks, .weather, .define, .spelling,
+        case .calculator, .currency, .units, .timeZones, .dates, .colors, .qr, .stocks, .weather, .wikipedia, .define, .spelling,
              .translate, .emoji, .textTools, .largeType, .macInfo, .speedTest, .processes: .answers
-        case .windows, .runningApps, .mac, .sound, .keepAwake, .bluetooth, .camera, .shortcuts, .shell, .homebrew: .mac
+        case .windows, .runningApps, .mac, .sound, .keepAwake, .bluetooth, .wifiPassword, .camera, .shortcuts, .shell, .homebrew: .mac
         default: .yours
         }
     }
@@ -48,7 +48,8 @@ enum Feature: String, CaseIterable, Sendable {
         case .qr: ["qr"]
         case .stocks: ["stock"]
         case .weather: ["weather"]
-        case .define: ["define"]
+        case .wikipedia: ["wiki"]
+        case .define: ["define", "synonyms"]
         case .spelling: ["spell"]
         case .translate: ["translate"]
         case .emoji: ["emoji"]
@@ -58,7 +59,10 @@ enum Feature: String, CaseIterable, Sendable {
         case .clipboard: ["clip"]
         case .notes: ["note", "add note"]
         case .contacts: ["contact"]
-        case .calendar: ["meetings", "week", "month", "add event"]
+        case .messageCodes: ["codes"]
+        case .latestFiles: ["screenshots", "downloads"]
+        case .wifiPassword: ["wifi password"]
+        case .calendar: ["meetings", "week", "month", "free", "add event"]
         case .reminders: ["due", "add todo"]
         case .files: ["f"]
         case .browserTabs: ["tabs"]
@@ -83,24 +87,28 @@ enum Feature: String, CaseIterable, Sendable {
         case .qr: ("QR codes", "qr and a link or any text")
         case .stocks: ("Stocks", "stock aapl. Prices from Yahoo Finance")
         case .weather: ("Weather", "weather lisbon. Forecasts from Open-Meteo")
-        case .define: ("Dictionary", "define serendipity")
+        case .wikipedia: ("Wikipedia", "wiki lisbon. Summaries from Wikipedia")
+        case .define: ("Dictionary", "define serendipity, synonyms happy")
         case .spelling: ("Spelling", "spell recieve")
         case .translate: ("Translate", "translate bom dia, on this Mac")
         case .emoji: ("Emoji", "emoji heart")
-        case .textTools: ("Text tools", "uuid, password, lowercase, paste plain")
+        case .textTools: ("Text tools", "uuid, password, fake name, lowercase, paste plain")
         case .largeType: ("Large Type", "large and any text, across the screen")
         case .macInfo: ("Your Mac", "ip, battery, disk")
         case .speedTest: ("Speed test", "speed, against Apple's servers")
         case .processes: ("Processes", "cpu, memory, port 3000")
         case .clipboard: ("Clipboard history", "clip: what you copied, kept on this Mac")
+        case .cleanLinks: ("Links without tracking", "utm_, fbclid and the like taken off the links you copy")
         case .notes: ("Notes", "note, add note")
         case .snippets: ("Snippets", "Text you paste by name")
         case .scripts: ("Scripts", "The scripts folder, as rows")
         case .commands: ("Your commands", "The links, apps, files and shell lines in config.toml")
         case .contacts: ("Contacts", "contact ana")
-        case .calendar: ("Calendar", "The next meeting, meetings, week, month, add event")
+        case .messageCodes: ("Codes from Messages", "codes: the latest verification codes, to copy")
+        case .calendar: ("Calendar", "The next meeting, meetings, week, month, free time, add event")
         case .reminders: ("Reminders", "Reminders that are due, add todo")
         case .files: ("Files", "f invoice, ~/code, :reveal, :trash")
+        case .latestFiles: ("Latest screenshots and downloads", "screenshots, downloads: newest first, Enter pastes one")
         case .browserTabs: ("Browser tabs", "Your open tabs, by title")
         case .bookmarks: ("Bookmarks and history", "Pages from your browser, by title")
         case .systemSettings: ("System Settings", "Its pages, as rows: wi-fi, displays")
@@ -115,6 +123,7 @@ enum Feature: String, CaseIterable, Sendable {
         case .sound: ("Sound", ":play, :volume 30, :mute, :output")
         case .keepAwake: ("Keep awake", ":awake 2h")
         case .bluetooth: ("Bluetooth", ":connect airpods")
+        case .wifiPassword: ("Wi-Fi password", "wifi password, with a QR code to join")
         case .camera: ("Camera", "camera: see yourself before a call")
         case .shortcuts: ("Shortcuts", ":shortcut and a shortcut's name")
         case .shell: ("Shell", ":! and a command")

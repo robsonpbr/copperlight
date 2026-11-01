@@ -50,7 +50,7 @@ struct LauncherResult: Identifiable, Sendable {
     var score: Double
     /// What Enter does, named on the selected row ("Open", "Copy"). Empty: no hint.
     var actionTitle = "Open"
-    let action: @MainActor @Sendable () -> Void
+    var action: @MainActor @Sendable () -> Void
     /// Tab (or Enter) puts this in the search field instead of running anything (`:quit` → ":quit ", to pick an app);
     /// a name that takes text becomes its chip.
     var completion: String? = nil
@@ -195,6 +195,8 @@ final class SearchModel {
     @ObservationIgnored var learning = Config.Learning()
     /// `[apps] suggestions`: the apps opened from here are kept, with the time, only for those.
     @ObservationIgnored var keepsAppOpens = true
+    /// An Open or Save dialog was in front when the hotkey was pressed: Enter on a file or folder takes it there.
+    @ObservationIgnored var fileDialog = false
     /// `[answers] cards`: off, an answer is a plain row like the rest.
     var showsCards = true
     /// How many times the panel came up: each one springs the view in.
@@ -448,6 +450,9 @@ final class SearchModel {
                         let boosted = batch.map { row in
                             var row = row
                             row.score += Frecency.bonus(frecency, row.id, at: now) + Self.learnedBonus(learned, learnedKey, row.id, at: now)
+                            if fileDialog, let path = dialogPath(forRow: row.id) {
+                                (row.actionTitle, row.action) = ("Go There", { goInDialog(to: path) })
+                            }
                             return row
                         }
                         merged = (merged + boosted).sorted { $0.score > $1.score }
@@ -850,6 +855,7 @@ private struct LauncherView: View {
                     case .week(let card)?: WeekCardView(card: card).padding(18) // the whole card: its one row is Enter
                     case .camera(let card)?: CameraCardView(card: card).padding(18) // the whole card: its one row is Enter
                     case .month(let card)?: MonthCardView(card: card).padding(18) // the whole card: its one row is Enter
+                    case .wiki(let card)?: WikiCardView(card: card).padding(18) // the whole card: its one row is Enter
                     case .speed(let test, let tested, let running)?: SpeedCardView(test: test, tested: tested, running: running).padding(18)
                     case .entry(let entry)?: DictionaryCardView(entry: entry).padding(.horizontal, 22).padding(.vertical, 18)
                     case .calculation(let typed, let result, let note)?: // a band over its rows
@@ -1076,7 +1082,7 @@ struct Keycap: View {
 
 /// Title and subtitle; on the right, an item's age (clipboard). The selected row says what Enter does, in place of
 /// the age (its wash is the list's, `SelectionWash`).
-private struct ResultRow: View {
+struct ResultRow: View {
     let result: LauncherResult
     let selected: Bool
     var offersPreview = false // "Preview ⇥": Tab opens the pane beside the list
@@ -1103,17 +1109,13 @@ private struct ResultRow: View {
             }
             Spacer(minLength: 8)
             if selected, !result.actionTitle.isEmpty || offersPreview || result.more != nil || result.actions != nil {
-                HStack(spacing: 7) {
-                    if let tab = offersPreview ? "Preview" : result.more?.label ?? (result.actions != nil && result.completion == nil ? "Actions" : nil) {
-                        Text(tab).font(.system(size: 12)).foregroundStyle(.secondary)
-                        Keycap(label: "tab").padding(.trailing, 6)
-                    }
-                    if !result.actionTitle.isEmpty {
-                        Text(result.actionTitle).font(.system(size: 12)).foregroundStyle(.secondary)
-                        Keycap(label: result.key)
-                    }
+                ViewThatFits(in: .horizontal) { // the title comes first: short of room, what Tab does goes, then the words
+                    let tab = offersPreview ? "Preview" : result.more?.label ?? (result.actions != nil && result.completion == nil ? "Actions" : nil)
+                    hints(tab: tab, enter: result.actionTitle)
+                    hints(tab: nil, enter: result.actionTitle)
+                    hints(tab: nil, enter: result.actionTitle.split(separator: " ").first.map(String.init)) // "Paste to Google Chrome": "Paste"
+                    hints(tab: nil, enter: nil)
                 }
-                .fixedSize()
             } else if !result.accessory.isEmpty {
                 Text(result.accessory).font(.system(size: 12).monospacedDigit()).foregroundStyle(.tertiary).fixedSize()
                     .padding(.trailing, 18 + 7) // ends where the selected row's action does, before its ↵ key
@@ -1122,6 +1124,21 @@ private struct ResultRow: View {
         .padding(.horizontal, 12)
         .frame(height: LauncherView.rowHeight)
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    /// What Tab and Enter do on the selected row, in `tab` and `enter`'s words; without `enter`, only Enter's key.
+    private func hints(tab: String?, enter: String?) -> some View {
+        HStack(spacing: 7) {
+            if let tab {
+                Text(tab).font(.system(size: 12)).foregroundStyle(.secondary)
+                Keycap(label: "tab").padding(.trailing, 6)
+            }
+            if !result.actionTitle.isEmpty {
+                if let enter { Text(enter).font(.system(size: 12)).foregroundStyle(.secondary) }
+                Keycap(label: result.key)
+            }
+        }
+        .fixedSize()
     }
 
     /// The badge, or the clock: SwiftUI's timer text updates itself, so the row needs no refresh to tick.

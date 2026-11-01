@@ -24,8 +24,9 @@ private func filePreview(_ path: String) -> (load: (@Sendable () async -> String
     return (nil, nil, details)
 }
 
-/// Tab on a file: open it, with another app (its row fills in `:open with`), reveal it, copy its path or the file itself
-/// (to paste in Finder or an email), open its folder in your terminal, or move it to the Trash (asks first). What it
+/// Tab on a file: open it, with another app (its row fills in `:open with`), look at it full size, reveal it, copy its path or the file itself
+/// (to paste in Finder or an email), share it (AirDrop, Messages, Mail), open its folder in your terminal, or move it to
+/// the Trash (asks first). What it
 /// is shows beside them.
 func fileActionRows(_ path: String, terminal: String?) -> [LauncherResult] {
     let url = URL(filePath: path), name = url.lastPathComponent
@@ -34,12 +35,16 @@ func fileActionRows(_ path: String, terminal: String?) -> [LauncherResult] {
     let rows: [(title: String, subtitle: String, symbol: String, action: @MainActor @Sendable () -> Void)] = [
         ("Open", opener.map { "In \($0)" } ?? "", "arrow.up.forward.app", { NSWorkspace.shared.open(url) }),
         ("Open With…", "Another app", "square.grid.2x2", {}),
+        ("Quick Look", "Full size, as Space shows it in Finder", "eye", { quickLook(path) }),
         ("Reveal in Finder", shortParentPath(path), "folder", { NSWorkspace.shared.activateFileViewerSelecting([url]) }),
         ("Copy Path", (path as NSString).abbreviatingWithTildeInPath, "doc.on.doc", { copyToClipboard(path) }),
         ("Copy File", "To paste in Finder or an email", "doc.on.clipboard", {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.writeObjects([url as NSURL])
         }),
+        ("AirDrop", "To a device nearby", "dot.radiowaves.left.and.right", { share(url, with: .sendViaAirDrop) }),
+        ("Send in Messages", "", "message", { share(url, with: .composeMessage) }),
+        ("Send in Mail", "As an attachment", "envelope", { share(url, with: .composeEmail) }),
         ("Open in Terminal", terminal ?? "Terminal", "terminal", { openInTerminal(path, app: terminal) }),
         ("Move to Trash", "", "trash", { moveToTrash(path) }),
     ]
@@ -51,6 +56,12 @@ func fileActionRows(_ path: String, terminal: String?) -> [LauncherResult] {
                        preview: preview.load == nil ? name : nil, // a text file's own text loads in its place
                        previewStyle: .prose, loadPreview: preview.load, previewImage: preview.image, details: preview.details)
     }
+}
+
+/// Hands a file to AirDrop, Messages or Mail, which take it from there (AirDrop's window, a new message).
+@MainActor private func share(_ url: URL, with service: NSSharingService.Name) {
+    NSApp.activate()
+    NSSharingService(named: service)?.perform(withItems: [url])
 }
 
 /// The kinds of file an app says it opens (its Info.plist's document types), as type identifiers.
@@ -123,4 +134,13 @@ func recentDocumentsQuery(_ types: [String]) -> String {
                            return icon
                        }, details: details)
     }
+}
+
+/// The file full size in Quick Look, as Space shows it in Finder (`:look`, or Tab on a file). Esc closes it.
+@MainActor func quickLook(_ path: String) {
+    let process = Process()
+    process.executableURL = URL(filePath: "/usr/bin/qlmanage")
+    process.arguments = ["-p", path]
+    (process.standardOutput, process.standardError) = (FileHandle.nullDevice, FileHandle.nullDevice)
+    try? process.run()
 }

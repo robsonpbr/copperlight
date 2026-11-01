@@ -11,6 +11,9 @@ func unitNamed(_ name: String) -> Dimension? {
     case "ft", "foot", "feet", "'": UnitLength.feet
     case "yd", "yard", "yards": UnitLength.yards
     case "mi", "mile", "miles": UnitLength.miles
+    // CSS's: 96 px an inch, 16 px a rem (the browsers' default text size).
+    case "px", "pixel", "pixels": UnitLength(symbol: "px", converter: UnitConverterLinear(coefficient: 0.0254 / 96))
+    case "rem", "em": UnitLength(symbol: "rem", converter: UnitConverterLinear(coefficient: 0.0254 / 6))
     case "nmi": UnitLength.nauticalMiles
     case "mg": UnitMass.milligrams
     case "g", "gram", "grams": UnitMass.grams
@@ -61,6 +64,7 @@ func unitNamed(_ name: String) -> Dimension? {
 
 /// Where `10 km` goes with no target: across metric and US units, by the source's symbol.
 private let defaultTargets = [
+    "px": "rem", "rem": "px",
     "km": "mi", "mi": "km", "m": "ft", "ft": "m", "cm": "in", "in": "cm", "mm": "in", "yd": "m",
     "kg": "lb", "lb": "kg", "g": "oz", "oz": "g", "st": "kg", "t": "lb",
     "°C": "f", "°F": "c", "K": "c",

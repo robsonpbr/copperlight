@@ -1,4 +1,5 @@
 import AppKit
+import EventKit
 import KeyboardShortcuts
 import ServiceManagement
 import SwiftUI
@@ -99,6 +100,17 @@ import SwiftUI
         })
     }
 
+    /// `[meetings] work_start` and `work_end`; 9 to 18, the default, removes them.
+    var workHours: Binding<Range<Int>> {
+        Binding(get: { self.config.meetings.workHours }, set: { hours in
+            guard hours != self.config.meetings.workHours, !hours.isEmpty else { return }
+            self.save({ $0.meetings.workHours = hours }, {
+                $0.set("work_start", in: "meetings", to: hours.lowerBound == 9 ? nil : .int(hours.lowerBound))
+                $0.set("work_end", in: "meetings", to: hours.upperBound == 18 ? nil : .int(hours.upperBound))
+            })
+        })
+    }
+
     func strings(_ path: WritableKeyPath<Config, [String]>, _ table: String, _ key: String) -> Binding<[String]> {
         binding(path, table, key) { .strings($0) }
     }
@@ -155,7 +167,7 @@ final class SettingsWindow: AppWindow {
 }
 
 private enum Pane: String, CaseIterable, Identifiable {
-    case general = "General", launcher = "Launcher", features = "Features", keywords = "Keywords", clipboard = "Clipboard", search = "Files", browser = "Browser",
+    case general = "General", launcher = "Launcher", features = "Features", options = "Options", keywords = "Keywords", clipboard = "Clipboard", search = "Files", browser = "Browser",
          commands = "Commands", snippets = "Snippets", about = "About"
 
     var id: Self { self }
@@ -170,6 +182,7 @@ private enum Pane: String, CaseIterable, Identifiable {
         case .general: "gearshape.fill"
         case .launcher: "magnifyingglass"
         case .features: "switch.2"
+        case .options: "slider.horizontal.3"
         case .keywords: "character.cursor.ibeam"
         case .clipboard: "doc.on.clipboard.fill"
         case .search: "folder.fill"
@@ -202,6 +215,7 @@ private struct SettingsView: View {
                     case .general: GeneralPane(model: model, showWelcome: showWelcome)
                     case .launcher: LauncherPane(model: model, forget: forget)
                     case .features: FeaturesPane(model: model)
+                    case .options: OptionsPane(model: model)
                     case .keywords: KeywordsPane(model: model)
                     case .clipboard: ClipboardPane(model: model)
                     case .search: FilesPane(model: model)
@@ -267,11 +281,6 @@ private struct GeneralPane: View {
     let model: SettingsModel
     let showWelcome: @MainActor () -> Void
 
-    /// The currencies offered as the default target: the most traded.
-    private static let currencies = ["AUD", "BRL", "CAD", "CHF", "CNY", "CZK", "DKK", "EUR", "GBP", "HKD", "HUF", "IDR", "ILS",
-                                     "INR", "ISK", "JPY", "KRW", "MXN", "MYR", "NOK", "NZD", "PHP", "PLN", "RON", "SEK", "SGD",
-                                     "THB", "TRY", "USD", "ZAR"]
-
     var body: some View {
         Section {
             LabeledContent("Open Copperlight") {
@@ -291,11 +300,6 @@ private struct GeneralPane: View {
             }
         }
         look
-        if model.config.features.isOn(.currency) { currency }
-        if model.config.features.isOn(.translate), !TranslateProvider.languageChoices.isEmpty { translate }
-        if model.config.features.isOn(.notes) { notes }
-        if model.config.features.isOn(.weather) { weather }
-        if model.config.features.isOn(.pomodoro) { pomodoro }
         Section {
             LabeledContent("Welcome screen") { Button("Show", action: showWelcome) }
             LabeledContent("config.toml") {
@@ -328,6 +332,114 @@ private struct GeneralPane: View {
             }
         } header: { Text("Look") } footer: {
             Note("The field's edge, the selected row, chips and the titles over answers. Your Mac's follows the color chosen in System Settings › Appearance.")
+        }
+    }
+}
+
+/// Each feature's own options, for the features that are on.
+private struct OptionsPane: View {
+    let model: SettingsModel
+
+    /// The currencies offered as the default target: the most traded.
+    private static let currencies = ["AUD", "BRL", "CAD", "CHF", "CNY", "CZK", "DKK", "EUR", "GBP", "HKD", "HUF", "IDR", "ILS",
+                                     "INR", "ISK", "JPY", "KRW", "MXN", "MYR", "NOK", "NZD", "PHP", "PLN", "RON", "SEK", "SGD",
+                                     "THB", "TRY", "USD", "ZAR"]
+
+    var body: some View {
+        let features = model.config.features
+        if features.isOn(.calendar) { calendar }
+        if features.isOn(.reminders) { reminders }
+        if features.isOn(.contacts) { contacts }
+        if features.isOn(.currency) { currency }
+        if features.isOn(.translate), !TranslateProvider.languageChoices.isEmpty { translate }
+        if features.isOn(.weather) { weather }
+        if features.isOn(.timeZones) { timeZones }
+        if features.isOn(.colors) { colors }
+        if features.isOn(.notes) { notes }
+        if features.isOn(.pomodoro) { pomodoro }
+        if features.isOn(.pomodoro) || features.isOn(.timers) { sound }
+    }
+
+    private var calendar: some View {
+        Section {
+            let names = EKEventStore.authorizationStatus(for: .event) == .fullAccess ? EKEventStore().calendars(for: .event).map(\.title).sorted() : []
+            Chooser(names: names, chosen: model.binding(\.meetings.calendars, "meetings", "calendars") { $0.isEmpty ? nil : .strings($0) })
+            Picker("Show the next meeting", selection: model.binding(\.meetings.headsUp, "meetings", "heads_up") { $0 == 10 ? nil : .int($0) }) {
+                ForEach([2, 5, 10, 15, 30], id: \.self) { Text("\($0) minutes before").tag($0) }
+            }
+            let hours = model.workHours
+            Picker("Working hours start", selection: Binding(get: { hours.wrappedValue.lowerBound }, set: { hours.wrappedValue = $0..<hours.wrappedValue.upperBound })) {
+                ForEach(0..<hours.wrappedValue.upperBound, id: \.self) { Text("\($0):00").tag($0) }
+            }
+            Picker("Working hours end", selection: Binding(get: { hours.wrappedValue.upperBound }, set: { hours.wrappedValue = hours.wrappedValue.lowerBound..<$0 })) {
+                ForEach((hours.wrappedValue.lowerBound + 1)...24, id: \.self) { Text("\($0):00").tag($0) }
+            }
+        } header: { Text("Calendar") } footer: {
+            Note(EKEventStore.authorizationStatus(for: .event) == .fullAccess
+                 ? "The calendars that count, for meetings, week, month, free and the next meeting. Free looks within your working hours."
+                 : "Type “meetings” in the launcher once to let Copperlight see your calendars; then pick the ones that count here. Free looks within your working hours.")
+        }
+    }
+
+    private var reminders: some View {
+        Section {
+            let names = EKEventStore.authorizationStatus(for: .reminder) == .fullAccess ? EKEventStore().calendars(for: .reminder).map(\.title).sorted() : []
+            Chooser(names: names, chosen: model.binding(\.reminders.lists, "reminders", "lists") { $0.isEmpty ? nil : .strings($0) })
+        } header: { Text("Reminders") } footer: {
+            Note(allowed(.reminder) ? "The lists whose reminders count, for “due” and the empty launcher."
+                 : "Type “due” in the launcher once to let Copperlight see your reminders; then pick the lists that count here.")
+        }
+    }
+
+    private func allowed(_ type: EKEntityType) -> Bool { EKEventStore.authorizationStatus(for: type) == .fullAccess }
+
+    private var contacts: some View {
+        Section {
+            Picker("Enter on a person", selection: model.binding(\.contacts.enter, "contacts", "enter") { $0 == .message ? nil : .string($0.rawValue) }) {
+                Text("Message").tag(Config.Contacts.Enter.message)
+                Text("Call").tag(Config.Contacts.Enter.call)
+                Text("FaceTime").tag(Config.Contacts.Enter.facetime)
+                Text("Email").tag(Config.Contacts.Enter.email)
+            }
+        } header: { Text("Contacts") } footer: {
+            Note("When they have no number or address for it, Enter sends a message. Tab still lists every way to reach them.")
+        }
+    }
+
+    private var timeZones: some View {
+        Section {
+            TextField("Your cities", text: Binding(get: { model.config.timeZones.cities.joined(separator: ", ") }, set: { text in
+                let cities = text.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+                model.binding(\.timeZones.cities, "time_zones", "cities") { $0.isEmpty ? nil : .strings($0) }.wrappedValue = cities
+            }), prompt: Text("New York, Tokyo"))
+        } header: { Text("Time zones") } footer: {
+            Note("Type “time” to see the time now in each, how far ahead or behind, and the day.")
+        }
+    }
+
+    private var colors: some View {
+        Section {
+            Picker("Copy colors as", selection: model.binding(\.colors.copy, "colors", "copy") { $0 == .hex ? nil : .string($0.rawValue) }) {
+                Text("Hex · #c87533").tag(ColorNotation.hex)
+                Text("RGB · rgb(200, 117, 51)").tag(ColorNotation.rgb)
+                Text("HSL · hsl(27, 59%, 49%)").tag(ColorNotation.hsl)
+            }
+        } header: { Text("Colors") } footer: {
+            Note("For Pick Color and the colors you picked. A color you type shows every notation.")
+        }
+    }
+
+    private var sound: some View {
+        Section {
+            Picker("When it's done", selection: model.binding(\.timers.sound, "timers", "sound") { $0 == "default" ? nil : .string($0) }) {
+                Text("The notification's sound").tag("default")
+                Text("No sound").tag("none")
+                Divider()
+                ForEach(macSounds(), id: \.self) { Text($0).tag($0) }
+            }
+            .onChange(of: model.config.timers.sound) { _, name in NSSound(named: name)?.play() }
+        } header: { Text("Pomodoro and timers") } footer: {
+            Note("What a pomodoro, a break or a timer plays when it ends.")
         }
     }
 
@@ -365,6 +477,11 @@ private struct GeneralPane: View {
 
     private var weather: some View {
         Section {
+            Picker("Units", selection: model.binding(\.weather.units, "weather", "units") { $0 == .auto ? nil : .string($0.rawValue) }) {
+                Text("Like this Mac").tag(Config.Weather.Units.auto)
+                Text("°C and km/h").tag(Config.Weather.Units.celsius)
+                Text("°F and mph").tag(Config.Weather.Units.fahrenheit)
+            }
             TextField("City", text: Binding(get: { model.config.weather.city ?? "" },
                                             set: { model.text(\.weather.city, "weather", "city").wrappedValue = $0 }),
                       prompt: Text("Where you are"))
@@ -377,6 +494,23 @@ private struct GeneralPane: View {
         Section("Pomodoro") {
             Minutes(title: "Focus", value: model.binding(\.pomodoro.defaultMinutes, "pomodoro", "default_minutes") { .int($0) })
             Minutes(title: "Break", value: model.binding(\.pomodoro.breakMinutes, "pomodoro", "break_minutes") { .int($0) })
+        }
+    }
+}
+
+/// A switch for each name; all on is no list at all, and the last one can't be turned off.
+private struct Chooser: View {
+    let names: [String]
+    @Binding var chosen: [String]
+
+    var body: some View {
+        ForEach(names, id: \.self) { name in
+            Toggle(name, isOn: Binding(get: { chosen.isEmpty || chosen.contains { $0.caseInsensitiveCompare(name) == .orderedSame } }, set: { on in
+                let current = chosen.isEmpty ? names : names.filter { name in chosen.contains { $0.caseInsensitiveCompare(name) == .orderedSame } }
+                let kept = on ? names.filter { current.contains($0) || $0 == name } : current.filter { $0 != name }
+                guard !kept.isEmpty else { return }
+                chosen = kept.count == names.count ? [] : kept
+            }))
         }
     }
 }
@@ -867,6 +1001,7 @@ private struct AboutPane: View {
             LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")
             LabeledContent("License") { Link("GNU GPL v3", destination: URL(string: "https://www.gnu.org/licenses/gpl-3.0.html")!) }
             LabeledContent("Website") { Link("copperlight.app", destination: URL(string: "https://copperlight.app")!) }
+            LabeledContent("Privacy") { Link("Every server and permission", destination: URL(string: "https://copperlight.app/privacy/")!) }
             LabeledContent("Source code") { Link("github.com/ramosrob/copperlight", destination: URL(string: "https://github.com/ramosrob/copperlight")!) }
         } footer: {
             Note("Copperlight is free and open source. © 2026 Robson Ramos.")
