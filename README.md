@@ -10,10 +10,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ramosrob/copperlight/releases/latest"><img src="https://img.shields.io/github/v/release/ramosrob/copperlight?label=download&color=E88C4A" alt="Download the latest release"></a>
+  <a href="https://github.com/robsonpbr/copperlight/releases/latest"><img src="https://img.shields.io/github/v/release/robsonpbr/copperlight?label=download&color=E88C4A" alt="Download the latest release"></a>
   <img src="https://img.shields.io/badge/macOS-15%2B-2A2522" alt="macOS 15 or later">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-2A2522" alt="License: GPL-3.0"></a>
-  <a href="https://github.com/ramosrob/copperlight/actions/workflows/test.yml"><img src="https://github.com/ramosrob/copperlight/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
+  <a href="https://github.com/robsonpbr/copperlight/actions/workflows/test.yml"><img src="https://github.com/robsonpbr/copperlight/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
 </p>
 
 <p align="center">
@@ -277,7 +277,7 @@ Requires macOS 15 or later, on Apple silicon or Intel.
 
 ### Download
 
-1. Download the zip from [Releases](https://github.com/ramosrob/copperlight/releases), unzip it and move
+1. Download the zip from [Releases](https://github.com/robsonpbr/copperlight/releases), unzip it and move
    Copperlight.app to Applications.
 2. Open it. The first time, macOS asks you to confirm it: click **Done**, then open System Settings → Privacy &
    Security, scroll down to "Copperlight was blocked" and click **Open Anyway**. Only once.
@@ -292,7 +292,7 @@ Needs Xcode 26 or later (the full app: the Command Line Tools alone can't build 
 
 ```sh
 brew install xcodegen
-git clone https://github.com/ramosrob/copperlight.git
+git clone https://github.com/robsonpbr/copperlight.git
 cd copperlight
 make install
 ```
@@ -384,8 +384,8 @@ included. Every setting is in
 ## Support Copperlight
 
 Copperlight is free, and it stays free. If it saves you time, you can
-[sponsor it on GitHub](https://github.com/sponsors/ramosrob) or [buy me a coffee](https://buymeacoffee.com/ramosrob).
-Found a bug or have an idea? [Open an issue](https://github.com/ramosrob/copperlight/issues).
+[sponsor it on GitHub](https://github.com/sponsors/robsonpbr) or [buy me a coffee](https://buymeacoffee.com/ramosrob).
+Found a bug or have an idea? [Open an issue](https://github.com/robsonpbr/copperlight/issues).
 
 ## License
 

@@ -2,7 +2,7 @@
 
 What's planned for Copperlight, roughly in order. There are no dates: things ship when they're ready.
 [SPEC.md](SPEC.md) decides what fits: a small core, keyboard only, one hotkey, plain-text config, nothing about
-you leaves your Mac. Ideas are welcome: [open an issue](https://github.com/ramosrob/copperlight/issues).
+you leaves your Mac. Ideas are welcome: [open an issue](https://github.com/robsonpbr/copperlight/issues).
 
 ## Next
 

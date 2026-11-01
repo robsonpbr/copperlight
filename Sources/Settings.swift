@@ -1066,7 +1066,7 @@ private struct AboutPane: View {
             LabeledContent("License") { Link("GNU GPL v3", destination: URL(string: "https://www.gnu.org/licenses/gpl-3.0.html")!) }
             LabeledContent("Website") { Link("copperlight.app", destination: URL(string: "https://copperlight.app")!) }
             LabeledContent("Privacy") { Link("Every server and permission", destination: URL(string: "https://copperlight.app/privacy/")!) }
-            LabeledContent("Source code") { Link("github.com/ramosrob/copperlight", destination: URL(string: "https://github.com/ramosrob/copperlight")!) }
+            LabeledContent("Source code") { Link("github.com/robsonpbr/copperlight", destination: URL(string: "https://github.com/robsonpbr/copperlight")!) }
         } footer: {
             Note("Copperlight is free and open source. © 2026 Robson Ramos.")
         }
