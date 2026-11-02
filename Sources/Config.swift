@@ -63,12 +63,26 @@ struct Config: Decodable, Equatable {
         }
     }
 
-    /// Your own words for the built-in keywords, which keep working: `translate = "t"`, `commands = [";", ">"]`.
+    /// Your own words for the built-in keywords, in place of theirs (`weather = "wth"`); `:` and `:!` keep theirs beside
+    /// yours (`commands = [";", ">"]`).
     struct Keywords: Decodable, Equatable, Sendable {
         /// By the keyword's key (`Keyword.key`): translate → ["t"].
         var words: [String: [String]] = [:]
         /// `language = false`: not the words of this Mac's language (Keywords.strings), only English's and yours.
         var language = true
+
+        /// The keywords your words replace: you left their own word out (`weather = "wth"`), so it stops working.
+        /// `:` and `:!` keep theirs beside yours.
+        var retired: Set<String> {
+            Set(Keyword.all.filter { keyword in
+                ![":", ":!"].contains(keyword) && words[Keyword.key(keyword)].map { !$0.isEmpty && !$0.contains(keyword) } == true
+            })
+        }
+
+        /// Each replaced keyword's first word of yours, which Copperlight types into the field in its place: weather → wth.
+        var renamed: [String: String] {
+            Dictionary(uniqueKeysWithValues: retired.compactMap { keyword in words[Keyword.key(keyword)]?.first.map { (keyword, $0) } })
+        }
 
         /// What you type → the keyword it stands for: "t" → "translate", ";" → ":".
         var expansions: [String: String] {
@@ -96,7 +110,7 @@ struct Config: Decodable, Equatable {
             var taken = Dictionary(uniqueKeysWithValues: Keyword.all.map { ($0, String(localized: "\"\($0)\" is already a keyword")) })
             for path in ["~", "/"] { taken[path] = String(localized: "\"\(path)\" starts a path") }
             for keyword in Keyword.all {
-                for word in words[Keyword.key(keyword)] ?? [] {
+                for word in words[Keyword.key(keyword)] ?? [] where word != keyword { // its own word kept beside yours
                     if word.isEmpty { return String(localized: "a word for \(keyword) is empty") }
                     if word.contains(where: \.isWhitespace) { return String(localized: "\"\(word)\": one word, no spaces") }
                     if let why = taken[word] { return why }
@@ -533,9 +547,9 @@ struct Config: Decodable, Equatable {
         # stocks = false
 
         [keywords]
-        # Your own words for the built-in ones, which keep working; Settings › Keywords lists them all.
-        # translate = "t"              # t bom dia, or t and Tab
-        # commands = ";"               # ;left, ;quit, in place of :
+        # Your own words in place of a keyword's own; Settings › Keywords lists them all, each with Reset.
+        # weather = "wth"              # wth lisboa; weather no longer works. ["weather", "wth"] keeps both
+        # commands = ";"               # ;left, ;quit, beside : (: and :! keep their own)
         # language = false             # not the words in your Mac's language (tempo for weather): English's and yours only
 
         [look]

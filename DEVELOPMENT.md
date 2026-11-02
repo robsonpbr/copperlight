@@ -20,6 +20,9 @@ lists everything it does, [docs/guide.md](docs/guide.md) explains it in detail a
 - **No AI service and no plugin store.** What runs on the Mac is fine: Apple's on-device model writes app search
   words when Apple Intelligence is on, and Vision reads the text in photos.
 - **Use decides the order.** Rows people pick rise on their own (frecency). No aliases or numbers to set up.
+- **Your words for keywords.** A keyword can be replaced by your own word (`weather = "wth"`): its own word then
+  reaches nothing of its feature. A provider behind `Gated` gets that for free; one that answers a keyword outside a
+  gate checks `Feature.isBlocked` itself.
 - **In your language.** Text a person reads goes through localization, so a translator adds a language with three
   text files and no code ([TRANSLATING.md](TRANSLATING.md)). `make strings` writes the English list from the
   compiler; `make translations` says what each language is missing.

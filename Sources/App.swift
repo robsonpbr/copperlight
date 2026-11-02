@@ -37,19 +37,21 @@ struct BuiltinProvider: ResultProvider {
     func results(for query: String) -> [LauncherResult] {
         var rows: [LauncherResult] = []
         let lower = query.lowercased()
-        if Feature.notes.isOn, let score = score(query, prefixOf: "note", title: "Note") {
+        let notesOn = Feature.notes.isOn && !Feature.notes.isBlocked // `note`, replaced by your word, typed: not the note
+        if notesOn, let score = score(query, prefixOf: "note", title: "Note") {
             let last = notes().first?.url
             rows.append(LauncherResult(id: "builtin:note", title: String(localized: "Note"),
                                        subtitle: String(localized: "Your last note · Esc hides it"), icon: .symbol("note.text"), score: score,
                                        action: { [showNote, newNote] in if let last { showNote(last) } else { newNote("") } }))
         }
-        if Feature.notes.isOn {
+        if notesOn {
             rows += notesStartRow(lower).map { [$0] } ?? []
             if lower.count >= 5, "new note".hasPrefix(lower) { rows.append(newNoteRow("", score: 50)) }
             rows += noteTextRows(query)
         }
         // From 3 letters: "c" and "cl" belong to Chrome, Calendar, Claude…
-        if Feature.clipboard.isOn, let score = score(query, prefixOf: "clipboard", minLength: 3, title: "Clipboard History") {
+        if Feature.clipboard.isOn, !Feature.clipboard.isBlocked,
+           let score = score(query, prefixOf: "clipboard", minLength: 3, title: "Clipboard History") {
             rows.append(LauncherResult(id: "builtin:clipboard", title: String(localized: "Clipboard History"),
                                        subtitle: String(localized: "Search past copies"), icon: .symbol("doc.on.clipboard"), score: score,
                                        action: showClipboard))
@@ -465,8 +467,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.keepsAppOpens = config.apps.suggestions
         model.showsCards = config.answers.cards
         let yours = Set(config.commands.map { $0.alias.lowercased() } + config.snippets.map { $0.name.lowercased() })
-        let language = config.keywords.language ? languageKeywords(languageKeywordTable(), taken: yours) : [:] // clima → weather
-        model.keywords = language.merging(config.keywords.expansions) { _, own in own }
+        model.keywords = keywordExpansions(config.keywords, languageTable: languageKeywordTable(), taken: yours,
+                                           language: config.keywords.language) // wth → weather, clima → weather
+        (model.retired, model.renamed) = (config.keywords.retired, config.keywords.renamed)
         clipboardModel.keywords = model.keywords.filter { $0.value == VerbProvider.prefix } // its search is for what you copied
         // Chained so back-to-back reloads reach the providers in order.
         weather.setCity(config.weather.city ?? "")

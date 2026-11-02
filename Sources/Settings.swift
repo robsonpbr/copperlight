@@ -69,12 +69,19 @@ import SwiftUI
         })
     }
 
-    /// Your words for a keyword, as one line ("t, tr"): one is a string under [keywords], several a list, none removes
+    /// Every keyword back to its own word: your words for them go from config.toml.
+    func resetKeywords() {
+        let keys = config.keywords.words.keys
+        save({ $0.keywords.words = [:] }, { file in for key in keys { file.set(key, in: "keywords", to: nil) } })
+    }
+
+    /// Your words for a keyword, as one line ("wth, w"): one is a string under [keywords], several a list, none removes
     /// the key. A word that's taken isn't saved; `problem` says why.
     func keyword(_ keyword: String) -> Binding<String> {
         let key = Keyword.key(keyword)
         return Binding(get: { (self.config.keywords.words[key] ?? []).joined(separator: ", ") }, set: { text in
-            let words = text.lowercased().split { $0 == "," || $0.isWhitespace }.map(String.init)
+            // Commas only: a keyword's own word may keep its space ("add todo, todo").
+            let words = text.lowercased().split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
             guard words != self.config.keywords.words[key] ?? [] else { return }
             var all = self.config.keywords.words
             all[key] = words.isEmpty ? nil : words
@@ -707,15 +714,19 @@ private struct KeywordsPane: View {
                 Section(group.title) {
                     ForEach(features, id: \.self) { feature in
                         ForEach(feature.keywords, id: \.self) { keyword in
+                            // Replaced by yours, a keyword's words in your language go with it.
                             KeywordRow(model: model, keyword: keyword, what: feature.name,
-                                       theirs: shownWords?[keyword].flatMap { $0 == keyword ? nil : $0 })
+                                       theirs: model.config.keywords.retired.contains(keyword) ? nil
+                                           : shownWords?[keyword].flatMap { $0 == keyword ? nil : $0 })
                         }
                     }
                 }
             }
         }
-        Section {} footer: {
-            Note("Your words work beside the built-in ones: with t for translate, “t bom dia”, or t and Tab. A word of symbols works stuck to what follows: ; for : is ;left. Your word takes the place of what it would find: t alone no longer finds apps. Separate several with commas. Saved in config.toml under [keywords].")
+        Section {
+            Button("Reset All") { model.resetKeywords() }.disabled(model.config.keywords.words.isEmpty)
+        } footer: {
+            Note("Your words replace the keyword's own: with wth for weather, “wth lisboa” and Tab give the Weather chip, and “weather” no longer does. Its words in your Mac's language go with it. To keep it too, write it in: weather, wth. Separate several with commas. Reset brings the keyword's own word back. For :, a word of symbols works beside it, stuck to what follows: ; for : is ;left. Saved in config.toml under [keywords].")
         }
     }
 }
@@ -731,16 +742,22 @@ private struct KeywordRow: View {
 
     var body: some View {
         LabeledContent {
-            TextField(keyword, text: $text, prompt: Text("your words"))
-                .labelsHidden().frame(width: 200).focused($focused)
-                .onSubmit { model.keyword(keyword).wrappedValue = text }
-                .onChange(of: focused) { if !focused { model.keyword(keyword).wrappedValue = text } }
+            HStack {
+                if !model.keyword(keyword).wrappedValue.isEmpty { // yours in place: Reset gives the keyword its own back
+                    Button("Reset") { model.keyword(keyword).wrappedValue = "" }
+                }
+                TextField(keyword, text: $text, prompt: Text("your words"))
+                    .labelsHidden().frame(width: 200).focused($focused)
+                    .onSubmit { model.keyword(keyword).wrappedValue = text }
+                    .onChange(of: focused) { if !focused { model.keyword(keyword).wrappedValue = text } }
+            }
         } label: {
             Text(keyword).monospaced()
             Text(what)
             if let theirs { Text(theirs).monospaced() }
         }
         .onAppear { text = model.keyword(keyword).wrappedValue }
+        .onChange(of: model.config.keywords.words[Keyword.key(keyword)]) { text = model.keyword(keyword).wrappedValue } // its Reset, Reset All
     }
 }
 

@@ -203,6 +203,10 @@ final class SearchModel {
     var opens = 0
     /// `[keywords]`: your words for the built-in ones, "t" → "translate", ";" → ":".
     @ObservationIgnored var keywords: [String: String] = [:]
+    /// Keywords your words replace (`[keywords] weather = "wth"`): typed, their own word no longer reaches them.
+    @ObservationIgnored var retired: Set<String> = []
+    /// Each replaced keyword's first word of yours, typed into the field in its place.
+    @ObservationIgnored var renamed: [String: String] = [:]
 
     /// `searchesEmptyQuery`: ask providers about "" too (the clipboard lists everything), instead of showing nothing.
     /// `exclusive`: a query starting with one of these prefixes ("f ") goes to that provider alone.
@@ -237,7 +241,7 @@ final class SearchModel {
         guard learning.recent else { return false }
         guard recent.indices.contains(next) else { return !query.isEmpty }
         let entry = recent[next]
-        if entry.chip { fill(entry.query) } else { modeMatch = nil; query = entry.query }
+        if entry.chip { fill(entry.query) } else { modeMatch = nil; query = yours(entry.query) } // never a replaced word
         recalled = (next, query)
         return true
     }
@@ -301,10 +305,17 @@ final class SearchModel {
         return text
     }
 
-    /// Puts `text` in the field as Tab or Enter fills it in: the name it starts with, if any, becomes its chip.
+    /// Puts `text` in the field as Tab or Enter fills it in: the name it starts with, if any, becomes its chip. A
+    /// replaced keyword without one goes in as your word ("pick color " → "pc "): its own no longer works.
     func fill(_ text: String) {
         modeMatch = named(text)
-        query = text
+        query = modeMatch == nil ? yours(text) : text
+    }
+
+    /// `text` with a replaced keyword's own word at its start spelled your way: "pick color " → "pc ".
+    private func yours(_ text: String) -> String {
+        guard let keyword = Keyword.retiredWord(text, in: retired), let word = renamed[keyword] else { return text }
+        return word + text.dropFirst(keyword.count)
     }
 
     /// The field's text: the query, or what follows the mode's name while its chip shows.
@@ -321,9 +332,13 @@ final class SearchModel {
         // Your word for a keyword becomes it first, a chip if the keyword has one: "t" → Translate, as "translate" would.
         if case let full = expanded(query), full != query {
             if named(full) == nil, named(full + " ") != nil { return fill(full + " ") }
-            query = full
+            // With text: its chip, keeping the text ("wth lisboa" → Weather, "lisboa"), then a longer one if it names one.
+            if let chip = named(full), chip.mode.prefix.count > (mode?.prefix.count ?? 0) { fill(full); _ = moveEnding(); return }
+            if Keyword.retiredWord(full, in: retired) == nil { query = full } // a replaced keyword's own word stays out
         }
-        let entered = named(query).flatMap { $0.mode.prefix.count > (mode?.prefix.count ?? 0) ? $0 : nil }
+        // A replaced keyword's own word, typed, makes no chip.
+        let entered = Keyword.retiredWord(query, in: retired) != nil ? nil
+            : named(query).flatMap { $0.mode.prefix.count > (mode?.prefix.count ?? 0) ? $0 : nil }
         if let entered {
             modeMatch = entered
             search() // the same text, now for its provider alone
@@ -348,6 +363,7 @@ final class SearchModel {
         // The shortest name that starts with it, when every other one goes on from it ("translate " before
         // "translate to german "); "add" could be several things, so it fills in nothing.
         let lower = query.lowercased()
+        guard Keyword.retiredWord(lower, in: retired) == nil else { return } // a replaced keyword's own word: no chip
         let names = modes.map(\.mode.prefix).filter { !lower.isEmpty && $0.hasPrefix(lower) && $0 != lower }.sorted { $0.count < $1.count }
         if let shortest = names.first, names.allSatisfy({ $0.hasPrefix(shortest) }) { fill(shortest) }
     }
@@ -422,10 +438,13 @@ final class SearchModel {
             if let idle { task = Task { let rows = await idle(); if !Task.isCancelled { results = rows } } }
             return
         }
-        // A chip's provider alone; else the longest prefix wins: ":!" (shell) over ":" (commands).
+        // A chip's provider alone; else the longest prefix wins: ":!" (shell) over ":" (commands). A replaced keyword's
+        // own word, as typed (not your word's expansion), reaches nothing of its feature.
         let inMode = modeMatch != nil
+        let blocked = inMode ? nil : Keyword.retiredWord(self.query, in: retired)
         let providers = modeMatch.map { [$0.provider] }
-            ?? exclusive.filter { query.hasPrefix($0.key) }.max { $0.key.count < $1.key.count }.map { [$0.value] } ?? providers
+            ?? exclusive.filter { query.hasPrefix($0.key) && $0.key.trimmingCharacters(in: .whitespaces) != blocked }
+                .max { $0.key.count < $1.key.count }.map { [$0.value] } ?? providers
         let (frecency, learned, now, typed) = learning.picked ? (frecency, learned, Date.now, self.query.lowercased())
             : ([:], [:], Date.now, self.query.lowercased())
         let learnedKey = Self.learnedKey(self.query)
@@ -436,7 +455,11 @@ final class SearchModel {
         task = Task {
             await withTaskGroup(of: (rows: [LauncherResult], patient: Bool)?.self) { group in
                 for provider in providers {
-                    group.addTask { (inMode ? await provider.modeResults(for: query) : await provider.results(for: query), provider.patient) }
+                    group.addTask {
+                        await Keyword.$blocked.withValue(blocked) {
+                            (inMode ? await provider.modeResults(for: query) : await provider.results(for: query), provider.patient)
+                        }
+                    }
                 }
                 // ponytail: one fixed wait, under what reads as instant; per-provider deadlines if one ever needs more.
                 group.addTask { try? await Task.sleep(for: Self.wait); return nil } // nil: the wait is over

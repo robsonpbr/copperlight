@@ -2265,7 +2265,6 @@
 
 "Your own color" = "Cor personalizada";
 
-"Your words work beside the built-in ones: with t for translate, “t bom dia”, or t and Tab. A word of symbols works stuck to what follows: ; for : is ;left. Your word takes the place of what it would find: t alone no longer finds apps. Separate several with commas. Saved in config.toml under [keywords]." = "Suas palavras funcionam junto com as nativas: com t para translate, “t bom dia” ou t e Tab. Uma palavra feita de símbolos funciona colada ao que vem depois: com ; para :, fica ;left. Sua palavra toma o lugar do que ela encontraria: t sozinho deixa de encontrar apps. Separe várias com vírgulas. Salvas no config.toml em [keywords].";
 
 /* Settings › Features: the group of features for your own things (notes, files) */
 "Yours" = "Pessoal";
@@ -2490,3 +2489,9 @@
 "… %lld more characters" = "… mais %lld caracteres";
 
 "↑ brings back what you ran" = "↑ traz de volta o que você executou";
+
+"Reset" = "Redefinir";
+
+"Reset All" = "Redefinir Tudo";
+
+"Your words replace the keyword's own: with wth for weather, “wth lisboa” and Tab give the Weather chip, and “weather” no longer does. Its words in your Mac's language go with it. To keep it too, write it in: weather, wth. Separate several with commas. Reset brings the keyword's own word back. For :, a word of symbols works beside it, stuck to what follows: ; for : is ;left. Saved in config.toml under [keywords]." = "Suas palavras substituem a da palavra-chave: com wth para weather, “wth lisboa” e Tab abrem o chip Tempo, e “weather” deixa de funcionar. As palavras dela no idioma do seu Mac vão junto. Para manter a original também, escreva-a junto: weather, wth. Separe várias com vírgulas. Redefinir traz a palavra original de volta. Para :, uma palavra de símbolos funciona ao lado dele, colada ao que vem depois: ; para : é ;left. Salvo no config.toml em [keywords].";

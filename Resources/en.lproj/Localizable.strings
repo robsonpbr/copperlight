@@ -1544,6 +1544,10 @@
 
 "Replace the running timer (%@ left) with one until %@?" = "Replace the running timer (%@ left) with one until %@?";
 
+"Reset" = "Reset";
+
+"Reset All" = "Reset All";
+
 "Restart" = "Restart";
 
 "Restart the Mac? Apps with unsaved changes ask first." = "Restart the Mac? Apps with unsaved changes ask first.";
@@ -2266,7 +2270,7 @@
 
 "Your own color" = "Your own color";
 
-"Your words work beside the built-in ones: with t for translate, “t bom dia”, or t and Tab. A word of symbols works stuck to what follows: ; for : is ;left. Your word takes the place of what it would find: t alone no longer finds apps. Separate several with commas. Saved in config.toml under [keywords]." = "Your words work beside the built-in ones: with t for translate, “t bom dia”, or t and Tab. A word of symbols works stuck to what follows: ; for : is ;left. Your word takes the place of what it would find: t alone no longer finds apps. Separate several with commas. Saved in config.toml under [keywords].";
+"Your words replace the keyword's own: with wth for weather, “wth lisboa” and Tab give the Weather chip, and “weather” no longer does. Its words in your Mac's language go with it. To keep it too, write it in: weather, wth. Separate several with commas. Reset brings the keyword's own word back. For :, a word of symbols works beside it, stuck to what follows: ; for : is ;left. Saved in config.toml under [keywords]." = "Your words replace the keyword's own: with wth for weather, “wth lisboa” and Tab give the Weather chip, and “weather” no longer does. Its words in your Mac's language go with it. To keep it too, write it in: weather, wth. Separate several with commas. Reset brings the keyword's own word back. For :, a word of symbols works beside it, stuck to what follows: ; for : is ;left. Saved in config.toml under [keywords].";
 
 /* Settings › Features: the group of features for your own things (notes, files) */
 "Yours" = "Yours";

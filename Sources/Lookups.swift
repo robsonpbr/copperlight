@@ -278,7 +278,11 @@ struct LookupProvider: ResultProvider {
     /// In the CPU and Memory chips, every process; typed without them, the 8 busiest.
     func modeResults(for query: String) async -> [LauncherResult] { await results(for: query, limit: 100) }
 
-    func results(for query: String) async -> [LauncherResult] { await results(for: query, limit: 8) }
+    func results(for query: String) async -> [LauncherResult] {
+        // `cpu`, `memory`, `port`, `speed`: replaced by your word, and their own typed. Not behind a feature's gate here.
+        guard !Feature.processes.isBlocked, !Feature.speedTest.isBlocked else { return [] }
+        return await results(for: query, limit: 8)
+    }
 
     private func results(for query: String, limit: Int) async -> [LauncherResult] {
         let lower = query.lowercased().trimmingCharacters(in: .whitespaces)

@@ -148,10 +148,27 @@ enum Feature: String, CaseIterable, Sendable {
     }
 }
 
-/// The built-in keywords, which config.toml's `[keywords]` adds your own words to: `translate = "t"`, `commands = ";"`.
-/// They keep working. A keyword's key there is the word, `_` for its spaces; `:` is `commands`, `:!` is `shell`.
+extension Feature {
+    /// One of its keywords is replaced and its own word was typed (`Keyword.blocked`): its rows stay out. A provider
+    /// that answers a keyword outside `Gated` checks this itself.
+    var isBlocked: Bool { Keyword.blocked.map(keywords.contains) ?? false }
+}
+
+/// The built-in keywords, which config.toml's `[keywords]` replaces with your own words (`weather = "wth"`), or adds
+/// yours beside for `:` and `:!` (`commands = ";"`). A keyword's key there is the word, `_` for its spaces; `:` is
+/// `commands`, `:!` is `shell`.
 enum Keyword {
     static var all: [String] { [":"] + Feature.listed.flatMap(\.keywords) }
+
+    /// The replaced keyword (`[keywords] weather = "wth"`) whose own word was typed, while the providers answer it: its
+    /// feature's rows stay out. Set for the general search only, never inside a chip.
+    @TaskLocal static var blocked: String?
+
+    /// The longest of `retired` that `text` starts with, typed alone or before a space: only the word itself stops.
+    static func retiredWord(_ text: String, in retired: Set<String>) -> String? {
+        let lower = text.lowercased().trimmingCharacters(in: .whitespaces)
+        return retired.filter { lower == $0 || lower.hasPrefix($0 + " ") }.max { $0.count < $1.count }
+    }
     static func key(_ word: String) -> String { [":": "commands", ":!": "shell"][word] ?? word.replacingOccurrences(of: " ", with: "_") }
 }
 
@@ -167,6 +184,9 @@ struct Gated: ResultProvider {
 
     var modes: [Mode] { isOn(feature) ? provider.modes : [] }
     var patient: Bool { provider.patient }
-    func results(for query: String) async -> [LauncherResult] { isOn(feature) ? await provider.results(for: query) : [] }
+    func results(for query: String) async -> [LauncherResult] {
+        guard isOn(feature), !feature.isBlocked else { return [] } // its own word, replaced, was typed
+        return await provider.results(for: query)
+    }
     func modeResults(for query: String) async -> [LauncherResult] { isOn(feature) ? await provider.modeResults(for: query) : [] }
 }

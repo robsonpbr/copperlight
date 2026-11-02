@@ -42,10 +42,14 @@ weather; your cities, for `time` alone (the time now in each); whether a picked 
 the sound a pomodoro or a timer ends with. Each is a key in config.toml ([configuration.md](configuration.md)).
 
 **Your own keywords:** Settings › Keywords has a field beside each keyword (`translate`, `weather`, `:`…) for words of
-your own. With `t` for translate, `t bom dia` translates, and `t` then Tab makes the Translate chip; `translate` still
-works. A word of symbols works stuck to what follows: with `;` for `:`, `;left` is `:left`. Your word takes the place of
-what it would find: with `t`, typing `t` alone no longer finds apps. It's saved as `translate = "t"` under
-`[keywords]`.
+your own, which replace its own. With `wth` for weather, `wth lisboa` then Tab gives the Weather chip, searching
+Lisbon, and `weather` no longer does: Copperlight types `wth` wherever it would have typed `weather` (Tab on a row,
+Delete on a chip, ↑), and its words in your Mac's language (`clima`) go with it. Other
+ways in stay (`wea` still finds the Weather row by its name), and so does what else the word names, like the Weather
+app. To keep a keyword's own word too, write it in: `weather, wth`. Several words are separated by commas. Reset beside
+the field brings the keyword's own word back, and Reset All every one. Your word takes the place of what it would find:
+with `t` for translate, typing `t` alone no longer finds apps. It's saved as `weather = "wth"` under `[keywords]`. `:`
+and `:!` keep their own: a word of symbols for them works beside them, stuck to what follows (`;` for `:` is `;left`).
 
 **Your language:** Copperlight's text follows your Mac's language, or the one chosen for Copperlight in System Settings
 › General › Language & Region › Applications: English, Portuguese (Brazil) or Portuguese (Portugal). What isn't

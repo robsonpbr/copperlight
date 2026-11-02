@@ -16,6 +16,15 @@ func languageKeywords(_ table: [String: String], keywords: [String] = Keyword.al
     return words
 }
 
+/// What typing expands, word → keyword: your words, and your language's (`languageTable`, unless `language` is off)
+/// but a replaced keyword's (clima goes with weather once it's wth) and those naming your commands or snippets
+/// (`taken`). Your words win.
+func keywordExpansions(_ keywords: Config.Keywords, languageTable: [String: String], taken: Set<String>,
+                       language: Bool = true) -> [String: String] {
+    let theirs = language ? languageKeywords(languageTable.filter { !keywords.retired.contains($0.key) }, taken: taken) : [:]
+    return theirs.merging(keywords.expansions) { _, own in own }
+}
+
 /// The Keywords.strings macOS picks for this Mac's language: English's on an English Mac, whose words are the keywords.
 func languageKeywordTable(bundle: Bundle = .main) -> [String: String] {
     guard let url = bundle.url(forResource: "Keywords", withExtension: "strings"), let data = try? Data(contentsOf: url) else { return [:] }

@@ -56,7 +56,7 @@ struct CaptureProvider: ResultProvider {
     /// The to-do target says the app it adds to: "Add Reminder", or "Add to Things".
     private var targets: [Target] {
         let app = todos().app
-        return Self.all.filter { isOn($0.feature) }.map { target in
+        return Self.all.filter { isOn($0.feature) && Keyword.blocked != "add \($0.name)" }.map { target in // replaced: its word typed
             target.name == "todo" && app != .reminders
                 ? Target(name: "todo", title: String(localized: "Add to \(todoAppName(app))"), icon: target.icon, feature: target.feature) : target
         }

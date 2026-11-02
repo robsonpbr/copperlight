@@ -7,8 +7,8 @@ line here.
 **Not offered yet**, with their code kept: the text inside files and the text in photos. Everything else on this page
 is on, and each one can be turned off: Settings › Features, or `[features]` in config.toml
 ([configuration.md](docs/configuration.md)). Off means off: no rows, no commands, nothing in the background, nothing
-sent, no permission asked for. The keywords below (`translate`, `:`…) can have your own words beside them: Settings ›
-Keywords, or `[keywords]` (`translate = "t"`, `commands = ";"`).
+sent, no permission asked for. The keywords below (`translate`, `weather`…) can be replaced by words of your own, with a Reset:
+Settings › Keywords, or `[keywords]` (`weather = "wth"`); `:` gets yours beside it (`commands = ";"`).
 
 ## At a glance
 
@@ -543,7 +543,7 @@ Launcher (what the empty launcher shows, what it learns and Forget, answer cards
 Options (each feature's own: the calendars and reminder lists that count, how early the next meeting shows, working
 hours for `free`, what Enter does on a person, the currency to convert to, the language to translate to, °C or °F
 and a city for the weather, your cities for `time`, what a color is copied as, Markdown in notes, the pomodoro's
-lengths, and the sound a pomodoro or a timer ends with), Keywords (your own words for each keyword, and your language's), Clipboard (how much to keep, apps not recorded), Files (folders
+lengths, and the sound a pomodoro or a timer ends with), Keywords (your own words in place of each keyword's, with Reset, and your language's), Clipboard (how much to keep, apps not recorded), Files (folders
 searched, names hidden, app descriptions online or not),
 Browser (where links open, which profile), Commands and Snippets (add, edit, delete), and About (version, license,
 and the open source it's built with). Every change goes straight into config.toml, editing only its own lines, comments kept;

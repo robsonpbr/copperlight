@@ -18,8 +18,9 @@ launcher = "option+space"      # default; the only hotkey
 stocks = false                 # everything is on by default; a feature's name = false turns it off (list below)
 
 [keywords]
-translate = "t"                # your own words beside the built-in ones (list below): t bom dia, or t and Tab
-commands = [";", ">"]          # ;left and >left, as :left
+weather = "wth"                # your words in place of a keyword's own (list below): wth lisboa, and weather no
+                               # longer works. ["weather", "wth"] keeps both. Settings › Keywords, with Reset.
+commands = [";", ">"]          # ;left and >left, beside :left: `:` and `:!` keep their own
 language = true                # default: the words in your Mac's language work too (tempo for weather, on a Mac in
                                # Portuguese). false: English's and yours only. Settings › Keywords.
 
@@ -237,12 +238,16 @@ when you change it), or any color, `"#3478f6"` (`rgb(…)` and `hsl(…)` too). 
 shade from it, as copper has. Settings › General › Look has the same choice and a color picker. The icon and its C in
 the welcome screen stay copper.
 
-**Keywords**, the words that start something (`translate`, `:`), keep working, and `[keywords]` adds your own:
-`translate = "t"`, or several, `translate = ["t", "tr"]`. Your word counts alone, before a space (`t bom dia`), and
-with Tab for the chip, as the keyword would. A word of symbols works stuck to what follows too: with `commands = ";"`,
-`;left` is `:left`. Your word takes the place of what it would find: with `t`, typing `t` alone no longer finds apps.
-A word that's a keyword already, another keyword's, `~` or `/` (they start paths), or has a space is an error row.
-Settings › Keywords has a field for each.
+**Keywords**, the words that start something (`translate`, `weather`), can be replaced by your own in `[keywords]`:
+`weather = "wth"`, or several, `weather = ["wth", "w"]`. Then only yours work: `weather lisboa` no longer gives the
+weather, while `wea` still finds the Weather row by its name, and the Weather app and files still show. Copperlight types
+your word wherever it would type the keyword's: Tab on a row, Delete on a chip, ↑. To keep the keyword's own word too,
+write it in: `weather = ["weather", "wth"]` (`add_todo = ["add todo", "todo"]`, its space and all). Your word counts
+alone or before a space (`wth lisboa`, then Tab for the Weather chip), and its words in your Mac's language go with the
+keyword's. Your word takes the place of what it would find: with `translate = "t"`, typing `t` alone no longer finds
+apps. `:` and `:!` keep their own: a word of symbols works beside them, stuck to what follows (`commands = ";"`:
+`;left` is `:left`). A word that's another keyword's own, another of yours, `~` or `/` (they start paths), or has a
+space (but a keyword's own) is an error row. Settings › Keywords has a field for each, with Reset.
 
 | Key | Keyword |
 |---|---|

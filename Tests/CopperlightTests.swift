@@ -4865,3 +4865,141 @@ func keywordFileProblems(_ table: [String: String], keywords: [String]) -> [Stri
     #expect(TranslateProvider.choices(from: languages, locale: Locale(identifier: "en_US")).map { "\($0.key)=\($0.name)" }
             == ["german=German", "portuguese=Portuguese"])
 }
+
+// MARK: Renaming keywords
+
+/// Your words for a keyword replace its own, unless you write it in too; `:` and `:!` keep theirs beside yours.
+@Test func keywordsRename() throws {
+    let renamed = try Config.parse("[keywords]\nweather = \"wth\"").keywords
+    #expect(renamed.retired == ["weather"] && renamed.renamed == ["weather": "wth"] && renamed.expansions["wth"] == "weather")
+    #expect(try Config.parse("[keywords]\nweather = [\"weather\", \"wth\"]").keywords.retired.isEmpty)
+    #expect(try Config.parse("[keywords]\nadd_todo = [\"add todo\", \"todo\"]").keywords.retired.isEmpty)
+    #expect(try Config.parse("[keywords]\ncommands = \";\"\nshell = \">\"").keywords.retired.isEmpty)
+    #expect(throws: (any Error).self) { try Config.parse("[keywords]\nweather = \"define\"") }
+}
+
+/// Answers anything that starts with `prefix`, with a row named `id`.
+private struct Starting: ResultProvider {
+    let id: String, prefix: String
+    var modes: [Mode] = []
+    func results(for query: String) async -> [LauncherResult] {
+        query.lowercased().hasPrefix(prefix) ? [LauncherResult(id: id, title: id, icon: .symbol("circle"), score: 1, action: {})] : []
+    }
+}
+
+/// A replaced keyword's own word, typed alone or before a space, no longer reaches its feature; what else it names (an
+/// app called Weather) still shows, the start of it (wea) still finds the feature by name, and your word works.
+@MainActor @Test func renamedKeywordStopsWorking() async throws {
+    let weather = Gated(.weather, Starting(id: "weather", prefix: "wea"), isOn: { _ in true }) // its name too, from 3 letters
+    let files = Gated(.files, Starting(id: "files", prefix: "f "), isOn: { _ in true })
+    let model = SearchModel(providers: [weather, Starting(id: "app", prefix: "w"), Starting(id: "anything", prefix: "")],
+                            exclusive: ["f ": files])
+    (model.keywords, model.retired, model.renamed) = (["wth": "weather", "find": "f"], ["weather", "f"], ["weather": "wth", "f": "find"])
+    let ids = { (query: String) async throws -> Set<String> in
+        model.query = query
+        try await Task.sleep(for: .milliseconds(100))
+        return Set(model.results.map(\.id))
+    }
+    #expect(try await ids("wth lisboa").contains("weather"))
+    #expect(try await ids("weather lisboa") == ["app", "anything"])
+    #expect(try await ids("weather") == ["app", "anything"])
+    #expect(try await ids("wea").contains("weather")) // found by its name: only the word itself stops
+    #expect(try await ids("f invoice") == ["anything"]) // not sent to file search alone
+    #expect(try await ids("find invoice") == ["files"])
+}
+
+/// The keywords answered outside a feature's gate stop too: the note, the add targets, the Mac's numbers.
+@MainActor @Test func ungatedKeywordsStop() async {
+    let builtins = BuiltinProvider(showNote: { _ in }, showClipboard: {}, notesFolder: URL(filePath: "/nonexistent"),
+                                   noteFile: URL(filePath: "/nonexistent/note.txt"))
+    #expect(builtins.results(for: "note").contains { $0.title == "Note" })
+    #expect(Keyword.$blocked.withValue("note") { builtins.results(for: "note") }.allSatisfy { $0.title != "Note" && $0.title != "Notes" })
+    let capture = CaptureProvider(addToNote: { _ in }, isOn: { _ in true })
+    #expect(!capture.results(for: "add todo pay rent").isEmpty)
+    #expect(Keyword.$blocked.withValue("add todo") { capture.results(for: "add todo pay rent") }.isEmpty)
+    #expect(await Keyword.$blocked.withValue("cpu") { await LookupProvider().results(for: "cpu") }.isEmpty)
+    #expect(builtins.results(for: "clip").contains { $0.id == "builtin:clipboard" })
+    #expect(Keyword.$blocked.withValue("clip") { builtins.results(for: "clip") }.allSatisfy { $0.id != "builtin:clipboard" })
+    for target in ["add note", "add event"] {
+        #expect(Keyword.$blocked.withValue(target) { capture.results(for: "\(target) fri 10am dentist") }.isEmpty, "\(target)")
+    }
+    for word in ["memory", "port", "speed"] {
+        #expect(await Keyword.$blocked.withValue(word) { await LookupProvider().results(for: word) }.isEmpty, "\(word)")
+    }
+}
+
+/// What typing expands: your words, and your language's but those of a keyword your words replace (clima goes with
+/// weather once it's wth) and those that name your commands or snippets; yours win.
+@Test func keywordExpansionsMerge() throws {
+    let keywords = try Config.parse("[keywords]\nweather = \"wth\"").keywords
+    let table = ["weather": "clima", "week": "semana", "note": "nota"]
+    let words = keywordExpansions(keywords, languageTable: table, taken: ["nota"])
+    #expect(words["wth"] == "weather" && words["clima"] == nil && words["semana"] == "week" && words["nota"] == nil)
+    #expect(keywordExpansions(keywords, languageTable: table, taken: [], language: false)["semana"] == nil)
+}
+
+/// Reset gives a keyword its own word back; Reset All, every one; config.toml loses their lines, keeping the rest.
+@MainActor @Test func keywordsReset() throws {
+    let file = URL(filePath: NSTemporaryDirectory()).appending(path: "copperlight-\(UUID().uuidString).toml")
+    try "[keywords]\nlanguage = false\n".write(to: file, atomically: true, encoding: .utf8)
+    let model = SettingsModel(file: file)
+    model.keyword("weather").wrappedValue = "wth"
+    model.keyword("translate").wrappedValue = "t, tr"
+    #expect(model.config.keywords.words == ["weather": ["wth"], "translate": ["t", "tr"]])
+    model.keyword("weather").wrappedValue = ""
+    #expect(model.config.keywords.words == ["translate": ["t", "tr"]])
+    model.resetKeywords()
+    let text = try String(contentsOf: file, encoding: .utf8)
+    #expect(model.config.keywords.words.isEmpty && !text.contains("translate") && text.contains("language = false"))
+}
+
+/// Copperlight never types a replaced keyword's own word into the field: a name it fills in becomes its chip, or your
+/// word; Tab keeps your word; Delete on a chip puts your word back.
+@MainActor @Test func renamedKeywordInTheField() {
+    let chip = Mode(prefix: "weather ", title: "Weather", icon: .symbol("cloud"))
+    let weather = Gated(.weather, Starting(id: "weather", prefix: "wea", modes: [chip]), isOn: { _ in true })
+    let model = SearchModel(providers: [weather])
+    (model.keywords, model.retired, model.renamed) = (["wth": "weather", "pc": "pick color"], ["weather", "pick color"],
+                                                      ["weather": "wth", "pick color": "pc"])
+    model.fill("weather ")
+    #expect(model.mode?.prefix == "weather ") // Tab on the Weather row, found by its name: its chip
+    model.leaveMode()
+    #expect(model.query == "wth")
+    model.fill("pick color ")
+    #expect(model.query == "pc ")
+    model.query = "pc"
+    model.complete()
+    #expect(model.query.hasPrefix("pc"))
+}
+
+/// Answers only in its chip, as Weather does: typed, it gives nothing.
+private struct ChipOnly: ResultProvider {
+    let prefix: String
+    var modes: [Mode] { [Mode(prefix: prefix, title: prefix.capitalized, icon: .symbol("circle"))] }
+    func results(for query: String) async -> [LauncherResult] { [] }
+    func modeResults(for query: String) async -> [LauncherResult] {
+        [LauncherResult(id: "chip", title: query, icon: .symbol("circle"), score: 1, action: {})]
+    }
+}
+
+/// Your word with text, then Tab, makes the chip it stands for, keeping the text; the replaced word with Tab makes none;
+/// ↑ brings back a query run with the replaced word as your word.
+@MainActor @Test func renamedKeywordTabAndRecall() async throws {
+    let state = StateStore(file: try tempStateFile())
+    let model = SearchModel(providers: [Gated(.weather, ChipOnly(prefix: "weather "), isOn: { _ in true }),
+                                        Gated(.reminders, ChipOnly(prefix: "add todo "), isOn: { _ in true })], frecency: state)
+    (model.keywords, model.retired, model.renamed) = (["wth": "weather", "todo": "add todo"], ["weather", "add todo"],
+                                                      ["weather": "wth", "add todo": "todo"])
+    model.query = "wth lisboa"
+    model.complete()
+    #expect(model.mode?.prefix == "weather " && model.typed == "lisboa")
+    model.fill("")
+    model.query = "add todo"
+    model.complete()
+    #expect(model.mode == nil) // the shortest name starting with it isn't filled in either
+    model.fill("")
+    model.query = "weather"
+    model.remember() // run before the rename, typed
+    model.query = ""
+    #expect(model.recallOlder() && model.query == "wth")
+}
