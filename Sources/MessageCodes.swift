@@ -80,18 +80,22 @@ struct MessageCodeProvider: ResultProvider {
         }
         let messages: [ChatMessage]
         do { messages = try read(.now - 15 * 60) } catch {
-            return [note("Allow Full Disk Access to read codes from Messages", "Privacy & Security → Full Disk Access → Copperlight",
-                         "Open System Settings", {
+            return [note(String(localized: "Allow Full Disk Access to read codes from Messages"),
+                         String(localized: "Privacy & Security → Full Disk Access → Copperlight",
+                                comment: "System Settings' pages, by the names macOS gives them"),
+                         String(localized: "Open System Settings"), {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
             })]
         }
         let codes = messages.compactMap { message in verificationCode(in: message.text).map { (message, $0) } }.prefix(5)
-        guard !codes.isEmpty else { return [note("No codes in the last 15 minutes", "From Messages", "", {})] }
+        guard !codes.isEmpty else { return [note(String(localized: "No codes in the last 15 minutes"), String(localized: "From Messages"), "", {})] }
         return codes.enumerated().map { index, found in
             let (message, code) = found
             let minutes = Int(Date.now.timeIntervalSince(message.date) / 60)
-            return LauncherResult(id: "codes:\(index)", title: code, subtitle: "\(message.sender) · \(minutes < 1 ? "just now" : "\(minutes) min ago")",
-                                  icon: .symbol("lock.shield"), score: 50 - Double(index) / 100, actionTitle: "Copy",
+            let when = minutes < 1 ? String(localized: "just now") : String(localized: "\(minutes) min ago")
+            return LauncherResult(id: "codes:\(index)", title: code, subtitle: "\(message.sender) · \(when)",
+                                  icon: .symbol("lock.shield"), score: 50 - Double(index) / 100,
+                                  actionTitle: String(localized: "Copy", comment: "Enter on a verification code"),
                                   action: { copyToClipboard(code) }, preview: message.text, previewStyle: .prose)
         }
     }

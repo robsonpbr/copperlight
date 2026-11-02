@@ -60,14 +60,14 @@ struct PathProvider: ResultProvider {
     func results(for query: String) -> [LauncherResult] {
         guard let path = pathQuery(query) else { return [] }
         guard let entries = pathEntries(path) else {
-            return [LauncherResult(id: "path:none", title: "No folder at \(path.folder)", icon: .symbol("questionmark.folder"),
+            return [LauncherResult(id: "path:none", title: String(localized: "No folder at \(path.folder)"), icon: .symbol("questionmark.folder"),
                                    score: 0, actionTitle: "", action: {})]
         }
         var rows: [LauncherResult] = []
         if path.filter.isEmpty {
             let folder = path.url
             rows.append(LauncherResult(id: "file:\(folder.path)", title: folder.path == "/" ? "/" : folder.lastPathComponent,
-                                       subtitle: path.folder, icon: .file(folder.path), score: 100, actionTitle: "Open in Finder",
+                                       subtitle: path.folder, icon: .file(folder.path), score: 100, actionTitle: String(localized: "Open in Finder"),
                                        action: { NSWorkspace.shared.open(folder) }))
         }
         let terminal = terminal
@@ -82,7 +82,9 @@ struct PathProvider: ResultProvider {
                 }
             }
             return LauncherResult(id: "file:\(path)", title: entry.name, icon: .file(path), score: 50 - Double(index) / 1000,
-                                  actionTitle: entry.isFolder ? "Browse" : "Open", action: { NSWorkspace.shared.open(URL(filePath: path)) },
+                                  actionTitle: entry.isFolder ? String(localized: "Browse", comment: "Enter on a folder in a typed path: goes into it")
+                                      : String(localized: "Open", comment: "Enter on a file in a typed path"),
+                                  action: { NSWorkspace.shared.open(URL(filePath: path)) },
                                   completion: entry.isFolder ? entry.shown + "/" : nil, actions: actions)
         }
     }

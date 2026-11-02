@@ -24,7 +24,8 @@ struct BuiltinProvider: ResultProvider {
 
     /// The Notes chip (`note` ⇥): your notes alone, without apps or the search row.
     var modes: [Mode] {
-        Feature.notes.isOn ? [Mode(prefix: "note ", title: "Notes", icon: .symbol("note.text"), hint: "A word in them, or nothing for all")] : []
+        Feature.notes.isOn ? [Mode(prefix: "note ", title: String(localized: "Notes"), icon: .symbol("note.text"),
+                                   hint: String(localized: "A word in them, or nothing for all", comment: "The Notes chip's empty field"))] : []
     }
 
     func modeResults(for query: String) async -> [LauncherResult] {
@@ -38,8 +39,8 @@ struct BuiltinProvider: ResultProvider {
         let lower = query.lowercased()
         if Feature.notes.isOn, let score = score(query, prefixOf: "note", title: "Note") {
             let last = notes().first?.url
-            rows.append(LauncherResult(id: "builtin:note", title: "Note", subtitle: "Your last note · Esc hides it",
-                                       icon: .symbol("note.text"), score: score,
+            rows.append(LauncherResult(id: "builtin:note", title: String(localized: "Note"),
+                                       subtitle: String(localized: "Your last note · Esc hides it"), icon: .symbol("note.text"), score: score,
                                        action: { [showNote, newNote] in if let last { showNote(last) } else { newNote("") } }))
         }
         if Feature.notes.isOn {
@@ -49,20 +50,20 @@ struct BuiltinProvider: ResultProvider {
         }
         // From 3 letters: "c" and "cl" belong to Chrome, Calendar, Claude…
         if Feature.clipboard.isOn, let score = score(query, prefixOf: "clipboard", minLength: 3, title: "Clipboard History") {
-            rows.append(LauncherResult(id: "builtin:clipboard", title: "Clipboard History", subtitle: "Search past copies",
-                                       icon: .symbol("doc.on.clipboard"), score: score,
+            rows.append(LauncherResult(id: "builtin:clipboard", title: String(localized: "Clipboard History"),
+                                       subtitle: String(localized: "Search past copies"), icon: .symbol("doc.on.clipboard"), score: score,
                                        action: showClipboard))
         }
         if let score = score(query, prefixOf: "welcome", minLength: 3, title: "Welcome to Copperlight") {
-            rows.append(LauncherResult(id: "builtin:welcome", title: "Welcome to Copperlight",
-                                       subtitle: "The hotkey, permissions, Open at Login", icon: .symbol("hand.wave"),
+            rows.append(LauncherResult(id: "builtin:welcome", title: String(localized: "Welcome to Copperlight"),
+                                       subtitle: String(localized: "The hotkey, permissions, Open at Login"), icon: .symbol("hand.wave"),
                                        score: score, action: showWelcome))
         }
         // "settings" alone is System Settings' too, so only a plain fuzzy match there; "copperlight" goes straight to it.
         if let score = score(query, prefixOf: "copperlight settings", minLength: 3, title: "Copperlight Settings") {
-            rows.append(LauncherResult(id: "builtin:settings", title: "Copperlight Settings",
-                                       subtitle: "Hotkey, features, clipboard, files, browser, commands, snippets", icon: .symbol("gearshape"),
-                                       score: score, action: showSettings))
+            rows.append(LauncherResult(id: "builtin:settings", title: String(localized: "Copperlight Settings"),
+                                       subtitle: String(localized: "Hotkey, features, clipboard, files, browser, commands, snippets"),
+                                       icon: .symbol("gearshape"), score: score, action: showSettings))
         }
         return rows
     }
@@ -85,15 +86,21 @@ struct BuiltinProvider: ResultProvider {
         else if lower.count >= 3, "notes".hasPrefix(lower) { score = lower.hasPrefix("notes") ? 50.01 : 49.99 }
         else if let other = otherNameScore(lower, "All Notes") { score = other }
         else { return nil }
-        return LauncherResult(id: "builtin:notes", title: typed.isEmpty ? "Notes" : "Notes with “\(typed)”",
-                              subtitle: typed.isEmpty ? "All your notes, the last edited first" : "Your notes that say it",
-                              icon: .symbol("list.bullet.rectangle"), score: score, actionTitle: "List",
+        return LauncherResult(id: "builtin:notes",
+                              title: typed.isEmpty ? String(localized: "Notes") : String(localized: "Notes with “\(typed)”"),
+                              subtitle: typed.isEmpty ? String(localized: "All your notes, the last edited first")
+                                  : String(localized: "Your notes that say it"),
+                              icon: .symbol("list.bullet.rectangle"), score: score,
+                              actionTitle: String(localized: "List", comment: "Enter on the Notes row: lists them in the Notes chip"),
                               action: {}, completion: "note " + typed)
     }
 
     private func newNoteRow(_ text: String, score: Double) -> LauncherResult {
-        LauncherResult(id: "note:new", title: "New Note", subtitle: text.isEmpty ? "An empty one" : "Starting with “\(text)”",
-                       icon: .symbol("square.and.pencil"), score: score, actionTitle: "Create", action: { [newNote] in newNote(text) })
+        LauncherResult(id: "note:new", title: String(localized: "New Note"),
+                       subtitle: text.isEmpty ? String(localized: "An empty one", comment: "A new note")
+                           : String(localized: "Starting with “\(text)”"),
+                       icon: .symbol("square.and.pencil"), score: score, actionTitle: String(localized: "Create", comment: "Enter on New Note"),
+                       action: { [newNote] in newNote(text) })
     }
 
     /// In the Notes chip: every note by its first line, last edited first, with the next line and, beside the list,
@@ -112,7 +119,7 @@ struct BuiltinProvider: ResultProvider {
         guard query.count >= 3, lower != "note", !lower.hasPrefix("note ") else { return [] }
         return notes().compactMap { note in
             matchingLine(note.text, query).map {
-                noteRow(note, id: "note-text:\(note.url.lastPathComponent)", subtitle: "Note · \($0)", score: 0.3)
+                noteRow(note, id: "note-text:\(note.url.lastPathComponent)", subtitle: String(localized: "Note · \($0)"), score: 0.3)
             }
         }
     }
@@ -120,7 +127,7 @@ struct BuiltinProvider: ResultProvider {
     /// A prefix of `keyword` (at least `minLength` long) ranks first: above apps, fuzzy commands and
     /// math; only an exact command alias (100) beats it. Anything else is a plain fuzzy match on the title.
     private func score(_ query: String, prefixOf keyword: String, minLength: Int = 1, title: String) -> Double? {
-        query.count >= minLength && keyword.hasPrefix(query.lowercased()) ? 50 : fuzzyScore(query, title) ?? otherNameScore(query, title)
+        query.count >= minLength && keyword.hasPrefix(query.lowercased()) ? 50 : titleScore(title) { fuzzyScore(query, $0) } ?? otherNameScore(query, title)
     }
 }
 
@@ -153,7 +160,7 @@ struct CopperlightApp: App {
     do {
         if on { try service.register() } else { try service.unregister() }
     } catch {
-        notify("Couldn't change Launch at Login", error.localizedDescription)
+        notify(String(localized: "Couldn't change Launch at Login"), error.localizedDescription)
     }
     if service.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
     return service.status == .enabled
@@ -234,7 +241,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     /// The files selected in Finder when the hotkey was pressed over it (or the row asking to see them), on top.
     private var finderIdle: [LauncherResult] = []
-    private lazy var panel: LauncherPanel = LauncherPanel(model: model, placeholder: "Type anything")
+    private lazy var panel: LauncherPanel = LauncherPanel(model: model,
+                                                          placeholder: String(localized: "Type anything", comment: "The launcher's empty field"))
 
     /// The meeting to join now, for Enter after `camera`.
     nonisolated private static func joinable(_ meetings: MeetingsProvider) -> @Sendable () async -> LauncherResult? {
@@ -264,7 +272,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var clipboardModel = SearchModel(
         providers: clipboardProvider.map { [$0] } ?? [], searchesEmptyQuery: true,
         exclusive: clipboardProvider.map { [VerbProvider.prefix: VerbProvider(verbs: $0.verbs)] } ?? [:])
-    private lazy var clipboardPanel = LauncherPanel(model: clipboardModel, placeholder: "Search clipboard history, : for commands…")
+    private lazy var clipboardPanel = LauncherPanel(model: clipboardModel,
+                                                    placeholder: String(localized: "Search clipboard history, : for commands…"))
     private var notes: [String: NotePanel] = [:] // by the file's path
     private var welcome: WelcomeWindow?
     private var settings: SettingsWindow?
@@ -368,7 +377,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showClipboard() {
         clipboardModel.notice = historyError.map { error in
-            LauncherResult(id: "clipboard-error", title: "Clipboard history is off: can't open clipboard.sqlite",
+            LauncherResult(id: "clipboard-error", title: String(localized: "Clipboard history is off: can't open clipboard.sqlite"),
                            subtitle: error, icon: .symbol("exclamationmark.triangle"), score: .infinity,
                            actionTitle: "", action: {})
         }
@@ -378,7 +387,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Enter on Paste Next in the launcher: onto the clipboard, and into the app in front.
     private func pasteFromLauncher(_ content: ClipboardContent) {
         history?.restore(content)
-        if hasAccessibility("paste") { sendPaste() }
+        if hasAccessibility(String(localized: "paste", comment: "Ends “Allow Copperlight in Accessibility to …”")) { sendPaste() }
     }
 
     /// Enter in the clipboard panel. Without Accessibility it can only copy, so it says how to fix that.
@@ -386,9 +395,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         history?.restore(content)
         if AXIsProcessTrusted() { return sendPaste() }
         clipboardModel.notice = LauncherResult(
-            id: "accessibility", title: "Copied. To paste it too, allow Copperlight in Accessibility",
-            subtitle: "Privacy & Security → Accessibility", icon: .symbol("lock.shield"), score: .infinity,
-            actionTitle: "Open System Settings", action: { requestAccessibility() })
+            id: "accessibility", title: String(localized: "Copied. To paste it too, allow Copperlight in Accessibility"),
+            subtitle: String(localized: "Privacy & Security → Accessibility", comment: "Where System Settings has it, in its own words"),
+            icon: .symbol("lock.shield"), score: .infinity,
+            actionTitle: String(localized: "Open System Settings"), action: { requestAccessibility() })
         clipboardPanel.show()
     }
 
@@ -432,9 +442,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             model.notice = nil
         } catch {
             model.notice = LauncherResult(
-                id: "config-error", title: "config.toml: \(Config.describe(error))",
-                subtitle: "Using the last valid config", icon: .symbol("exclamationmark.triangle"),
-                score: .infinity, actionTitle: "Open config.toml",
+                id: "config-error", title: String(localized: "config.toml: \(Config.describe(error))"),
+                subtitle: String(localized: "Using the last valid config"), icon: .symbol("exclamationmark.triangle"),
+                score: .infinity, actionTitle: String(localized: "Open config.toml"),
                 action: { NSWorkspace.shared.open(Config.file) })
         }
         settings?.model.reload() // an edit by hand shows in the settings window too
@@ -454,7 +464,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.learning = config.learning
         model.keepsAppOpens = config.apps.suggestions
         model.showsCards = config.answers.cards
-        model.keywords = config.keywords.expansions
+        let yours = Set(config.commands.map { $0.alias.lowercased() } + config.snippets.map { $0.name.lowercased() })
+        let language = config.keywords.language ? languageKeywords(languageKeywordTable(), taken: yours) : [:] // clima → weather
+        model.keywords = language.merging(config.keywords.expansions) { _, own in own }
         clipboardModel.keywords = model.keywords.filter { $0.value == VerbProvider.prefix } // its search is for what you copied
         // Chained so back-to-back reloads reach the providers in order.
         weather.setCity(config.weather.city ?? "")

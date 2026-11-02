@@ -14,7 +14,8 @@ struct ReminderItem: Equatable, Sendable {
 extension ReminderItem {
     init?(_ reminder: EKReminder) {
         guard let parts = reminder.dueDateComponents, let due = Calendar.current.date(from: parts) else { return nil }
-        self.init(id: reminder.calendarItemIdentifier, title: reminder.title ?? "Untitled", due: due, allDay: parts.hour == nil,
+        let untitled = String(localized: "Untitled", comment: "An event or reminder without a title")
+        self.init(id: reminder.calendarItemIdentifier, title: reminder.title ?? untitled, due: due, allDay: parts.hour == nil,
                   list: reminder.calendar?.title ?? "")
     }
 }
@@ -33,8 +34,8 @@ func dueNow(_ items: [ReminderItem], now: Date, calendar: Calendar = .current) -
 /// The copper badge: "Overdue", "in 20 min", or "Today" for a day's reminder.
 func reminderBadge(_ item: ReminderItem, now: Date, calendar: Calendar = .current) -> String {
     let end = deadline(item, calendar: calendar)
-    if end <= now { return "Overdue" }
-    return item.allDay ? "Today" : startsIn(item.due, end: end, now: now)
+    if end <= now { return String(localized: "Overdue", comment: "Badge on a reminder past its time") }
+    return item.allDay ? String(localized: "Today", comment: "A day: today") : startsIn(item.due, end: end, now: now)
 }
 
 /// Incomplete reminders due by the end of today, with full Reminders access (`add todo` asks for it); nil without it.
@@ -55,7 +56,7 @@ func fetchDueReminders() async -> [ReminderItem]? {
     let store = EKEventStore()
     guard let reminder = store.calendarItem(withIdentifier: id) as? EKReminder else { return }
     reminder.isCompleted = true
-    do { try store.save(reminder, commit: true) } catch { notify("Couldn't complete the reminder", error.localizedDescription) }
+    do { try store.save(reminder, commit: true) } catch { notify(String(localized: "Couldn't complete the reminder"), error.localizedDescription) }
 }
 
 /// Reminders that are due: the empty launcher shows what's overdue, due within the hour or due today with no time,
@@ -87,12 +88,14 @@ struct RemindersProvider: ResultProvider {
     }
 
     private func row(_ item: ReminderItem, score: Double, now: Date, app: Config.Reminders.App = .reminders) -> LauncherResult {
-        let when = item.allDay ? (calendar.isDate(item.due, inSameDayAs: now) ? "Today" : item.due.formatted(.dateTime.weekday().day().month()))
+        let today = String(localized: "Today", comment: "A day: today")
+        let when = item.allDay ? (calendar.isDate(item.due, inSameDayAs: now) ? today : item.due.formatted(.dateTime.weekday().day().month()))
             : calendar.isDate(item.due, inSameDayAs: now) ? item.due.formatted(date: .omitted, time: .shortened)
             : item.due.formatted(.dateTime.weekday().day().month().hour().minute())
         let id = item.id
         return LauncherResult(id: "reminder:\(id)", title: item.title, subtitle: [item.list, when].filter { !$0.isEmpty }.joined(separator: " · "),
-                              icon: .symbol("checklist"), score: score, actionTitle: "Complete",
+                              icon: .symbol("checklist"), score: score,
+                              actionTitle: String(localized: "Complete", comment: "Enter on a reminder or to-do: marks it done"),
                               action: {
                                   switch app {
                                   case .things: completeInThings(id)
@@ -125,15 +128,20 @@ struct RemindersProvider: ResultProvider {
         guard let items = await due() else {
             let status = EKEventStore.authorizationStatus(for: .reminder)
             return [status == .denied || status == .restricted
-                ? LauncherResult(id: "builtin:due", title: "Allow Copperlight to see your reminders", subtitle: "Privacy & Security → Reminders",
-                                 icon: .symbol("checklist"), score: 50, actionTitle: "Open System Settings", action: {
+                ? LauncherResult(id: "builtin:due", title: String(localized: "Allow Copperlight to see your reminders"),
+                                 subtitle: String(localized: "Privacy & Security → Reminders",
+                                                  comment: "System Settings' pages, by the names macOS gives them"),
+                                 icon: .symbol("checklist"), score: 50, actionTitle: String(localized: "Open System Settings"), action: {
                     NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Reminders")!)
                 })
-                : LauncherResult(id: "builtin:due", title: "See Due Reminders", subtitle: "Asks to read your reminders, once", icon: .symbol("checklist"),
-                                 score: 50, actionTitle: "Allow", action: {
+                : LauncherResult(id: "builtin:due", title: String(localized: "See Due Reminders"),
+                                 subtitle: String(localized: "Asks to read your reminders, once"), icon: .symbol("checklist"), score: 50,
+                                 actionTitle: String(localized: "Allow", comment: "Enter asks macOS for Reminders access"), action: {
                     Task {
-                        guard (try? await EKEventStore().requestFullAccessToReminders()) == true else { return notify("Copperlight can't see your reminders") }
-                        notify("Type “due” again to see them")
+                        guard (try? await EKEventStore().requestFullAccessToReminders()) == true else {
+                            return notify(String(localized: "Copperlight can't see your reminders"))
+                        }
+                        notify(String(localized: "Type “due” again to see them"))
                     }
                 })]
         }
@@ -145,7 +153,8 @@ struct RemindersProvider: ResultProvider {
     private func dueRows(_ items: [ReminderItem], now: Date, app: Config.Reminders.App) -> [LauncherResult] {
         let due = items.sorted { deadline($0, calendar: calendar) < deadline($1, calendar: calendar) }
         guard !due.isEmpty else {
-            return [LauncherResult(id: "builtin:due", title: "Nothing due today", icon: .symbol("checklist"), score: 50, actionTitle: "", action: {})]
+            return [LauncherResult(id: "builtin:due", title: String(localized: "Nothing due today"),
+                                   icon: .symbol("checklist"), score: 50, actionTitle: "", action: {})]
         }
         return due.enumerated().map { row($1, score: 50 - Double($0) / 100, now: now, app: app) }
     }
@@ -154,16 +163,18 @@ struct RemindersProvider: ResultProvider {
     private func todoistRows(_ query: String, now: Date) async -> [LauncherResult] {
         let icon = LauncherResult.Icon.symbol("checklist")
         guard let key = todoistKey() else {
-            return [LauncherResult(id: "builtin:due", title: "Connect Todoist in Settings", subtitle: "Settings › Options › To-dos: paste your Todoist key",
-                                   icon: icon, score: 50, actionTitle: "Open Settings", action: showSettings)]
+            return [LauncherResult(id: "builtin:due", title: String(localized: "Connect Todoist in Settings"),
+                                   subtitle: String(localized: "Settings › Options › To-dos: paste your Todoist key"),
+                                   icon: icon, score: 50, actionTitle: String(localized: "Open Settings"), action: showSettings)]
         }
         if let items = await todoist.cached(now: now) {
             let rows = dueRows(items, now: now, app: .todoist)
             return rows + [openTodoAppRow(.todoist, score: 50 - Double(rows.count) / 100)]
         }
         let (todoist, send, show) = (todoist, send, show)
-        return [LauncherResult(id: "builtin:due", title: "Show What's Due in Todoist", subtitle: "Asks Todoist for today's and overdue tasks",
-                               icon: icon, score: 50, actionTitle: "Show", action: {
+        return [LauncherResult(id: "builtin:due", title: String(localized: "Show What's Due in Todoist"),
+                               subtitle: String(localized: "Asks Todoist for today's and overdue tasks"), icon: icon, score: 50,
+                               actionTitle: String(localized: "Show", comment: "Enter on due's row: asks Todoist"), action: {
             Task {
                 switch await todoist.load(key: key, send: send) {
                 case .success: show(query)
@@ -185,17 +196,20 @@ struct RemindersProvider: ResultProvider {
         case .due(let items):
             let rows = dueRows(items, now: now, app: .things)
             return rows + [openTodoAppRow(.things, score: 50 - Double(rows.count) / 100)]
-        case .closed: return [openTodoAppRow(.things, title: "Open Things to See What's Due", score: 50)]
-        case .failed: return [openTodoAppRow(.things, title: "Couldn't read Things", score: 50)]
+        case .closed: return [openTodoAppRow(.things, title: String(localized: "Open Things to See What's Due"), score: 50)]
+        case .failed: return [openTodoAppRow(.things, title: String(localized: "Couldn't read Things"), score: 50)]
         case .unasked:
-            return message("See What's Due in Things", "Asks to control Things, once", "Allow", {
+            return message(String(localized: "See What's Due in Things"), String(localized: "Asks to control Things, once"),
+                           String(localized: "Allow", comment: "Enter asks macOS to let Copperlight control Things"), {
                 Task.detached {
                     guard automationPermission(id, ask: true) == noErr else { return }
-                    await MainActor.run { notify("Type “due” again to see them") }
+                    await MainActor.run { notify(String(localized: "Type “due” again to see them")) }
                 }
             })
         case .refused:
-            return message("Allow Copperlight to control Things", "Privacy & Security → Automation", "Open System Settings", {
+            return message(String(localized: "Allow Copperlight to control Things"),
+                           String(localized: "Privacy & Security → Automation", comment: "System Settings' pages, by the names macOS gives them"),
+                           String(localized: "Open System Settings"), {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation")!)
             })
         }

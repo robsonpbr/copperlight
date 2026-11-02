@@ -7,7 +7,7 @@ import IOKit.hidsystem
 /// (`:quit saf`) and lists a row per target. Enter on such a command fills in its keyword.
 struct Verb: Sendable {
     let keyword: String // what you type after ":" ("quit", "copy path")
-    let title: String
+    let title: LocalizedStringResource // in this Mac's language; its English (`english`) is found and named too
     let icon: LauncherResult.Icon
     var confirm: String? = nil // ask first (`:shut down`)
     var showing: (@Sendable () -> String)? = nil // a toggle's row says what Enter does now ("Turn Wi-Fi Off")
@@ -15,6 +15,11 @@ struct Verb: Sendable {
     var run: (@MainActor @Sendable () -> Void)? = nil
     var targets: (@Sendable (String) async -> [LauncherResult])? = nil
     var feature: Feature? = nil // nil: always there
+}
+
+extension Verb {
+    var shown: String { String(localized: title) }
+    var english: String { title.key } // otherNames' key, and what typing in English matches
 }
 
 extension [Verb] {
@@ -32,7 +37,7 @@ struct VerbProvider: ResultProvider {
     private var shown: [Verb] { verbs.filter { $0.feature.map(isOn) ?? true } }
     /// The commands that take a name (`:quit `); `:!` is the shell's.
     var modes: [Mode] {
-        shown.filter { $0.targets != nil && $0.keyword != "!" }.map { Mode(prefix: ":\($0.keyword) ", title: $0.title, icon: $0.icon) }
+        shown.filter { $0.targets != nil && $0.keyword != "!" }.map { Mode(prefix: ":\($0.keyword) ", title: $0.shown, icon: $0.icon) }
     }
 
     func results(for query: String) async -> [LauncherResult] {
@@ -42,7 +47,7 @@ struct VerbProvider: ResultProvider {
         // Another name takes targets too: `:kill slack` is `:force quit slack`.
         let verbs = shown
         let named = verbs.lazy.compactMap { verb in
-            verb.targets == nil ? nil : ([verb.keyword] + (otherNames[verb.title] ?? [])).first { lower == $0 || lower.hasPrefix($0 + " ") }.map { (verb, $0) }
+            verb.targets == nil ? nil : ([verb.keyword] + (otherNames[verb.english] ?? [])).first { lower == $0 || lower.hasPrefix($0 + " ") }.map { (verb, $0) }
         }.first
         if let (verb, name) = named, let targets = verb.targets {
             // `:hide o` still offers `:hide others`: commands that extend this one's keyword come first.
@@ -57,12 +62,16 @@ struct VerbProvider: ResultProvider {
         let lower = text.lowercased()
         let group = verbs.filter { $0.keyword == lower || $0.keyword.hasPrefix(lower + " ") }
         return (group.isEmpty || lower.isEmpty ? verbs : group).enumerated().compactMap { index, verb in
-            let match = [fuzzyScore(text, verb.title), fuzzyScore(text, verb.keyword), otherNameScore(text, verb.title)].compactMap { $0 }.max()
+            let match = [fuzzyScore(text, verb.english), fuzzyScore(text, verb.shown), fuzzyScore(text, verb.keyword),
+                         otherNameScore(text, verb.english)].compactMap { $0 }.max()
             // As listed when nothing's typed, 0.01 apart, so the ones you use (frecency, up to 0.5) move up.
             guard let score = text.isEmpty ? -0.01 * Double(index) : match else { return nil }
             return LauncherResult(
-                id: "verb:\(verb.keyword)", title: verb.showing?() ?? verb.title, subtitle: ":" + verb.keyword, icon: verb.icon,
-                score: score, actionTitle: verb.run != nil ? "Run" : "Choose", action: verb.run ?? {},
+                id: "verb:\(verb.keyword)", title: verb.showing?() ?? verb.shown, subtitle: ":" + verb.keyword, icon: verb.icon,
+                score: score,
+                actionTitle: verb.run != nil ? String(localized: "Run", comment: "Enter on a : command (:lock): runs it")
+                    : String(localized: "Choose", comment: "Enter on a : command that takes a name (:quit): fills it in"),
+                action: verb.run ?? {},
                 // One that runs and takes text too (`:awake`, `:awake 2h`) runs on Enter; typing after it gives the rest.
                 completion: verb.targets != nil && verb.run == nil ? ":\(verb.keyword) " : nil, repeats: verb.repeats, confirm: verb.confirm)
         }
@@ -72,11 +81,11 @@ struct VerbProvider: ResultProvider {
 extension Verb {
     /// The launcher's commands: the window in front, running apps, files, the Mac, Copperlight.
     @MainActor static func launcher(files: FileSearchProvider) -> [Verb] {
-        let place = { (keyword: String, title: String, symbol: String, layout: WindowLayout) in
+        let place = { (keyword: String, title: LocalizedStringResource, symbol: String, layout: WindowLayout) in
             Verb(keyword: keyword, title: title, icon: .symbol(symbol), run: { arrangeFrontWindow(layout) })
         }
-        let nudge = { (direction: NudgeDirection, title: String, symbol: String) in
-            Verb(keyword: "nudge \(direction)", title: "Nudge \(title)", icon: .symbol(symbol), repeats: true, run: { nudgeFrontWindow(direction) })
+        let nudge = { (direction: NudgeDirection, title: LocalizedStringResource, symbol: String) in // a whole title: word order differs
+            Verb(keyword: "nudge \(direction)", title: title, icon: .symbol(symbol), repeats: true, run: { nudgeFrontWindow(direction) })
         }
         return ([
             // The window in front
@@ -98,10 +107,10 @@ extension Verb {
             place("right third", "Right Third", "rectangle.trailingthird.inset.filled", .rightThird),
             place("left two thirds", "Left Two Thirds", "rectangle.lefthalf.inset.filled", .leftTwoThirds),
             place("right two thirds", "Right Two Thirds", "rectangle.righthalf.inset.filled", .rightTwoThirds),
-            nudge(.left, "Left", "arrow.left"),
-            nudge(.right, "Right", "arrow.right"),
-            nudge(.up, "Up", "arrow.up"),
-            nudge(.down, "Down", "arrow.down"),
+            nudge(.left, "Nudge Left", "arrow.left"),
+            nudge(.right, "Nudge Right", "arrow.right"),
+            nudge(.up, "Nudge Up", "arrow.up"),
+            nudge(.down, "Nudge Down", "arrow.down"),
             Verb(keyword: "next display", title: "Move to Next Display", icon: .symbol("display.2"), run: { moveFrontWindowToNextDisplay() }),
             Verb(keyword: "restore", title: "Restore Window", icon: .symbol("arrow.uturn.backward"), run: { restoreFrontWindow() }),
             Verb(keyword: "close", title: "Close Window", icon: .symbol("xmark.square"), run: { closeFrontWindow() }),
@@ -109,19 +118,25 @@ extension Verb {
         ] + layouts()).belonging(to: .windows) + [
             // Running apps
             Verb(keyword: "quit", title: "Quit Application", icon: .symbol("xmark"),
-                 targets: { runningAppRows($0, verb: "Quit") { $0.terminate() } }),
+                 targets: { runningAppRows($0, verb: "Quit", title: { String(localized: "Quit \($0)") },
+                                           actionTitle: String(localized: "Quit", comment: "Enter on a running app")) { $0.terminate() } }),
             Verb(keyword: "force quit", title: "Force Quit Application", icon: .symbol("xmark.octagon"),
-                 targets: { runningAppRows($0, verb: "Force Quit", confirm: true) { $0.forceTerminate() } }),
+                 targets: { runningAppRows($0, verb: "Force Quit", title: { String(localized: "Force Quit \($0)") },
+                                           actionTitle: String(localized: "Force Quit", comment: "Enter on a running app"),
+                                           confirm: { String(localized: "Force Quit \($0)? Unsaved changes are lost.") }) { $0.forceTerminate() } }),
             Verb(keyword: "hide", title: "Hide Application", icon: .symbol("eye.slash"),
-                 targets: { runningAppRows($0, verb: "Hide") { $0.hide() } }),
+                 targets: { runningAppRows($0, verb: "Hide", title: { String(localized: "Hide \($0)") },
+                                           actionTitle: String(localized: "Hide", comment: "Enter on a running app")) { $0.hide() } }),
             Verb(keyword: "hide others", title: "Hide Others", icon: .symbol("eye.slash.circle"), run: { hideOtherApps() }),
             Verb(keyword: "unhide all", title: "Unhide All Apps", icon: .symbol("eye"), run: { unhideAllApps() }),
             Verb(keyword: "quit all", title: "Quit All Apps", icon: .symbol("xmark.circle"),
-                 confirm: "Quit every app? Apps with unsaved changes ask first.", run: { quitApps(keepingFront: false) }),
+                 confirm: String(localized: "Quit every app? Apps with unsaved changes ask first."), run: { quitApps(keepingFront: false) }),
             Verb(keyword: "quit others", title: "Quit Other Apps", icon: .symbol("xmark.circle"),
-                 confirm: "Quit every app but the one in front? Apps with unsaved changes ask first.", run: { quitApps(keepingFront: true) }),
+                 confirm: String(localized: "Quit every app but the one in front? Apps with unsaved changes ask first."),
+                 run: { quitApps(keepingFront: true) }),
             Verb(keyword: "relaunch", title: "Relaunch Application", icon: .symbol("arrow.clockwise.circle"),
-                 targets: { runningAppRows($0, verb: "Relaunch") { relaunch($0) } }),
+                 targets: { runningAppRows($0, verb: "Relaunch", title: { String(localized: "Relaunch \($0)") },
+                                           actionTitle: String(localized: "Relaunch", comment: "Enter on a running app")) { relaunch($0) } }),
         ].belonging(to: .runningApps) + [
             // Files
             fileVerb("reveal", "Reveal in Finder", icon: .symbol("folder"), files: files) {
@@ -130,7 +145,8 @@ extension Verb {
             fileVerb("copy path", "Copy Path", icon: .symbol("doc.on.doc"), files: files) { copyToClipboard($0) },
             fileVerb("look", "Quick Look", icon: .symbol("eye"), files: files) { quickLook($0) },
             Verb(keyword: "open with", title: "Open With", icon: .symbol("arrow.up.forward.app"), targets: { await openWithRows($0, files: files) }),
-            fileVerb("trash", "Move to Trash", icon: .symbol("trash"), files: files, confirm: { "Move “\($0)” to the Trash?" }) { moveToTrash($0) },
+            fileVerb("trash", "Move to Trash", icon: .symbol("trash"), files: files,
+                     confirm: { String(localized: "Move “\($0)” to the Trash?") }) { moveToTrash($0) },
             fileVerb("terminal", "Open in Terminal", icon: .symbol("terminal"), files: files) { path in
                 Task { openInTerminal(path, app: await files.terminalApp()) }
             },
@@ -138,38 +154,45 @@ extension Verb {
             // The Mac
             Verb(keyword: "lock", title: "Lock Screen", icon: .symbol("lock.fill"), run: { lockScreen() }),
             Verb(keyword: "log out", title: "Log Out", icon: .symbol("rectangle.portrait.and.arrow.right"),
-                 confirm: "Log out? Apps with unsaved changes ask first.",
-                 run: { osascript(#"tell application "loginwindow" to «event aevtrlgo»"#, label: "Log Out") }),
+                 confirm: String(localized: "Log out? Apps with unsaved changes ask first."),
+                 run: { osascript(#"tell application "loginwindow" to «event aevtrlgo»"#, label: String(localized: "Log Out")) }),
             Verb(keyword: "screen saver", title: "Start Screen Saver", icon: .symbol("sparkles.tv"),
-                 run: { runDetached("/usr/bin/open", ["-a", "ScreenSaverEngine"], label: "Screen Saver") }),
+                 run: {
+                     runDetached("/usr/bin/open", ["-a", "ScreenSaverEngine"],
+                                 label: String(localized: "Screen Saver", comment: "Names :screen saver in “… failed” notifications"))
+                 }),
             Verb(keyword: "show desktop", title: "Show Desktop", icon: .symbol("menubar.dock.rectangle"), run: { hideAllApps() }),
             Verb(keyword: "open trash", title: "Open Trash", icon: .symbol("trash"),
                  run: { NSWorkspace.shared.open(URL.homeDirectory.appending(path: ".Trash")) }),
             Verb(keyword: "sleep", title: "Sleep", icon: .symbol("moon.zzz.fill"),
-                 run: { runDetached("/usr/bin/pmset", ["sleepnow"], label: "Sleep") }),
+                 run: { runDetached("/usr/bin/pmset", ["sleepnow"], label: String(localized: "Sleep")) }),
             Verb(keyword: "sleep displays", title: "Sleep Displays", icon: .symbol("display"),
-                 run: { runDetached("/usr/bin/pmset", ["displaysleepnow"], label: "Sleep Displays") }),
+                 run: { runDetached("/usr/bin/pmset", ["displaysleepnow"], label: String(localized: "Sleep Displays")) }),
             // Apple events to loginwindow (kAERestart, kAEShutDown): apps are asked to quit, as from the Apple menu.
             Verb(keyword: "restart", title: "Restart", icon: .symbol("arrow.clockwise"),
-                 confirm: "Restart the Mac? Apps with unsaved changes ask first.",
-                 run: { osascript(#"tell application "loginwindow" to «event aevtrest»"#, label: "Restart") }),
+                 confirm: String(localized: "Restart the Mac? Apps with unsaved changes ask first."),
+                 run: { osascript(#"tell application "loginwindow" to «event aevtrest»"#, label: String(localized: "Restart")) }),
             Verb(keyword: "shut down", title: "Shut Down", icon: .symbol("power"),
-                 confirm: "Shut down the Mac? Apps with unsaved changes ask first.",
-                 run: { osascript(#"tell application "loginwindow" to «event aevtshut»"#, label: "Shut Down") }),
+                 confirm: String(localized: "Shut down the Mac? Apps with unsaved changes ask first."),
+                 run: { osascript(#"tell application "loginwindow" to «event aevtshut»"#, label: String(localized: "Shut Down")) }),
             Verb(keyword: "empty trash", title: "Empty Trash", icon: .symbol("trash"),
-                 confirm: "Empty the Trash? This can't be undone.",
-                 run: { osascript(#"tell application "Finder" to empty trash"#, label: "Empty Trash") }),
+                 confirm: String(localized: "Empty the Trash? This can't be undone."),
+                 run: { osascript(#"tell application "Finder" to empty trash"#, label: String(localized: "Empty Trash")) }),
             Verb(keyword: "dark", title: "Toggle Dark Mode", icon: .symbol("circle.lefthalf.filled"),
-                 showing: { UserDefaults.standard.string(forKey: "AppleInterfaceStyle") == "Dark" ? "Turn Dark Mode Off" : "Turn Dark Mode On" },
+                 showing: {
+                     UserDefaults.standard.string(forKey: "AppleInterfaceStyle") == "Dark"
+                         ? String(localized: "Turn Dark Mode Off") : String(localized: "Turn Dark Mode On")
+                 },
                  run: {
                      osascript(#"tell application "System Events" to tell appearance preferences to set dark mode to not dark mode"#,
-                               label: "Dark Mode")
+                               label: String(localized: "Dark Mode", comment: "Names :dark in “… failed” notifications"))
                  }),
             Verb(keyword: "wifi", title: "Toggle Wi-Fi", icon: .symbol("wifi"),
-                 showing: { wifiIsOn() ? "Turn Wi-Fi Off" : "Turn Wi-Fi On" }, run: { toggleWiFi() }),
+                 showing: { wifiIsOn() ? String(localized: "Turn Wi-Fi Off") : String(localized: "Turn Wi-Fi On") }, run: { toggleWiFi() }),
         ].belonging(to: .mac) + [
             Verb(keyword: "awake", title: "Keep Awake", icon: .symbol("sun.max"),
-                 showing: { KeepAwake.isOn ? "Stop Keeping Awake" : "Keep Awake" }, run: { KeepAwake.shared.toggle() },
+                 showing: { KeepAwake.isOn ? String(localized: "Stop Keeping Awake") : String(localized: "Keep Awake") },
+                 run: { KeepAwake.shared.toggle() },
                  targets: { text in await MainActor.run { awakeRows(text) } }),
         ].belonging(to: .keepAwake) + [
             Verb(keyword: "eject", title: "Eject Disk", icon: .symbol("eject"), targets: { ejectRows($0) }),
@@ -181,9 +204,13 @@ extension Verb {
                  run: { pressMediaKey(NX_KEYTYPE_PREVIOUS) }),
             Verb(keyword: "volume", title: "Set Volume", icon: .symbol("speaker.wave.2.fill"), targets: { volumeRows($0) }),
             Verb(keyword: "mute", title: "Toggle Mute", icon: .symbol("speaker.slash.fill"),
-                 showing: { outputIsMuted() ? "Unmute" : "Mute" }, run: { toggleMute() }),
+                 showing: {
+                     outputIsMuted() ? String(localized: "Unmute", comment: ":mute's row: turns the sound back on")
+                         : String(localized: "Mute", comment: ":mute's row: turns the sound off")
+                 },
+                 run: { toggleMute() }),
             Verb(keyword: "mute mic", title: "Toggle Microphone", icon: .symbol("mic.slash.fill"),
-                 showing: { micIsMuted() ? "Unmute Microphone" : "Mute Microphone" }, run: { toggleMicMute() }),
+                 showing: { micIsMuted() ? String(localized: "Unmute Microphone") : String(localized: "Mute Microphone") }, run: { toggleMicMute() }),
             Verb(keyword: "output", title: "Switch Sound Output", icon: .symbol("hifispeaker"), targets: { outputRows($0) }),
         ].belonging(to: .sound) + [
             Verb(keyword: "connect", title: "Connect Bluetooth Device", icon: .symbol("antenna.radiowaves.left.and.right"),
@@ -194,7 +221,7 @@ extension Verb {
                 runDetached("/bin/sh", ["-c", """
                     case "$(defaults read com.apple.finder AppleShowAllFiles 2>/dev/null)" in 1|YES|true|TRUE) show=false;; *) show=true;; esac
                     defaults write com.apple.finder AppleShowAllFiles -bool $show && killall Finder
-                    """], label: "Hidden Files")
+                    """], label: String(localized: "Hidden Files", comment: "Names :hidden files in “… failed” notifications"))
             }),
         ].belonging(to: .mac) + [
             Verb(keyword: "shortcut", title: "Run Shortcut", icon: .file("/System/Applications/Shortcuts.app"),
@@ -210,21 +237,23 @@ extension Verb {
 
     /// `:reveal readme`: a row per matching file (file search, so from 2 letters). A path (`:reveal ~/code/copperlight/`)
     /// lists that folder instead, with the folder itself first. `confirm`: a question to ask first, given the file's name.
-    private static func fileVerb(_ keyword: String, _ title: String, icon: LauncherResult.Icon, files: FileSearchProvider,
+    private static func fileVerb(_ keyword: String, _ title: LocalizedStringResource, icon: LauncherResult.Icon, files: FileSearchProvider,
                                  confirm: (@Sendable (String) -> String)? = nil,
                                  act: @escaping @MainActor @Sendable (String) -> Void) -> Verb {
         Verb(keyword: keyword, title: title, icon: icon, targets: { filter in
-            await fileTargets(filter, files: files).enumerated().map { index, file in
-                LauncherResult(id: "\(keyword):\(file.path)", title: "\(title): \(file.name)", subtitle: shortParentPath(file.path),
-                               icon: .file(file.path), score: -Double(index), actionTitle: title,
+            let shown = String(localized: title)
+            return await fileTargets(filter, files: files).enumerated().map { index, file in
+                LauncherResult(id: "\(keyword):\(file.path)", title: String(localized: "\(shown): \(file.name)", comment: "“Reveal in Finder: notes.txt”"),
+                               subtitle: shortParentPath(file.path), icon: .file(file.path), score: -Double(index), actionTitle: shown,
                                action: { act(file.path) }, confirm: confirm?(file.name))
             }
         })
     }
 }
 
-/// One row per running app whose name matches `filter` (all of them, A–Z, when it's empty).
-func runningAppRows(_ filter: String, verb: String, confirm: Bool = false,
+/// One row per running app whose name matches `filter` (all of them, A–Z, when it's empty). `verb` is the rows' id, in
+/// English ("Quit"); `title` a row's title for the app's name ("Quit Slack"); `confirm` a question to ask first.
+func runningAppRows(_ filter: String, verb: String, title: (String) -> String, actionTitle: String, confirm: ((String) -> String)? = nil,
                     act: @escaping @MainActor @Sendable (NSRunningApplication) -> Void) -> [LauncherResult] {
     let apps = NSWorkspace.shared.runningApplications.filter { $0.activationPolicy == .regular }
         .sorted { ($0.localizedName ?? "") < ($1.localizedName ?? "") }
@@ -233,10 +262,10 @@ func runningAppRows(_ filter: String, verb: String, confirm: Bool = false,
         let pid = app.processIdentifier
         return LauncherResult(
             // By path, not pid, so frecency remembers "Quit Slack" across launches.
-            id: "\(verb):\(app.bundleURL?.path ?? "\(pid)")", title: "\(verb) \(name)",
-            icon: app.bundleURL.map { .file($0.path) } ?? .symbol("app"), score: score, actionTitle: verb,
+            id: "\(verb):\(app.bundleURL?.path ?? "\(pid)")", title: title(name),
+            icon: app.bundleURL.map { .file($0.path) } ?? .symbol("app"), score: score, actionTitle: actionTitle,
             action: { if let app = NSRunningApplication(processIdentifier: pid) { act(app) } },
-            confirm: confirm ? "\(verb) \(name)? Unsaved changes are lost." : nil)
+            confirm: confirm?(name))
     }
 }
 
@@ -280,7 +309,8 @@ func runningAppRows(_ filter: String, verb: String, confirm: Bool = false,
         if app.isTerminated {
             _ = try? await NSWorkspace.shared.openApplication(at: url, configuration: .init())
         } else {
-            notify("\(app.localizedName ?? "The app") didn't quit, so it wasn't relaunched")
+            notify(app.localizedName.map { String(localized: "\($0) didn't quit, so it wasn't relaunched") }
+                ?? String(localized: "The app didn't quit, so it wasn't relaunched"))
         }
     }
 }
@@ -290,7 +320,7 @@ func runningAppRows(_ filter: String, verb: String, confirm: Bool = false,
 @MainActor func osascript(_ script: String, label: String) { runDetached("/usr/bin/osascript", ["-e", script], label: label) }
 
 @MainActor func lockScreen() {
-    guard hasAccessibility("lock the screen") else { return }
+    guard hasAccessibility(String(localized: "lock the screen", comment: "Ends “Allow Copperlight in Accessibility to …”")) else { return }
     sendKeystroke(kVK_ANSI_Q, [.maskControl, .maskCommand]) // the system's own Lock Screen shortcut
 }
 
@@ -303,23 +333,28 @@ func ejectRows(_ filter: String) -> [LauncherResult] {
               let name = values.volumeLocalizedName, let score = filter.isEmpty ? -0.01 * Double(index) : fuzzyScore(filter, name)
         else { return nil }
         let path = url.path
-        return LauncherResult(id: "eject:\(path)", title: "Eject \(name)", subtitle: path, icon: .file(path),
-                              score: score, actionTitle: "Eject",
-                              action: { runDetached("/usr/sbin/diskutil", ["eject", path], label: "Eject \(name)") })
+        let title = String(localized: "Eject \(name)")
+        return LauncherResult(id: "eject:\(path)", title: title, subtitle: path, icon: .file(path),
+                              score: score, actionTitle: String(localized: "Eject", comment: "Enter on a disk"),
+                              action: { runDetached("/usr/sbin/diskutil", ["eject", path], label: title) })
     }
     guard rows.isEmpty, filter.isEmpty else { return rows }
-    return [LauncherResult(id: "eject:none", title: "No disks to eject", icon: .symbol("eject"), score: 0, actionTitle: "", action: {})]
+    return [LauncherResult(id: "eject:none", title: String(localized: "No disks to eject"), icon: .symbol("eject"), score: 0, actionTitle: "",
+                           action: {})]
 }
 
 /// `:volume 30`: one row that sets the output volume (and unmutes). Anything but 0–100 says what to type.
 func volumeRows(_ text: String) -> [LauncherResult] {
     guard let level = Int(text), (0...100).contains(level) else {
-        return [LauncherResult(id: "volume:help", title: "Type a level from 0 to 100", subtitle: ":volume 30",
+        return [LauncherResult(id: "volume:help", title: String(localized: "Type a level from 0 to 100"), subtitle: ":volume 30",
                                icon: .symbol("speaker.wave.2.fill"), score: 0, actionTitle: "", action: {})]
     }
-    return [LauncherResult(id: "volume:set", title: "Set Volume to \(level)%", icon: .symbol("speaker.wave.2.fill"),
-                           score: 0, actionTitle: "Set",
-                           action: { osascript("set volume output volume \(level) without output muted", label: "Volume") })]
+    return [LauncherResult(id: "volume:set", title: String(localized: "Set Volume to \(level)%"), icon: .symbol("speaker.wave.2.fill"),
+                           score: 0, actionTitle: String(localized: "Set", comment: "Enter on :volume's row: sets the volume"),
+                           action: {
+                               osascript("set volume output volume \(level) without output muted",
+                                         label: String(localized: "Volume", comment: "The sound's: names :volume in “… failed” notifications"))
+                           })]
 }
 
 /// `:shortcut name`: a row per Shortcut from Apple's Shortcuts app.
@@ -338,14 +373,17 @@ func shortcutAndInput(_ text: String, names: [String]) -> (name: String, input: 
 func shortcutRows(_ filter: String, names: [String]? = nil) -> [LauncherResult] {
     let names = names ?? shortcutNames()
     if let (name, input) = shortcutAndInput(filter, names: names) {
-        return [LauncherResult(id: "shortcut:\(name)", title: "Run Shortcut: \(name)", subtitle: "With “\(input)”",
-                               icon: .file("/System/Applications/Shortcuts.app"), score: 1, actionTitle: "Run",
+        return [LauncherResult(id: "shortcut:\(name)", title: String(localized: "Run Shortcut: \(name)"),
+                               subtitle: String(localized: "With “\(input)”", comment: "The text typed after a Shortcut's name, its input"),
+                               icon: .file("/System/Applications/Shortcuts.app"), score: 1,
+                               actionTitle: String(localized: "Run", comment: "Enter on a Shortcut"),
                                action: { runShortcut(name, input: input) })]
     }
     return names.enumerated().compactMap { index, name in
         guard let score = filter.isEmpty ? -0.01 * Double(index) : fuzzyScore(filter, name) else { return nil }
-        return LauncherResult(id: "shortcut:\(name)", title: "Run Shortcut: \(name)",
-                              icon: .file("/System/Applications/Shortcuts.app"), score: score, actionTitle: "Run",
+        return LauncherResult(id: "shortcut:\(name)", title: String(localized: "Run Shortcut: \(name)"),
+                              icon: .file("/System/Applications/Shortcuts.app"), score: score,
+                              actionTitle: String(localized: "Run", comment: "Enter on a Shortcut"),
                               action: { runShortcut(name, input: nil) })
     }
 }
@@ -354,7 +392,7 @@ func shortcutRows(_ filter: String, names: [String]? = nil) -> [LauncherResult] 
 @MainActor func runShortcut(_ name: String, input: String?) {
     guard let input else { return runDetached("/usr/bin/shortcuts", ["run", name], label: name) }
     let file = FileManager.default.temporaryDirectory.appending(path: "shortcut-input-\(UUID().uuidString).txt")
-    guard (try? input.write(to: file, atomically: true, encoding: .utf8)) != nil else { return notify("Couldn't run \(name)") }
+    guard (try? input.write(to: file, atomically: true, encoding: .utf8)) != nil else { return notify(String(localized: "Couldn't run \(name)")) }
     runDetached("/usr/bin/shortcuts", ["run", name, "--input-path", file.path], label: name)
     Task { // read when the Shortcut starts; then it's not needed
         try? await Task.sleep(for: .seconds(60))
@@ -387,8 +425,9 @@ func existingPathPrefix(_ text: String) -> (path: String, rest: String)? {
 func openWithRows(_ text: String, files: FileSearchProvider) async -> [LauncherResult] {
     guard let (path, filter) = existingPathPrefix(text) else {
         return await fileTargets(text, files: files).enumerated().map { index, file in
-            LauncherResult(id: "open with:\(file.path)", title: "Open With: \(file.name)", subtitle: shortParentPath(file.path),
-                           icon: .file(file.path), score: -Double(index), actionTitle: "Choose", action: {},
+            LauncherResult(id: "open with:\(file.path)", title: String(localized: "Open With: \(file.name)"), subtitle: shortParentPath(file.path),
+                           icon: .file(file.path), score: -Double(index),
+                           actionTitle: String(localized: "Choose", comment: "Enter on a file in :open with: fills it in, to pick an app"), action: {},
                            completion: ":open with \(file.path) ")
         }
     }
@@ -399,8 +438,9 @@ func openWithRows(_ text: String, files: FileSearchProvider) async -> [LauncherR
     return apps.enumerated().compactMap { index, app -> LauncherResult? in
         let appName = FileManager.default.displayName(atPath: app.path).replacingOccurrences(of: ".app", with: "")
         guard let score = filter.isEmpty ? -0.01 * Double(index) : fuzzyScore(filter, appName) else { return nil }
-        return LauncherResult(id: "open with:\(path):\(app.path)", title: appName, subtitle: app == standard ? "\(name) · its default app" : name,
-                              icon: .file(app.path), score: score, actionTitle: "Open With",
+        return LauncherResult(id: "open with:\(path):\(app.path)", title: appName,
+                              subtitle: app == standard ? String(localized: "\(name) · its default app", comment: "A file's name") : name,
+                              icon: .file(app.path), score: score, actionTitle: String(localized: "Open With", comment: "Enter on an app in :open with"),
                               action: { NSWorkspace.shared.open([url], withApplicationAt: app, configuration: .init()) })
     }.sorted { $0.score > $1.score }
 }
@@ -418,7 +458,7 @@ func terminalFolder(for path: String) -> String {
 
 @MainActor func moveToTrash(_ path: String) {
     do { try FileManager.default.trashItem(at: URL(filePath: path), resultingItemURL: nil) }
-    catch { notify("Couldn't move \((path as NSString).lastPathComponent) to the Trash", error.localizedDescription) }
+    catch { notify(String(localized: "Couldn't move \((path as NSString).lastPathComponent) to the Trash"), error.localizedDescription) }
 }
 
 /// Asks the `shortcuts` tool. ponytail: blocks this (background) thread ~20 ms per keystroke; cache it if that grows.
@@ -532,7 +572,9 @@ func sharesTextWhenAsked(bundleID: String?, bundleURL: URL?) -> Bool {
 
 @MainActor func hasAccessibility(_ why: String) -> Bool {
     if AXIsProcessTrusted() { return true }
-    notify("Allow Copperlight in Accessibility to \(why)", "Privacy & Security → Accessibility")
+    // `why` ends the sentence, localized where it's given ("paste", "manage windows").
+    notify(String(localized: "Allow Copperlight in Accessibility to \(why)"),
+           String(localized: "Privacy & Security → Accessibility", comment: "Where it is in System Settings"))
     // System Settings opens once per launch: someone who said no doesn't want it back on every Enter.
     if !askedForAccessibility {
         askedForAccessibility = true
@@ -546,7 +588,8 @@ func sharesTextWhenAsked(bundleID: String?, bundleURL: URL?) -> Bool {
 /// The focused window of the app in front. The launcher never takes focus, so that's the app you
 /// were in. Moving other apps' windows needs Accessibility, which pasting already asks for.
 @MainActor private func frontWindow() -> AXUIElement? {
-    guard hasAccessibility("manage windows"), let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier else { return nil }
+    guard hasAccessibility(String(localized: "manage windows", comment: "Ends “Allow Copperlight in Accessibility to …”")),
+          let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier else { return nil }
     return axElement(AXUIElementCreateApplication(pid), kAXFocusedWindowAttribute)
 }
 
@@ -612,9 +655,10 @@ func sharesTextWhenAsked(bundleID: String?, bundleURL: URL?) -> Bool {
 /// other Spaces' (that needs private APIs).
 func windowRows(_ filter: String) -> [LauncherResult] {
     guard AXIsProcessTrusted() else {
-        return [LauncherResult(id: "window:access", title: "Allow Copperlight in Accessibility to list windows",
-                               subtitle: "Privacy & Security → Accessibility", icon: .symbol("lock.shield"), score: 0,
-                               actionTitle: "Open System Settings", action: { requestAccessibility() })]
+        return [LauncherResult(id: "window:access", title: String(localized: "Allow Copperlight in Accessibility to list windows"),
+                               subtitle: String(localized: "Privacy & Security → Accessibility", comment: "Where it is in System Settings"),
+                               icon: .symbol("lock.shield"), score: 0,
+                               actionTitle: String(localized: "Open System Settings"), action: { requestAccessibility() })]
     }
     // Apps in the order of their windows on screen, front to back; the rest (hidden, minimized only) after.
     let onScreen = (CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? [])
@@ -629,7 +673,7 @@ func windowRows(_ filter: String) -> [LauncherResult] {
         AXUIElementSetMessagingTimeout(element, 0.25) // a hung app can't stall the list
         var windows: CFTypeRef?
         AXUIElementCopyAttributeValue(element, kAXWindowsAttribute as CFString, &windows)
-        let name = app.localizedName ?? "App"
+        let name = app.localizedName ?? String(localized: "App", comment: "Stands for an app's name when it has none")
         for window in windows as? [AXUIElement] ?? [] where axString(window, kAXSubroleAttribute) == kAXStandardWindowSubrole {
             let title = axString(window, kAXTitleAttribute).flatMap { $0.isEmpty ? nil : $0 } ?? name
             let minimized = axBool(window, kAXMinimizedAttribute)
@@ -640,8 +684,9 @@ func windowRows(_ filter: String) -> [LauncherResult] {
             let pid = app.processIdentifier
             rows.append(LauncherResult(
                 id: "window:\(app.bundleURL?.path ?? name):\(title)", title: title,
-                subtitle: name + (minimized ? " · minimized" : ""), icon: app.bundleURL.map { .file($0.path) } ?? .symbol("macwindow"),
-                score: match - index / 1000, actionTitle: "Switch", action: {
+                subtitle: minimized ? String(localized: "\(name) · minimized", comment: "An app's name, then: its window is minimized") : name,
+                icon: app.bundleURL.map { .file($0.path) } ?? .symbol("macwindow"),
+                score: match - index / 1000, actionTitle: String(localized: "Switch", comment: "Enter on a window: brings it forward"), action: {
                     if minimized { AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse) }
                     AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
                     AXUIElementPerformAction(window, kAXRaiseAction as CFString)
@@ -675,7 +720,7 @@ func dialogPath(forRow id: String) -> String? {
 /// Takes the dialog in front to `path`: its Go to Folder field (⌘⇧G), the path pasted in, Return. A file is selected
 /// in its folder; the dialog's own button still opens or saves.
 @MainActor func goInDialog(to path: String) {
-    guard hasAccessibility("go there in the dialog") else { return }
+    guard hasAccessibility(String(localized: "go there in the dialog", comment: "Ends “Allow Copperlight in Accessibility to …”")) else { return }
     sendKeystroke(kVK_ANSI_G, [.maskCommand, .maskShift], after: .milliseconds(150))
     Task {
         // ponytail: fixed waits for the sheet to open and take the paste; longer if a slow Mac ever misses them.

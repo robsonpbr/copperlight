@@ -49,7 +49,7 @@ struct LauncherResult: Identifiable, Sendable {
     let icon: Icon
     var score: Double
     /// What Enter does, named on the selected row ("Open", "Copy"). Empty: no hint.
-    var actionTitle = "Open"
+    var actionTitle = String(localized: "Open", comment: "Enter on a row, unless the row says otherwise")
     var action: @MainActor @Sendable () -> Void
     /// Tab (or Enter) puts this in the search field instead of running anything (`:quit` → ":quit ", to pick an app);
     /// a name that takes text becomes its chip.
@@ -451,7 +451,8 @@ final class SearchModel {
                             var row = row
                             row.score += Frecency.bonus(frecency, row.id, at: now) + Self.learnedBonus(learned, learnedKey, row.id, at: now)
                             if fileDialog, let path = dialogPath(forRow: row.id) {
-                                (row.actionTitle, row.action) = ("Go There", { goInDialog(to: path) })
+                                let there = String(localized: "Go There", comment: "Enter on a file while an Open or Save dialog is in front")
+                                (row.actionTitle, row.action) = (there, { goInDialog(to: path) })
                             }
                             return row
                         }
@@ -603,13 +604,15 @@ final class LauncherPanel: NSPanel {
             if let completion = result.completion { return model.fill(completion) }
             if let question = result.confirm {
                 model.confirming = LauncherResult(
-                    id: result.id, title: question, subtitle: "Esc to cancel", icon: .symbol("exclamationmark.triangle"),
-                    score: .infinity, actionTitle: "Confirm", action: result.action, output: result.output) // a check out runs once confirmed
+                    id: result.id, title: question, subtitle: String(localized: "Esc to cancel"), icon: .symbol("exclamationmark.triangle"),
+                    score: .infinity, actionTitle: String(localized: "Confirm", comment: "Enter on a question that asks first"),
+                    action: result.action, output: result.output) // a check out runs once confirmed
                 return
             }
             if let output = result.output {
-                model.confirming = LauncherResult(id: result.id, title: result.title, subtitle: "Running… Esc stops it",
-                                                  icon: result.icon, score: .infinity, actionTitle: "Hide", action: {})
+                model.confirming = LauncherResult(id: result.id, title: result.title, subtitle: String(localized: "Running… Esc stops it"),
+                                                  icon: result.icon, score: .infinity,
+                                                  actionTitle: String(localized: "Hide", comment: "Enter while a command runs"), action: {})
                 // Hiding the panel (Enter on "Hide", the hotkey) lets it finish; a notification says how it ended.
                 let showing = { @MainActor [weak self] in self?.isVisible == true && self?.model.confirming?.id == result.id }
                 model.run = Task {
@@ -1110,7 +1113,9 @@ struct ResultRow: View {
             Spacer(minLength: 8)
             if selected, !result.actionTitle.isEmpty || offersPreview || result.more != nil || result.actions != nil {
                 ViewThatFits(in: .horizontal) { // the title comes first: short of room, what Tab does goes, then the words
-                    let tab = offersPreview ? "Preview" : result.more?.label ?? (result.actions != nil && result.completion == nil ? "Actions" : nil)
+                    let tab = offersPreview ? String(localized: "Preview", comment: "Tab on a row: shows its text beside the list")
+                        : result.more?.label ?? (result.actions != nil && result.completion == nil
+                                                 ? String(localized: "Actions", comment: "Tab on a row: what you can do with it") : nil)
                     hints(tab: tab, enter: result.actionTitle)
                     hints(tab: nil, enter: result.actionTitle)
                     hints(tab: nil, enter: result.actionTitle.split(separator: " ").first.map(String.init)) // "Paste to Google Chrome": "Paste"
@@ -1270,7 +1275,7 @@ private struct PreviewPane: View {
                 }
             } else {
                 let text = result.preview ?? loaded.flatMap { $0.id == result.id ? $0.text : nil }
-                    ?? (result.loadPreview == nil ? "" : "Loading…")
+                    ?? (result.loadPreview == nil ? "" : String(localized: "Loading…"))
                 ScrollView {
                     let prose = result.previewStyle == .prose
                     Text(text)

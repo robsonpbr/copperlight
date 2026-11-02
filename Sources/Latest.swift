@@ -57,7 +57,9 @@ struct LatestFilesProvider: ResultProvider {
             let path = file.path, image = UTType(filenameExtension: file.pathExtension)?.conforms(to: .image) == true
             return LauncherResult(
                 id: "latest:\(path)", title: file.lastPathComponent, subtitle: added.formatted(.relative(presentation: .named, unitsStyle: .wide)) + size,
-                icon: .file(path), score: 50 - Double(index) / 100, actionTitle: AXIsProcessTrusted() ? "Paste" : "Copy",
+                icon: .file(path), score: 50 - Double(index) / 100,
+                actionTitle: AXIsProcessTrusted() ? String(localized: "Paste", comment: "Enter on a file: pastes it into the app you were in")
+                    : String(localized: "Copy", comment: "Enter on a file: copies it"),
                 action: { pasteFile(file) }, actions: { fileActionRows(path, terminal: nil) }, previewStyle: .prose,
                 previewImage: image ? { @MainActor in NSImage(contentsOf: file) } : nil)
         }
@@ -68,7 +70,7 @@ struct LatestFilesProvider: ResultProvider {
 @MainActor func pasteFile(_ file: URL) {
     NSPasteboard.general.clearContents()
     NSPasteboard.general.writeObjects([file as NSURL])
-    if hasAccessibility("paste files") { sendPaste() }
+    if hasAccessibility(String(localized: "paste files", comment: "Ends “Allow Copperlight in Accessibility to …”")) { sendPaste() }
 }
 
 /// The paths in what Finder's script returns, a line each; a folder's without its last "/".
@@ -95,7 +97,8 @@ func finderSelection() async -> [String] {
 /// Path, Open With, Trash), and over an Open dialog Enter goes there.
 func finderRows(_ paths: [String]) -> [LauncherResult] {
     paths.prefix(10).enumerated().map { index, path in
-        LauncherResult(id: "file:\(path)", title: (path as NSString).lastPathComponent, subtitle: "Selected in Finder · " + shortParentPath(path),
+        LauncherResult(id: "file:\(path)", title: (path as NSString).lastPathComponent,
+                       subtitle: String(localized: "Selected in Finder") + " · " + shortParentPath(path),
                        icon: .file(path), score: 200 - Double(index) / 100, action: { _ = NSWorkspace.shared.open(URL(filePath: path)) },
                        actions: { fileActionRows(path, terminal: nil) })
     }
@@ -103,10 +106,13 @@ func finderRows(_ paths: [String]) -> [LauncherResult] {
 
 /// In the empty launcher over Finder, until it's answered: Enter asks macOS to let Copperlight see Finder's selection.
 func finderAskRow() -> LauncherResult {
-    LauncherResult(id: "finder:ask", title: "Use What's Selected in Finder", subtitle: "Asks to control Finder, once", icon: .symbol("cursorarrow.rays"),
-                   score: 150, actionTitle: "Allow", action: {
+    LauncherResult(id: "finder:ask", title: String(localized: "Use What's Selected in Finder"),
+                   subtitle: String(localized: "Asks to control Finder, once"), icon: .symbol("cursorarrow.rays"), score: 150,
+                   actionTitle: String(localized: "Allow", comment: "Enter asks macOS for the permission"), action: {
         Task.detached {
-            if automationPermission("com.apple.finder", ask: true) == noErr { await notify("Select files in Finder and press the hotkey") }
+            if automationPermission("com.apple.finder", ask: true) == noErr {
+                await notify(String(localized: "Select files in Finder and press the hotkey"))
+            }
         }
     })
 }

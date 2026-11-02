@@ -12,9 +12,13 @@ func joinLink(in texts: [String?]) -> URL? {
 
 /// "in 15 min", "now", "in 2 h 5 min": how soon a meeting starts.
 func startsIn(_ start: Date, end: Date, now: Date = .now) -> String {
-    if start <= now { return end > now ? "now" : "ended" }
+    if start <= now {
+        return end > now ? String(localized: "now", comment: "A meeting going on, where how soon it starts goes")
+            : String(localized: "ended", comment: "A meeting over")
+    }
     let minutes = Int((start.timeIntervalSince(now) / 60).rounded(.up))
-    return minutes < 60 ? "in \(minutes) min" : "in \(minutes / 60) h" + (minutes % 60 == 0 ? "" : " \(minutes % 60) min")
+    return minutes < 60 ? String(localized: "in \(minutes) min") : minutes % 60 == 0 ? String(localized: "in \(minutes / 60) h")
+        : String(localized: "in \(minutes / 60) h \(minutes % 60) min")
 }
 
 /// An event, as the launcher shows it.
@@ -35,7 +39,8 @@ struct CalendarItem: Sendable {
 
 extension CalendarItem {
     init(_ event: EKEvent) {
-        self.init(title: event.title ?? "Untitled", start: event.startDate, end: event.endDate,
+        let untitled = String(localized: "Untitled", comment: "An event or reminder without a title")
+        self.init(title: event.title ?? untitled, start: event.startDate, end: event.endDate,
                   link: joinLink(in: [event.url?.absoluteString, event.location, event.notes]), calendar: event.calendar?.title ?? "",
                   location: event.location, notes: event.notes, people: (event.attendees ?? []).compactMap(\.name),
                   organizer: event.organizer?.name, allDay: event.isAllDay, id: event.eventIdentifier ?? "", busy: event.availability != .free)
@@ -60,7 +65,9 @@ func weekCard(_ items: [CalendarItem], now: Date = .now, calendar: Calendar = .c
         let start = calendar.date(byAdding: .day, value: offset, to: week.start)!, end = calendar.date(byAdding: .day, value: 1, to: start)!
         let mine = items.filter { $0.start < end && $0.end > start }.sorted { ($0.allDay ? 0 : 1, $0.start) < ($1.allDay ? 0 : 1, $1.start) }
         let events = mine.prefix(5).map { item in
-            WeekCard.Event(time: item.allDay ? "All day" : item.start < start ? "until " + item.end.formatted(hours) : item.start.formatted(hours),
+            WeekCard.Event(time: item.allDay ? String(localized: "All day") : item.start < start
+                               ? String(localized: "until \(item.end.formatted(hours))", comment: "An event from the day before: the time it ends")
+                               : item.start.formatted(hours),
                            title: item.title, past: item.end <= now)
         }
         return WeekCard.Day(name: calendar.shortWeekdaySymbols[calendar.component(.weekday, from: start) - 1],
@@ -70,7 +77,8 @@ func weekCard(_ items: [CalendarItem], now: Date = .now, calendar: Calendar = .c
     let last = calendar.date(byAdding: .day, value: 6, to: week.start)!
     // A repeating event's occurrences share an id: one event is an id and a start.
     let count = Set(items.filter { $0.start < week.end && $0.end > week.start }.map { "\($0.id)@\($0.start.timeIntervalSince1970)" }).count
-    return WeekCard(kicker: next ? "Next week" : "This week", range: (week.start..<last).formatted(range), count: count, days: days)
+    return WeekCard(kicker: next ? String(localized: "Next week") : String(localized: "This week"), range: (week.start..<last).formatted(range), count: count,
+                    days: days)
 }
 
 /// The month `now` is in, or the one after.
@@ -99,7 +107,8 @@ func monthCard(_ items: [CalendarItem], now: Date = .now, calendar: Calendar = .
     let name = Date.FormatStyle(locale: calendar.locale ?? .current, calendar: calendar, timeZone: calendar.timeZone).month(.wide).year()
     // A repeating event's occurrences share an id: one event is an id and a start.
     let count = Set(items.filter { $0.start < month.end && $0.end > month.start }.map { "\($0.id)@\($0.start.timeIntervalSince1970)" }).count
-    return MonthCard(kicker: next ? "Next month" : "This month", range: month.start.formatted(name), count: count, weekdays: weekdays,
+    return MonthCard(kicker: next ? String(localized: "Next month") : String(localized: "This month"), range: month.start.formatted(name),
+                     count: count, weekdays: weekdays,
                      weeks: stride(from: 0, to: days.count, by: 7).map { Array(days[$0..<$0 + 7]) })
 }
 
@@ -135,20 +144,24 @@ func freeDays(_ query: String, now: Date = .now, calendar: Calendar = .current, 
     let day = { (offset: Int) in calendar.date(byAdding: .day, value: offset, to: today)! }
     let workday = { (date: Date) in !calendar.isDateInWeekend(date) }
     let rest = words.dropFirst().joined(separator: " ")
+    let (todayName, tomorrowName) = (String(localized: "Today", comment: "A day: today"), String(localized: "Tomorrow", comment: "A day: tomorrow"))
     switch rest {
     case "":
         let over = calendar.component(.hour, from: now) >= hours.upperBound || !workday(today)
         let first = ((over ? 1 : 0)...).lazy.map(day).first(where: workday)!
-        return (calendar.isDateInToday(first) ? "Today" : calendar.isDateInTomorrow(first) ? "Tomorrow" : first.formatted(.dateTime.weekday(.wide)), [first])
-    case "today": return ("Today", [today])
-    case "tomorrow": return ("Tomorrow", [day(1)])
+        return (calendar.isDateInToday(first) ? todayName : calendar.isDateInTomorrow(first) ? tomorrowName : first.formatted(.dateTime.weekday(.wide)), [first])
+    case "today": return (todayName, [today])
+    case "tomorrow": return (tomorrowName, [day(1)])
     case "week", "this week", "next week":
         let week = calendar.dateInterval(of: .weekOfYear, for: rest == "next week" ? day(7) : today)!
         let days = (0..<7).map { calendar.date(byAdding: .day, value: $0, to: week.start)! }.filter { workday($0) && $0 >= today }
-        return (rest == "next week" ? "Next week" : "This week", days)
+        return (rest == "next week" ? String(localized: "Next week") : String(localized: "This week"), days)
     default:
-        let names = calendar.weekdaySymbols.map { $0.lowercased() } // in the Mac's language: Sunday first
-        guard let weekday = names.firstIndex(of: rest) else { return nil }
+        // In English, and in the Mac's language (sexta-feira): Sunday first.
+        var english = Calendar(identifier: .gregorian)
+        english.locale = Locale(identifier: "en_US_POSIX")
+        let names = [english.weekdaySymbols, calendar.weekdaySymbols].map { $0.map { $0.lowercased() } }
+        guard let weekday = names.lazy.compactMap({ $0.firstIndex(of: rest) }).first else { return nil }
         let first = (0..<7).map(day).first { calendar.component(.weekday, from: $0) == weekday + 1 }!
         return (calendar.weekdaySymbols[weekday], [first])
     }
@@ -183,21 +196,23 @@ func nextMeeting(_ items: [CalendarItem], now: Date = .now, headsUp: TimeInterva
 
 /// The copper badge beside an event that's coming up (within the hour: "in 17 min") or going ("Now"); nil otherwise.
 func eventBadge(_ item: CalendarItem, now: Date = .now) -> String? {
-    if item.start <= now { return item.end > now ? "Now" : nil }
+    if item.start <= now { return item.end > now ? String(localized: "Now", comment: "Badge on an event going on") : nil }
     return item.start.timeIntervalSince(now) <= 60 * 60 ? startsIn(item.start, end: item.end, now: now) : nil
 }
 
 /// The call's service, by its link: "Google Meet", "Zoom", "Teams", "Webex".
 func callService(_ link: URL) -> String {
     let host = link.host() ?? ""
-    return host.contains("google") ? "Google Meet" : host.contains("zoom") ? "Zoom" : host.contains("teams") ? "Teams" : host.contains("webex") ? "Webex" : "Call"
+    return host.contains("google") ? "Google Meet" : host.contains("zoom") ? "Zoom" : host.contains("teams") ? "Teams" : host.contains("webex") ? "Webex"
+        : String(localized: "Call", comment: "A video call on a service not known")
 }
 
 /// What Tab shows beside an event: its title, day and times and notes, and under them its calendar, place, call (and
 /// link), who's coming and who asked.
 func eventPreview(_ item: CalendarItem, now: Date = .now) -> (text: String, details: [(String, String)]) {
     let hours = { (date: Date) in date.formatted(date: .omitted, time: .shortened) }
-    let day = Calendar.current.isDate(item.start, inSameDayAs: now) ? "Today" : item.start.formatted(.dateTime.weekday(.wide).day().month())
+    let day = Calendar.current.isDate(item.start, inSameDayAs: now) ? String(localized: "Today", comment: "A day: today")
+        : item.start.formatted(.dateTime.weekday(.wide).day().month())
     let notes = item.notes?.trimmingCharacters(in: .whitespacesAndNewlines).prefix(3000) ?? ""
     let text = "\(item.title)\n\(day), \(hours(item.start))–\(hours(item.end))" + (notes.isEmpty ? "" : "\n\n\(notes)")
     let place = item.location.flatMap { location in
@@ -205,9 +220,13 @@ func eventPreview(_ item: CalendarItem, now: Date = .now) -> (text: String, deta
     }
     let people = item.people.isEmpty ? nil
         : item.people.prefix(4).joined(separator: ", ") + (item.people.count > 4 ? " +\(item.people.count - 4)" : "")
-    let details: [(String, String?)] = [("Calendar", item.calendar.isEmpty ? nil : item.calendar), ("Where", place),
-                                        ("Call", item.link.map(callService)), ("Link", item.link?.absoluteString),
-                                        ("People", people), ("Organizer", item.organizer)]
+    let details: [(String, String?)] = [(String(localized: "Calendar", comment: "Label: the event's calendar"),
+                                         item.calendar.isEmpty ? nil : item.calendar),
+                                        (String(localized: "Where", comment: "Label: the event's place"), place),
+                                        (String(localized: "Call", comment: "Label: the event's video call service"), item.link.map(callService)),
+                                        (String(localized: "Link", comment: "Label: the event's call link"), item.link?.absoluteString),
+                                        (String(localized: "People", comment: "Label: who's coming"), people),
+                                        (String(localized: "Organizer", comment: "Label: who asked"), item.organizer)]
     return (text, details.compactMap { label, value in value.map { (label, $0) } })
 }
 
@@ -236,11 +255,15 @@ func joinRows(_ item: CalendarItem, now: Date = .now, browser: Config.Browser, o
                            names: people.map { String($0.split(separator: " ").first ?? "") }.joined(separator: ", ")
                                + (item.people.count > 4 ? " +\(item.people.count - 4)" : ""),
                            note: eventNote(item.notes))
-    return [LauncherResult(id: "meeting:\(item.id)", title: "Join " + (service ?? "Call"),
+    let join = String(localized: "Join", comment: "Enter on a meeting: opens its video call")
+    let title = service.map { String(localized: "Join \($0)", comment: "The call's service: Google Meet, Zoom…") } ?? String(localized: "Join Call")
+    return [LauncherResult(id: "meeting:\(item.id)", title: title,
                            subtitle: item.link.map { ($0.host() ?? "") + $0.path() } ?? "", icon: .symbol("video"), score: score,
-                           actionTitle: "Join", action: item.link.map { webOpener($0, browser: browser) } ?? open, answer: .meeting(card)),
-            LauncherResult(id: "meeting:\(item.id):calendar", title: "Open in " + calendarAppName(openIn), icon: .symbol("calendar"),
-                           score: score - 0.001, actionTitle: "Open", action: open, answer: .meeting(card))]
+                           actionTitle: join, action: item.link.map { webOpener($0, browser: browser) } ?? open, answer: .meeting(card)),
+            LauncherResult(id: "meeting:\(item.id):calendar",
+                           title: String(localized: "Open in \(calendarAppName(openIn))", comment: "The calendar app's name"),
+                           icon: .symbol("calendar"), score: score - 0.001,
+                           actionTitle: String(localized: "Open", comment: "Enter on Open in Calendar"), action: open, answer: .meeting(card))]
 }
 
 /// `meetings`, `agenda`, `events` (and `calendar`, below the Calendar app): the rest of today's events from Calendar,
@@ -291,7 +314,8 @@ actor MeetingsProvider: ResultProvider {
             subtitle: "\(hours(item.start))–\(hours(item.end))" + (badge == nil ? " · \(startsIn(item.start, end: item.end, now: now))" : "")
                 + (item.link.map { " · \(callService($0))" } ?? ""),
             icon: .symbol(item.link == nil ? "calendar" : "video"), score: score,
-            actionTitle: item.link == nil ? calendarActionTitle(options.openIn) : "Join",
+            actionTitle: item.link == nil ? calendarActionTitle(options.openIn)
+                : String(localized: "Join", comment: "Enter on a meeting: opens its video call"),
             action: item.link.map { webOpener($0, browser: browser) } ?? calendarOpener(options.openIn, .day, item.start, browser: browser),
             badge: badge, preview: preview.text, previewStyle: .prose, details: preview.details)
     }
@@ -338,15 +362,25 @@ actor MeetingsProvider: ResultProvider {
         switch EKEventStore.authorizationStatus(for: .event) {
         case .fullAccess: break
         case .denied, .restricted:
-            return [message("Allow Copperlight to see your calendars", "Privacy & Security → Calendars → Copperlight: Full Access", "Open System Settings", {
+            return [message(String(localized: "Allow Copperlight to see your calendars"),
+                            String(localized: "Privacy & Security → Calendars → Copperlight: Full Access",
+                                   comment: "System Settings' pages, by the names macOS gives them"),
+                            String(localized: "Open System Settings"), {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!)
             })]
         default: // not asked yet, or add-only (for `add event`)
-            let asked = free != nil ? "See When You're Free" : span.map { "See Your \($0.capitalized)" } ?? "See Today's Meetings"
-            return [message(asked, "Asks to read your calendars, once", "Allow", {
+            let asked = free != nil ? String(localized: "See When You're Free")
+                : span.map { $0 == "week" ? String(localized: "See Your Week") : String(localized: "See Your Month") }
+                ?? String(localized: "See Today's Meetings")
+            return [message(asked, String(localized: "Asks to read your calendars, once"),
+                            String(localized: "Allow", comment: "Enter asks macOS for Calendars access"), {
                 Task {
-                    guard (try? await EKEventStore().requestFullAccessToEvents()) == true else { return notify("Copperlight can't see your calendars") }
-                    notify(free != nil ? "Type “\(lower)” again to see it" : span.map { "Type “\($0)” again to see it" } ?? "Type “meetings” again to see them")
+                    guard (try? await EKEventStore().requestFullAccessToEvents()) == true else {
+                        return notify(String(localized: "Copperlight can't see your calendars"))
+                    }
+                    notify(free != nil ? String(localized: "Type “\(lower)” again to see it", comment: "What was typed")
+                           : span.map { String(localized: "Type “\($0)” again to see it", comment: "What was typed") }
+                           ?? String(localized: "Type “meetings” again to see them"))
                 }
             })]
         }
@@ -359,20 +393,25 @@ actor MeetingsProvider: ResultProvider {
         }
         if let next = month {
             let card = monthCard(events(in: monthGrid(monthInterval(now: now, next: next))), now: now, next: next)
-            return [LauncherResult(id: "builtin:month", title: "\(card.range): \(card.count == 1 ? "1 event" : "\(card.count) events")",
+            let total = card.count == 1 ? String(localized: "1 event") : String(localized: "\(card.count) events")
+            return [LauncherResult(id: "builtin:month", title: "\(card.range): \(total)",
                                    subtitle: card.kicker, icon: .symbol("calendar"), score: base, actionTitle: calendarActionTitle(options.openIn),
                                    action: calendarOpener(options.openIn, .month, monthInterval(now: now, next: next).start, browser: browser),
                                    answer: .month(card))]
         }
         if let next = week {
             let card = weekCard(events(in: weekInterval(now: now, next: next)), now: now, next: next)
-            return [LauncherResult(id: "builtin:week", title: "\(card.kicker): \(card.count == 1 ? "1 event" : "\(card.count) events")",
+            let total = card.count == 1 ? String(localized: "1 event") : String(localized: "\(card.count) events")
+            return [LauncherResult(id: "builtin:week", title: "\(card.kicker): \(total)",
                                    subtitle: card.range, icon: .symbol("calendar"), score: base, actionTitle: calendarActionTitle(options.openIn),
                                    action: calendarOpener(options.openIn, .week, weekInterval(now: now, next: next).start, browser: browser),
                                    answer: .week(card))]
         }
         let items = today(now: now) ?? []
-        guard !items.isEmpty else { return [message("No more meetings today", "", calendarActionTitle(options.openIn), calendarOpener(options.openIn, .day, now, browser: browser))] }
+        guard !items.isEmpty else {
+            return [message(String(localized: "No more meetings today"), "", calendarActionTitle(options.openIn),
+                            calendarOpener(options.openIn, .day, now, browser: browser))]
+        }
         return rows(items, base: base, now: now)
     }
 }
@@ -382,19 +421,25 @@ private func freeRows(_ slots: [DateInterval], label: String, hours: Range<Int>,
                       open: (title: String, action: @MainActor @Sendable () -> Void)) -> [LauncherResult] {
     let icon = LauncherResult.Icon.symbol("calendar.badge.checkmark")
     guard !slots.isEmpty else {
-        return [LauncherResult(id: "builtin:free", title: "No free time \(label.lowercased())", subtitle: "Between \(hours.lowerBound):00 and \(hours.upperBound):00, 30 minutes or more",
+        return [LauncherResult(id: "builtin:free",
+                               title: String(localized: "No free time \(label.lowercased())", comment: "A day: today, tomorrow, Monday, next week"),
+                               subtitle: String(localized: "Between \(hours.lowerBound):00 and \(hours.upperBound):00, 30 minutes or more"),
                                icon: icon, score: base, actionTitle: open.title, action: open.action)]
     }
     let all = freeText(slots)
     let lengths = Duration.UnitsFormatStyle(allowedUnits: [.hours, .minutes], width: .narrow)
-    let whole = LauncherResult(id: "builtin:free", title: "Free \(label.lowercased()): \(slots.count == 1 ? "1 slot" : "\(slots.count) slots")",
-                               subtitle: all.replacing("\n", with: " · "), icon: icon, score: base, actionTitle: "Copy All",
+    let count = slots.count == 1 ? String(localized: "1 slot") : String(localized: "\(slots.count) slots")
+    let whole = LauncherResult(id: "builtin:free",
+                               title: String(localized: "Free \(label.lowercased()): \(count)", comment: "A day (today, next week), then 3 slots"),
+                               subtitle: all.replacing("\n", with: " · "), icon: icon, score: base,
+                               actionTitle: String(localized: "Copy All", comment: "Enter on free's first row: copies every slot"),
                                action: { copyToClipboard(all) }, preview: all, previewStyle: .prose)
     return [whole] + slots.enumerated().map { index, slot in
         let text = freeText([slot]).replacing(": ", with: ", ", maxReplacements: 1)
         return LauncherResult(id: "free:\(index)", title: (slot.start..<slot.end).formatted(.interval.hour().minute()),
                               subtitle: slot.start.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()) + " · "
                                   + Duration.seconds(slot.duration).formatted(lengths),
-                              icon: icon, score: base - Double(index + 1) / 100, actionTitle: "Copy", action: { copyToClipboard(text) })
+                              icon: icon, score: base - Double(index + 1) / 100,
+                              actionTitle: String(localized: "Copy", comment: "Enter on a free slot"), action: { copyToClipboard(text) })
     }
 }

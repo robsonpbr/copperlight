@@ -118,11 +118,14 @@ extension Color {
 
 /// The small capitals over an answer, in the accent.
 private struct Kicker: View {
-    let text: String
+    let text: Text
     @Environment(\.colorScheme) private var scheme
 
+    init(text: LocalizedStringKey) { self.text = Text(text) }
+    init(verbatim text: String) { self.text = Text(verbatim: text) }
+
     var body: some View {
-        Text(text.uppercased()).font(.system(size: 11.5, weight: .semibold)).tracking(0.5)
+        text.font(.system(size: 11.5, weight: .semibold)).tracking(0.5).textCase(.uppercase)
             .foregroundStyle(scheme == .dark ? Color.accent : Color.accentDeep)
     }
 }
@@ -189,7 +192,7 @@ struct AnswerHeading: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Kicker(text: kicker)
+            Kicker(verbatim: kicker)
             Text(title).font(.system(size: 21, weight: .medium)).lineLimit(2)
             Text(subtitle).font(.system(size: 13)).foregroundStyle(.secondary)
         }
@@ -210,7 +213,7 @@ struct StockCardView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Kicker(text: card.kicker).unredacted()
+                    Kicker(verbatim: card.kicker).unredacted()
                     HStack(spacing: 12) {
                         Text(card.price).font(.system(size: 36, weight: .semibold)).monospacedDigit()
                         if !card.change.isEmpty {
@@ -225,9 +228,9 @@ struct StockCardView: View {
             StockChart(closes: card.closes, previousClose: card.previousClose).frame(height: 150)
             Rectangle().fill(Color.primary.opacity(0.08)).frame(height: 1)
             HStack(alignment: .bottom, spacing: 32) {
-                ForEach(Array(card.facts.enumerated()), id: \.offset) { _, fact in Fact(label: fact.0, value: fact.1) }
+                ForEach(Array(card.facts.enumerated()), id: \.offset) { _, fact in Fact(verbatim: fact.0, value: fact.1) }
                 Spacer()
-                EnterHint(action: card.action)
+                EnterHint(verbatim: card.action)
             }
         }
         .modifier(Loading(active: card.loading))
@@ -236,11 +239,14 @@ struct StockCardView: View {
 
 /// A number under its name, along a card's bottom edge.
 private struct Fact: View {
-    let label: String, value: String
+    let label: Text, value: String
+
+    init(label: LocalizedStringKey, value: String) { (self.label, self.value) = (Text(label), value) }
+    init(verbatim label: String, value: String) { (self.label, self.value) = (Text(verbatim: label), value) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(label).font(.system(size: 11.5)).foregroundStyle(.secondary)
+            label.font(.system(size: 11.5)).foregroundStyle(.secondary)
             Text(value).font(.system(size: 15)).monospacedDigit()
         }
     }
@@ -248,12 +254,15 @@ private struct Fact: View {
 
 /// What Enter does, in a card's corner.
 private struct EnterHint: View {
-    let action: String
+    let action: Text
     var key = "↵"
+
+    init(action: LocalizedStringKey, key: String = "↵") { (self.action, self.key) = (Text(action), key) }
+    init(verbatim action: String, key: String = "↵") { (self.action, self.key) = (Text(verbatim: action), key) }
 
     var body: some View {
         HStack(spacing: 7) {
-            Text(action).font(.system(size: 12)).foregroundStyle(.secondary)
+            action.font(.system(size: 12)).foregroundStyle(.secondary)
             Keycap(label: key)
         }
     }
@@ -471,8 +480,9 @@ struct WeekCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 0) {
-                Kicker(text: card.kicker)
-                Text("  ·  \(card.range)  ·  \(card.count == 1 ? "1 event" : "\(card.count) events")").font(.system(size: 12)).foregroundStyle(.secondary)
+                Kicker(verbatim: card.kicker)
+                Text("  ·  \(card.range)  ·  \(card.count == 1 ? String(localized: "1 event") : String(localized: "\(card.count) events"))")
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
                 Spacer()
                 EnterHint(action: "Open in Calendar")
             }
@@ -521,8 +531,9 @@ struct MonthCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 0) {
-                Kicker(text: card.kicker)
-                Text("  ·  \(card.range)  ·  \(card.count == 1 ? "1 event" : "\(card.count) events")").font(.system(size: 12)).foregroundStyle(.secondary)
+                Kicker(verbatim: card.kicker)
+                Text("  ·  \(card.range)  ·  \(card.count == 1 ? String(localized: "1 event") : String(localized: "\(card.count) events"))")
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
                 Spacer()
                 EnterHint(action: "Open in Calendar")
             }
@@ -574,7 +585,7 @@ struct WikiCardView: View {
             }
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Kicker(text: "Wikipedia")
+                    Kicker(verbatim: "Wikipedia")
                     Spacer()
                     EnterHint(action: "Open in Wikipedia")
                 }
@@ -597,7 +608,7 @@ struct CameraCardView: View {
                 Kicker(text: "Camera")
                 Text("  ·  \(card.meeting ?? card.name)").font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
                 Spacer()
-                EnterHint(action: card.enter)
+                EnterHint(verbatim: card.enter)
             }
             CameraPreview().frame(height: 300).clipShape(.rect(cornerRadius: 12, style: .continuous))
         }
@@ -708,7 +719,7 @@ struct SpeedCardView: View {
     var running: Int? = nil
 
     var body: some View {
-        let ms = { (value: Double) in value > 0 ? "\(Int(value.rounded())) ms" : "…" }
+        let ms = { (value: Double) in value > 0 ? String(localized: "\(Int(value.rounded())) ms") : "…" }
         VStack(alignment: .leading, spacing: 20) {
             HStack {
                 Kicker(text: running == nil ? "Internet speed · \(test.connection)" : "Testing internet speed")
@@ -732,14 +743,18 @@ struct SpeedCardView: View {
                 Fact(label: "Latency", value: ms(test.idle))
                 Fact(label: "Under load", value: ms(test.loaded))
                 Spacer()
-                if running == nil { EnterHint(action: "Copy") } else { EnterHint(action: "Stop", key: "esc") }
+                if running == nil {
+                    EnterHint(verbatim: String(localized: "Copy", comment: "Enter on the speed test's result"))
+                } else {
+                    EnterHint(verbatim: String(localized: "Stop", comment: "Esc on the speed test while it runs"), key: "esc")
+                }
             }
         }
     }
 }
 
 private struct SpeedTile: View {
-    let label: String, symbol: String
+    let label: LocalizedStringKey, symbol: String
     let bitsPerSecond: Double
 
     var body: some View {

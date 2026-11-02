@@ -20,6 +20,8 @@ stocks = false                 # everything is on by default; a feature's name =
 [keywords]
 translate = "t"                # your own words beside the built-in ones (list below): t bom dia, or t and Tab
 commands = [";", ">"]          # ;left and >left, as :left
+language = true                # default: the words in your Mac's language work too (tempo for weather, on a Mac in
+                               # Portuguese). false: English's and yours only. Settings › Keywords.
 
 [look]
 accent = "system"              # copper (the default), system (your Mac's accent color), or a color: "#3478f6"

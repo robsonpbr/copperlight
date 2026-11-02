@@ -12,7 +12,7 @@ import Synchronization
 /// `:play`, `:next track`, `:previous track`: the keyboard's media keys, so they go to whatever is playing (Music,
 /// a browser tab, Spotify), as the keys do. Posting them needs Accessibility, which pasting already asks for.
 @MainActor func pressMediaKey(_ key: Int32) {
-    guard hasAccessibility("control what's playing") else { return }
+    guard hasAccessibility(String(localized: "control what's playing", comment: "Ends “Allow Copperlight in Accessibility to …”")) else { return }
     for down in [true, false] {
         let flags = NSEvent.ModifierFlags(rawValue: down ? 0xA00 : 0xB00)
         NSEvent.otherEvent(with: .systemDefined, location: .zero, modifierFlags: flags, timestamp: 0, windowNumber: 0, context: nil,
@@ -68,8 +68,9 @@ func outputRows(_ filter: String, outputs: [SoundOutput] = soundOutputs(), curre
     return ordered.enumerated().compactMap { index, output -> LauncherResult? in
         guard let score = filter.isEmpty ? -0.01 * Double(index) : fuzzyScore(filter, output.name) else { return nil }
         let id = output.id
-        return LauncherResult(id: "output:\(output.name)", title: output.name, subtitle: id == current ? "Current output" : "",
-                              icon: .symbol("hifispeaker"), score: score, actionTitle: "Switch", action: {
+        return LauncherResult(id: "output:\(output.name)", title: output.name, subtitle: id == current ? String(localized: "Current output") : "",
+                              icon: .symbol("hifispeaker"), score: score,
+                              actionTitle: String(localized: "Switch", comment: "Enter on a sound output: plays through it"), action: {
             if !setAudioProperty(system, kAudioHardwarePropertyDefaultOutputDevice, id) { NSSound.beep() }
         })
     }
@@ -115,18 +116,22 @@ func connectRows(_ filter: String, access: CBManagerAuthorization = CBManager.au
     switch access {
     case .allowedAlways: break
     case .notDetermined:
-        return [LauncherResult(id: "bluetooth:allow", title: "Connect Bluetooth Devices", subtitle: "Asks to use Bluetooth, once", icon: bluetooth,
-                               score: 50, actionTitle: "Allow", action: { bluetoothQuestion = CBCentralManager() })]
+        return [LauncherResult(id: "bluetooth:allow", title: String(localized: "Connect Bluetooth Devices"),
+                               subtitle: String(localized: "Asks to use Bluetooth, once"), icon: bluetooth, score: 50,
+                               actionTitle: String(localized: "Allow", comment: "Enter asks macOS for the permission"),
+                               action: { bluetoothQuestion = CBCentralManager() })]
     default:
-        return [LauncherResult(id: "bluetooth:allow", title: "Allow Copperlight to use Bluetooth", subtitle: "Privacy & Security → Bluetooth",
-                               icon: bluetooth, score: 50, actionTitle: "Open System Settings", action: {
+        return [LauncherResult(id: "bluetooth:allow", title: String(localized: "Allow Copperlight to use Bluetooth"),
+                               subtitle: String(localized: "Privacy & Security → Bluetooth", comment: "Where it is in System Settings"),
+                               icon: bluetooth, score: 50, actionTitle: String(localized: "Open System Settings"), action: {
             settingsPage("com.apple.preference.security?Privacy_Bluetooth")
         })]
     }
     let all = devices()
     guard !all.isEmpty else {
-        return [LauncherResult(id: "bluetooth:none", title: "No paired Bluetooth devices", subtitle: "Pair one in System Settings", icon: bluetooth,
-                               score: 50, actionTitle: "Open System Settings", action: { settingsPage("com.apple.BluetoothSettings") })]
+        return [LauncherResult(id: "bluetooth:none", title: String(localized: "No paired Bluetooth devices"),
+                               subtitle: String(localized: "Pair one in System Settings"), icon: bluetooth, score: 50,
+                               actionTitle: String(localized: "Open System Settings"), action: { settingsPage("com.apple.BluetoothSettings") })]
     }
     return (all.filter { !$0.connected } + all.filter(\.connected)).enumerated().compactMap { index, device -> LauncherResult? in
         // Close matches only: "air" is AirPods, not m-A-g-I-c keyboa-R-d.
@@ -134,16 +139,19 @@ func connectRows(_ filter: String, access: CBManagerAuthorization = CBManager.au
         else { return nil }
         let (id, address, name, icon) = ("bluetooth:\(device.address)", device.address, device.name, LauncherResult.Icon.symbol(device.symbol))
         guard !device.connected else {
-            return LauncherResult(id: id, title: name, subtitle: "Connected", icon: icon, score: score, actionTitle: "Disconnect", action: {
+            return LauncherResult(id: id, title: name, subtitle: String(localized: "Connected", comment: "A Bluetooth device's state"), icon: icon,
+                                  score: score, actionTitle: String(localized: "Disconnect", comment: "Enter on a connected Bluetooth device"), action: {
                 if IOBluetoothDevice(addressString: address)?.closeConnection() != kIOReturnSuccess { NSSound.beep() }
             })
         }
-        return LauncherResult(id: id, title: name, icon: icon, score: score, actionTitle: "Connect", action: {}, output: { _ in
+        return LauncherResult(id: id, title: name, icon: icon, score: score,
+                              actionTitle: String(localized: "Connect", comment: "Enter on a Bluetooth device"), action: {}, output: { _ in
             // It waits for the device to answer, so not on the main thread.
             let status = await Task.detached { IOBluetoothDevice(addressString: address)?.openConnection() ?? -1 }.value
             return status == kIOReturnSuccess
-                ? LauncherResult(id: id, title: "\(name) is connected", icon: icon, score: .infinity, actionTitle: "", action: {})
-                : LauncherResult(id: id, title: "Couldn’t connect \(name)", subtitle: "Is it on, nearby, and free of another device?",
+                ? LauncherResult(id: id, title: String(localized: "\(name) is connected"), icon: icon, score: .infinity, actionTitle: "", action: {})
+                : LauncherResult(id: id, title: String(localized: "Couldn’t connect \(name)"),
+                                 subtitle: String(localized: "Is it on, nearby, and free of another device?"),
                                  icon: .symbol("exclamationmark.triangle"), score: .infinity, actionTitle: "", action: {})
         })
     }
@@ -192,7 +200,9 @@ func wifiIsOn() -> Bool { CWWiFiClient.shared().interface()?.powerOn() ?? false 
 
 @MainActor func toggleWiFi() {
     guard let wifi = CWWiFiClient.shared().interface() else { return NSSound.beep() }
-    do { try wifi.setPower(!wifi.powerOn()) } catch { notify("Couldn't turn Wi-Fi \(wifi.powerOn() ? "off" : "on")", error.localizedDescription) }
+    do { try wifi.setPower(!wifi.powerOn()) } catch {
+        notify(wifi.powerOn() ? String(localized: "Couldn't turn Wi-Fi off") : String(localized: "Couldn't turn Wi-Fi on"), error.localizedDescription)
+    }
 }
 
 // MARK: Keep awake
@@ -220,7 +230,7 @@ func wifiIsOn() -> Bool { CWWiFiClient.shared().interface()?.powerOn() ?? false 
             else { return NSSound.beep() }
             Self.assertion.withLock { $0 = id }
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-            item.button?.image = NSImage(systemSymbolName: "sun.max", accessibilityDescription: "Keeping Awake")
+            item.button?.image = NSImage(systemSymbolName: "sun.max", accessibilityDescription: String(localized: "Keeping Awake"))
             self.item = item
         }
         until = deadline
@@ -232,8 +242,11 @@ func wifiIsOn() -> Bool { CWWiFiClient.shared().interface()?.powerOn() ?? false 
             }
         }
         let menu = NSMenu()
-        if let deadline { menu.addItem(withTitle: "Awake until \(deadline.formatted(date: .omitted, time: .shortened))", action: nil, keyEquivalent: "") }
-        menu.addItem(withTitle: "Stop Keeping Awake", action: #selector(stopFromMenu), keyEquivalent: "").target = self
+        if let deadline {
+            menu.addItem(withTitle: String(localized: "Awake until \(deadline.formatted(date: .omitted, time: .shortened))"), action: nil,
+                         keyEquivalent: "")
+        }
+        menu.addItem(withTitle: String(localized: "Stop Keeping Awake"), action: #selector(stopFromMenu), keyEquivalent: "").target = self
         item?.menu = menu
     }
 
@@ -263,25 +276,35 @@ func awakeDeadline(_ text: String, now: Date = .now) -> Date? {
 @MainActor func awakeRows(_ text: String, now: Date = .now) -> [LauncherResult] {
     let at = { (date: Date) in date.formatted(date: .omitted, time: .shortened) }
     let row = { (title: String, subtitle: String, deadline: Date?, score: Double) in
-        LauncherResult(id: "awake:\(title)", title: title, subtitle: subtitle, icon: .symbol("sun.max"), score: score, actionTitle: "Run",
+        LauncherResult(id: "awake:\(title)", title: title, subtitle: subtitle, icon: .symbol("sun.max"), score: score,
+                       actionTitle: String(localized: "Run", comment: "Enter on a :awake row: keeps the Mac awake"),
                        action: { KeepAwake.shared.start(until: deadline) })
     }
     guard text.isEmpty else {
         guard let deadline = awakeDeadline(text, now: now) else {
-            return [LauncherResult(id: "awake:hint", title: "Keep Awake for a while", subtitle: "Type how long: 2h, 90 min, until 18:00",
+            return [LauncherResult(id: "awake:hint", title: String(localized: "Keep Awake for a while"),
+                                   subtitle: String(localized: "Type how long: 2h, 90 min, until 18:00", comment: "The examples are typed as they are"),
                                    icon: .symbol("sun.max"), score: 1, actionTitle: "", action: {})]
         }
         let seconds = Int(deadline.timeIntervalSince(now).rounded())
         let atTime = text.lowercased().firstMatch(of: #/^(until|till|til|at)\b/#) != nil // a time of day, not a length
-        return [atTime ? row("Keep Awake until \(at(deadline))", "For \(timerLength(seconds / 60 * 60))", deadline, 1)
-                          : row("Keep Awake for \(timerLength(seconds))", "Until \(at(deadline))", deadline, 1)]
+        return [atTime ? row(String(localized: "Keep Awake until \(at(deadline))"),
+                             String(localized: "For \(timerLength(seconds / 60 * 60))", comment: "How long until then: “For 2 hours”"), deadline, 1)
+                       : row(String(localized: "Keep Awake for \(timerLength(seconds))"),
+                             String(localized: "Until \(at(deadline))", comment: "When it ends: “Until 18:00”"), deadline, 1)]
     }
     let toggle = KeepAwake.isOn
-        ? LauncherResult(id: "awake:toggle", title: "Stop Keeping Awake", subtitle: KeepAwake.shared.until.map { "Awake until \(at($0))" } ?? "Awake until you stop it",
-                         icon: .symbol("sun.max"), score: 2, actionTitle: "Run", action: { KeepAwake.shared.stop() },
+        ? LauncherResult(id: "awake:toggle", title: String(localized: "Stop Keeping Awake"),
+                         subtitle: KeepAwake.shared.until.map { String(localized: "Awake until \(at($0))") }
+                             ?? String(localized: "Awake until you stop it"),
+                         icon: .symbol("sun.max"), score: 2,
+                         actionTitle: String(localized: "Run", comment: "Enter on :awake's row: stops keeping the Mac awake"),
+                         action: { KeepAwake.shared.stop() },
                          ticking: KeepAwake.shared.until.map { .down(to: $0) })
-        : row("Keep Awake", "Until you stop it", nil, 2)
+        : row(String(localized: "Keep Awake"), String(localized: "Until you stop it"), nil, 2)
     return [toggle] + [3600, 7200].enumerated().map { index, seconds in
-        row("Keep Awake for \(timerLength(seconds))", "Until \(at(now + TimeInterval(seconds)))", now + TimeInterval(seconds), 1 - Double(index) / 100)
+        row(String(localized: "Keep Awake for \(timerLength(seconds))"),
+            String(localized: "Until \(at(now + TimeInterval(seconds)))", comment: "When it ends: “Until 18:00”"), now + TimeInterval(seconds),
+            1 - Double(index) / 100)
     }
 }

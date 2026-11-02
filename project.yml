@@ -1,6 +1,7 @@
 name: Copperlight
 options:
   bundleIdPrefix: app.copperlight
+  developmentLanguage: en # the text in the code; Resources/<code>.lproj holds each language (TRANSLATING.md)
   deploymentTarget:
     macOS: "15.0"
 packages:

@@ -23,24 +23,37 @@ struct CameraProvider: ResultProvider {
         let row = { (title: String, subtitle: String, actionTitle: String, action: @escaping @MainActor @Sendable () -> Void) in
             LauncherResult(id: "camera", title: title, subtitle: subtitle, icon: .symbol("video"), score: 50, actionTitle: actionTitle, action: action)
         }
-        guard let name = device() else { return [row("This Mac has no camera", "Connect one, or use your iPhone's", "", {})] }
+        guard let name = device() else {
+            return [row(String(localized: "This Mac has no camera"), String(localized: "Connect one, or use your iPhone's"), "", {})]
+        }
         switch status() {
         case .authorized: break
         case .denied, .restricted:
-            return [row("Allow Copperlight to use the camera", "Privacy & Security → Camera → Copperlight", "Open System Settings", {
+            return [row(String(localized: "Allow Copperlight to use the camera"),
+                        String(localized: "Privacy & Security → Camera → Copperlight",
+                               comment: "System Settings' pages, by the names macOS gives them"),
+                        String(localized: "Open System Settings"), {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera")!)
             })]
         default:
-            return [row("See Yourself", "Asks to use the camera, once", "Allow", {
-                Task { notify(await AVCaptureDevice.requestAccess(for: .video) ? "Type “camera” again to see yourself" : "Copperlight can't use the camera") }
+            return [row(String(localized: "See Yourself"), String(localized: "Asks to use the camera, once"),
+                        String(localized: "Allow", comment: "Enter asks macOS for camera access"), {
+                Task {
+                    notify(await AVCaptureDevice.requestAccess(for: .video) ? String(localized: "Type “camera” again to see yourself")
+                           : String(localized: "Copperlight can't use the camera"))
+                }
             })]
         }
         let meeting = await join()
         var soon: String?
         if case .meeting(let card)? = meeting?.answer { soon = "\(card.title) · \(card.soon)" }
-        let card = CameraCard(name: name, enter: meeting?.title ?? "Open Photo Booth", meeting: soon)
-        return [LauncherResult(id: "camera", title: "Camera", subtitle: soon.map { "Then Enter joins \($0)" } ?? name, icon: .symbol("video"),
-                               score: 50, actionTitle: meeting?.actionTitle ?? "Open Photo Booth", action: meeting?.action ?? openPhotoBooth,
+        let photoBooth = String(localized: "Open Photo Booth")
+        let card = CameraCard(name: name, enter: meeting?.title ?? photoBooth, meeting: soon)
+        return [LauncherResult(id: "camera", title: String(localized: "Camera", comment: "The camera row: you, before a call"),
+                               subtitle: soon.map { String(localized: "Then Enter joins \($0)", comment: "A meeting's title · how soon") }
+                                   ?? name,
+                               icon: .symbol("video"), score: 50, actionTitle: meeting?.actionTitle ?? photoBooth,
+                               action: meeting?.action ?? openPhotoBooth,
                                answer: .camera(card))]
     }
 }

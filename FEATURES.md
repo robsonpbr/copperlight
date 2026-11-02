@@ -528,6 +528,14 @@ The row shows the title and date Copperlight read before you press Enter; a noti
   after asking. The meeting about to start stays
   first.
 
+## Your language
+
+Copperlight's text follows your Mac's language, or the one chosen for it in System Settings › General › Language &
+Region › Applications: English, Portuguese (Brazil) and Portuguese (Portugal). Text not translated yet shows in
+English. Each keyword has words in that language too (`clima lisboa` for `weather lisboa`), beside the English ones,
+and the `:` commands, System Settings pages and rows like Pick Color are found by their title in either language. Settings › Keywords lists them, with a switch that turns them
+off (`[keywords] language = false`). Adding a language: [TRANSLATING.md](TRANSLATING.md).
+
 ## Settings
 
 **Settings…** in the menu bar, or `copperlight settings` in the launcher. A pane per group: General (hotkey, Open at Login, the accent color),
@@ -535,7 +543,7 @@ Launcher (what the empty launcher shows, what it learns and Forget, answer cards
 Options (each feature's own: the calendars and reminder lists that count, how early the next meeting shows, working
 hours for `free`, what Enter does on a person, the currency to convert to, the language to translate to, °C or °F
 and a city for the weather, your cities for `time`, what a color is copied as, Markdown in notes, the pomodoro's
-lengths, and the sound a pomodoro or a timer ends with), Keywords (your own words for each keyword), Clipboard (how much to keep, apps not recorded), Files (folders
+lengths, and the sound a pomodoro or a timer ends with), Keywords (your own words for each keyword, and your language's), Clipboard (how much to keep, apps not recorded), Files (folders
 searched, names hidden, app descriptions online or not),
 Browser (where links open, which profile), Commands and Snippets (add, edit, delete), and About (version, license,
 and the open source it's built with). Every change goes straight into config.toml, editing only its own lines, comments kept;

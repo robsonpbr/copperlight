@@ -120,12 +120,12 @@ func openArguments(_ url: String, in app: URL, profile: String?) -> Result<(via:
         // ponytail: reads Local State on every matching keystroke; cache by mtime if it ever feels slow.
         let localState = URL.applicationSupportDirectory.appending(path: "\(folder)/Local State")
         guard let data = try? Data(contentsOf: localState), let directory = chromiumProfileDirectory(profile, localState: data)
-        else { return .failure(BrowserError(message: "unknown \(name) profile \"\(profile)\"")) }
+        else { return .failure(BrowserError(message: String(localized: "unknown \(name) profile \"\(profile)\""))) }
         return .success(("\(name): \(profile)", ["-na", app.path, "--args", "--profile-directory=\(directory)", url]))
     }
     // ponytail: no check that the profile exists; Firefox shows its profile manager for a name it doesn't know.
     if bundleID == "org.mozilla.firefox" { return .success(("\(name): \(profile)", ["-na", app.path, "--args", "-P", profile, url])) }
-    return .failure(BrowserError(message: "\(name) can't be opened in a profile"))
+    return .failure(BrowserError(message: String(localized: "\(name) can't be opened in a profile")))
 }
 
 struct BrowserError: Error { let message: String }
@@ -133,7 +133,7 @@ struct BrowserError: Error { let message: String }
 /// `openArguments` in `browser` (nil: the default one).
 func browserOpening(_ url: String, browser: String?, profile: String?) -> Result<(via: String, arguments: [String]), BrowserError> {
     browserApp(browser).map { openArguments(url, in: $0, profile: profile) }
-        ?? .failure(BrowserError(message: browser.map { "no browser named \"\($0)\"" } ?? "no default browser"))
+        ?? .failure(BrowserError(message: browser.map { String(localized: "no browser named \"\($0)\"") } ?? String(localized: "no default browser")))
 }
 
 /// Where each Chromium browser keeps its `Local State`, under ~/Library/Application Support.
@@ -153,13 +153,15 @@ actor WebProvider: ResultProvider {
         let engine = browser.search ?? .google
         let search = opener(engine.url(for: query))
         var rows = [LauncherResult(
-            id: "web:search", title: "Search \(engine.name) for “\(query)”", subtitle: search.via,
-            icon: .asset(engine.logo), score: -10, actionTitle: "Search", action: search.open)]
+            id: "web:search", title: String(localized: "Search \(engine.name) for “\(query)”"), subtitle: search.via,
+            icon: .asset(engine.logo), score: -10, actionTitle: String(localized: "Search", comment: "Enter on the web search row"),
+            action: search.open)]
         if let url = webURL(query) {
             let site = opener(url)
             rows.append(LauncherResult(
-                id: "web:open", title: "Open \(query)", subtitle: ([url.absoluteString] + (site.via.isEmpty ? [] : [site.via])).joined(separator: " · "),
-                icon: .symbol("globe"), score: 10, actionTitle: "Open in Browser", action: site.open))
+                id: "web:open", title: String(localized: "Open \(query)", comment: "A row that opens a web address: Open github.com"),
+                subtitle: ([url.absoluteString] + (site.via.isEmpty ? [] : [site.via])).joined(separator: " · "),
+                icon: .symbol("globe"), score: 10, actionTitle: String(localized: "Open in Browser"), action: site.open))
         }
         return rows
     }
@@ -171,7 +173,7 @@ actor WebProvider: ResultProvider {
         guard browser.name != nil || browser.profile != nil else { return ("", fallback) }
         switch browserOpening(url.absoluteString, browser: browser.name, profile: browser.profile) {
         case .success(let (via, arguments)): return (via, { runDetached("/usr/bin/open", arguments, label: via) })
-        case .failure(let error): return ("\(error.message), so the default browser", fallback)
+        case .failure(let error): return (String(localized: "\(error.message), so the default browser"), fallback)
         }
     }
 }
@@ -207,14 +209,14 @@ actor CommandProvider: ResultProvider {
             guard browser != nil || profile != nil else { // any scheme (slack://, obsidian://) goes to its own app
                 return LauncherResult(id: id, title: title, subtitle: url, icon: .symbol("link"), score: score, action: {
                     if let link = URL(string: url), NSWorkspace.shared.open(link) { return }
-                    notify("\(alias): can't open \(url)")
+                    notify(String(localized: "\(alias): can't open \(url)"))
                 })
             }
             switch browserOpening(url, browser: browser, profile: profile) {
             case .failure(let error):
-                return LauncherResult(id: id, title: "\(alias): \(error.message)", subtitle: "Check browser and profile",
+                return LauncherResult(id: id, title: "\(alias): \(error.message)", subtitle: String(localized: "Check browser and profile"),
                                       icon: .symbol("exclamationmark.triangle"), score: score,
-                                      actionTitle: "Open config.toml", action: { NSWorkspace.shared.open(Config.file) })
+                                      actionTitle: String(localized: "Open config.toml"), action: { NSWorkspace.shared.open(Config.file) })
             case .success(let (via, arguments)):
                 return LauncherResult(id: id, title: title, subtitle: "\(url) · \(via)",
                                       icon: .symbol("link"), score: score, action: {
@@ -232,11 +234,11 @@ actor CommandProvider: ResultProvider {
         case .file(let path):
             let expanded = NSString(string: path).expandingTildeInPath
             return LauncherResult(id: id, title: alias, subtitle: path, icon: .file(expanded), score: score, action: {
-                if !NSWorkspace.shared.open(URL(filePath: expanded)) { notify("\(alias): can't open \(path)") }
+                if !NSWorkspace.shared.open(URL(filePath: expanded)) { notify(String(localized: "\(alias): can't open \(path)")) }
             })
         case .shell(let script):
             return LauncherResult(id: id, title: alias, subtitle: script, icon: .symbol("terminal"),
-                                  score: score, actionTitle: "Run", action: {
+                                  score: score, actionTitle: String(localized: "Run", comment: "Enter on a shell command from config.toml"), action: {
                 runDetached("/bin/zsh", ["-lc", script], label: alias)
             })
         }
@@ -262,13 +264,13 @@ actor CommandProvider: ResultProvider {
         try? FileManager.default.removeItem(at: log)
         guard status != 0 else { return }
         let tail = stderr.split(separator: "\n").suffix(5).joined(separator: "\n")
-        Task { @MainActor in notify("\(label) failed (exit \(status))", tail) }
+        Task { @MainActor in notify(String(localized: "\(label) failed (exit \(status))"), tail) }
     }
     do {
         try process.run()
     } catch {
         try? FileManager.default.removeItem(at: log)
-        notify("\(label) failed to start", error.localizedDescription)
+        notify(String(localized: "\(label) failed to start"), error.localizedDescription)
     }
 }
 

@@ -46,8 +46,11 @@ actor SnippetProvider: ResultProvider {
             let (text, back) = placeCursor(expandSnippet(snippet.text, query: typed, clipboard: clipboard))
             let firstLine = text.split(separator: "\n", omittingEmptySubsequences: true).first.map(String.init) ?? ""
             return LauncherResult(id: "snippet:\(snippet.name)", title: typed.isEmpty ? snippet.name : "\(snippet.name) \(typed)",
-                                  subtitle: firstLine, icon: .symbol("text.quote"), score: score, actionTitle: AXIsProcessTrusted() ? "Paste" : "Copy", action: {
-                guard hasAccessibility("paste snippets") else { return copyToClipboard(text) }
+                                  subtitle: firstLine, icon: .symbol("text.quote"), score: score,
+                                  actionTitle: AXIsProcessTrusted() ? String(localized: "Paste", comment: "Enter on a snippet: pastes it")
+                                      : String(localized: "Copy", comment: "Enter on a snippet: copies it"), action: {
+                let why = String(localized: "paste snippets", comment: "Ends “Allow Copperlight in Accessibility to …”")
+                guard hasAccessibility(why) else { return copyToClipboard(text) }
                 // ponytail: the arrows follow the paste by a fixed wait, like pasteKeepingClipboard's; longer if an app pastes late.
                 Task { await pasteKeepingClipboard(text, paste: { sendPaste(); sendKeystroke(kVK_LeftArrow, [], times: back, after: .milliseconds(300)) }) }
             }, preview: text.contains(where: \.isNewline) || text.count > 80 ? text : nil, previewStyle: .prose)

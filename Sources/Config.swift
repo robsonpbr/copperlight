@@ -55,7 +55,8 @@ struct Config: Decodable, Equatable {
             let c = try decoder.container(keyedBy: Name.self)
             for key in c.allKeys {
                 guard let feature = Feature(rawValue: key.stringValue), !Feature.parked.contains(feature) else {
-                    throw DecodingError.dataCorruptedError(forKey: key, in: c, debugDescription: "no feature by that name (Settings › Features lists them)")
+                    throw DecodingError.dataCorruptedError(
+                        forKey: key, in: c, debugDescription: String(localized: "no feature by that name (Settings › Features lists them)"))
                 }
                 if try !c.decode(Bool.self, forKey: key) { off.insert(feature) }
             }
@@ -66,6 +67,8 @@ struct Config: Decodable, Equatable {
     struct Keywords: Decodable, Equatable, Sendable {
         /// By the keyword's key (`Keyword.key`): translate → ["t"].
         var words: [String: [String]] = [:]
+        /// `language = false`: not the words of this Mac's language (Keywords.strings), only English's and yours.
+        var language = true
 
         /// What you type → the keyword it stands for: "t" → "translate", ";" → ":".
         var expansions: [String: String] {
@@ -76,8 +79,10 @@ struct Config: Decodable, Equatable {
         init(from decoder: any Decoder) throws {
             let c = try decoder.container(keyedBy: Name.self)
             for key in c.allKeys {
+                if key.stringValue == "language" { language = try c.decode(Bool.self, forKey: key); continue }
                 guard Keyword.all.contains(where: { Keyword.key($0) == key.stringValue }) else {
-                    throw DecodingError.dataCorruptedError(forKey: key, in: c, debugDescription: "no keyword by that name (Settings › Keywords lists them)")
+                    throw DecodingError.dataCorruptedError(
+                        forKey: key, in: c, debugDescription: String(localized: "no keyword by that name (Settings › Keywords lists them)"))
                 }
                 let words = try (try? c.decode(String.self, forKey: key)).map { [$0] } ?? c.decode([String].self, forKey: key)
                 self.words[key.stringValue] = words.map { $0.lowercased().trimmingCharacters(in: .whitespaces) }
@@ -87,14 +92,15 @@ struct Config: Decodable, Equatable {
 
         /// Why these words can't be: one that's a keyword already, another keyword's, starts a path, has a space, or is empty.
         static func problem(_ words: [String: [String]]) -> String? {
-            var taken = Dictionary(uniqueKeysWithValues: Keyword.all.map { ($0, "is already a keyword") })
-            (taken["~"], taken["/"]) = ("starts a path", "starts a path")
+            // Each taken word with the whole sentence it gets, so it reads as one in every language.
+            var taken = Dictionary(uniqueKeysWithValues: Keyword.all.map { ($0, String(localized: "\"\($0)\" is already a keyword")) })
+            for path in ["~", "/"] { taken[path] = String(localized: "\"\(path)\" starts a path") }
             for keyword in Keyword.all {
                 for word in words[Keyword.key(keyword)] ?? [] {
-                    if word.isEmpty { return "a word for \(keyword) is empty" }
-                    if word.contains(where: \.isWhitespace) { return "\"\(word)\": one word, no spaces" }
-                    if let why = taken[word] { return "\"\(word)\" \(why)" }
-                    taken[word] = "is already yours for \(keyword)"
+                    if word.isEmpty { return String(localized: "a word for \(keyword) is empty") }
+                    if word.contains(where: \.isWhitespace) { return String(localized: "\"\(word)\": one word, no spaces") }
+                    if let why = taken[word] { return why }
+                    taken[word] = String(localized: "\"\(word)\" is already yours for \(keyword)")
                 }
             }
             return nil
@@ -114,7 +120,8 @@ struct Config: Decodable, Equatable {
             case "system": accent = .system
             default:
                 guard let color = parseColor(text)?.color else {
-                    throw DecodingError.dataCorruptedError(forKey: .accent, in: c, debugDescription: "a color like \"#3478f6\", or \"copper\" or \"system\"")
+                    throw DecodingError.dataCorruptedError(forKey: .accent, in: c, debugDescription: String(
+                        localized: "a color like \"#3478f6\", or \"copper\" or \"system\"", comment: "copper and system are config.toml words"))
                 }
                 accent = .color(color)
             }
@@ -138,7 +145,7 @@ struct Config: Decodable, Equatable {
             defaultTarget = try c.decodeIfPresent(String.self, forKey: .defaultTarget)?.uppercased() ?? defaultTarget
             guard defaultTarget.count == 3, defaultTarget.allSatisfy({ $0.isASCII && $0.isLetter }) else {
                 throw DecodingError.dataCorruptedError(
-                    forKey: .defaultTarget, in: c, debugDescription: "expected a 3-letter currency code like \"EUR\"")
+                    forKey: .defaultTarget, in: c, debugDescription: String(localized: "expected a 3-letter currency code like \"EUR\""))
             }
         }
         private enum CodingKeys: String, CodingKey { case defaultTarget = "default_target" }
@@ -243,12 +250,13 @@ struct Config: Decodable, Equatable {
             calendars = try c.decodeIfPresent([String].self, forKey: .calendars) ?? calendars
             headsUp = try c.decodeIfPresent(Int.self, forKey: .headsUp) ?? headsUp
             guard (1...60).contains(headsUp) else {
-                throw DecodingError.dataCorruptedError(forKey: .headsUp, in: c, debugDescription: "must be 1 to 60 minutes")
+                throw DecodingError.dataCorruptedError(forKey: .headsUp, in: c, debugDescription: String(localized: "must be 1 to 60 minutes"))
             }
             let start = try c.decodeIfPresent(Int.self, forKey: .workStart) ?? workHours.lowerBound
             let end = try c.decodeIfPresent(Int.self, forKey: .workEnd) ?? workHours.upperBound
             guard 0 <= start, start < end, end <= 24 else {
-                throw DecodingError.dataCorruptedError(forKey: .workEnd, in: c, debugDescription: "work_start must come before work_end, 0 to 24")
+                throw DecodingError.dataCorruptedError(forKey: .workEnd, in: c, debugDescription: String(
+                    localized: "work_start must come before work_end, 0 to 24", comment: "work_start and work_end are config.toml keys: keep them"))
             }
             workHours = start..<end
             openIn = try choice(c, .openIn, openIn)
@@ -341,10 +349,11 @@ struct Config: Decodable, Equatable {
             maxDays = try c.decodeIfPresent(Int.self, forKey: .maxDays) ?? maxDays
             maxImages = try c.decodeIfPresent(Int.self, forKey: .maxImages) ?? maxImages
             for (key, value) in [(CodingKeys.maxItems, maxItems), (.maxDays, maxDays)] where value < 1 {
-                throw DecodingError.dataCorruptedError(forKey: key, in: c, debugDescription: "must be 1 or more")
+                throw DecodingError.dataCorruptedError(forKey: key, in: c, debugDescription: String(localized: "must be 1 or more"))
             }
             guard maxImages >= 0 else {
-                throw DecodingError.dataCorruptedError(forKey: .maxImages, in: c, debugDescription: "must be 0 (no images) or more")
+                throw DecodingError.dataCorruptedError(
+                    forKey: .maxImages, in: c, debugDescription: String(localized: "must be 0 (no images) or more"))
             }
         }
         private enum CodingKeys: String, CodingKey {
@@ -378,7 +387,7 @@ struct Config: Decodable, Equatable {
             defaultMinutes = try c.decodeIfPresent(Int.self, forKey: .defaultMinutes) ?? defaultMinutes
             breakMinutes = try c.decodeIfPresent(Int.self, forKey: .breakMinutes) ?? breakMinutes
             for (key, minutes) in [(CodingKeys.defaultMinutes, defaultMinutes), (.breakMinutes, breakMinutes)] where !(1...240).contains(minutes) {
-                throw DecodingError.dataCorruptedError(forKey: key, in: c, debugDescription: "must be 1 to 240")
+                throw DecodingError.dataCorruptedError(forKey: key, in: c, debugDescription: String(localized: "must be 1 to 240"))
             }
         }
         private enum CodingKeys: String, CodingKey { case defaultMinutes = "default_minutes", breakMinutes = "break_minutes" }
@@ -440,7 +449,8 @@ struct Config: Decodable, Equatable {
             case "file": .file(try c.decode(String.self, forKey: .path))
             case "shell": .shell(try c.decode(String.self, forKey: .run))
             case let other: throw DecodingError.dataCorruptedError(
-                forKey: .type, in: c, debugDescription: "unknown type \"\(other)\" (expected url, app, file or shell)")
+                forKey: .type, in: c, debugDescription: String(localized: "unknown type \"\(other)\" (expected url, app, file or shell)",
+                                                               comment: "url, app, file and shell are config.toml words: keep them"))
             }
         }
         private enum CodingKeys: String, CodingKey { case alias, type, url, browser, profile, app, path, run }
@@ -480,8 +490,9 @@ struct Config: Decodable, Equatable {
                                                                                         _ fallback: Value) throws -> Value where Value.RawValue == String {
         guard let word = try c.decodeIfPresent(String.self, forKey: key) else { return fallback }
         guard let value = Value(rawValue: word.lowercased()) else {
-            throw DecodingError.dataCorruptedError(forKey: key, in: c, debugDescription:
-                "expected " + Value.allCases.map { "\"\($0.rawValue)\"" }.joined(separator: ", "))
+            let words = Value.allCases.map { "\"\($0.rawValue)\"" }.joined(separator: ", ")
+            throw DecodingError.dataCorruptedError(
+                forKey: key, in: c, debugDescription: String(localized: "expected \(words)", comment: "Then the words config.toml takes, in quotes"))
         }
         return value
     }
@@ -496,10 +507,11 @@ struct Config: Decodable, Equatable {
             keys.map { $0.intValue.map { "[\($0)]" } ?? ".\($0.stringValue)" }.joined().trimmingPrefix(".").description
         }
         switch error {
-        case let error as TOMLParseError: return "line \(error.source.begin.line): \(error.description)"
+        case let error as TOMLParseError:
+            return String(localized: "line \(String(error.source.begin.line)): \(error.description)", comment: "Then the TOML reader's own message")
         case DecodingError.keyNotFound(let key, let context): // TOMLKit's path already ends in the key
             let keys = context.codingPath.last?.stringValue == key.stringValue ? context.codingPath : context.codingPath + [key]
-            return "\(path(keys)): missing"
+            return String(localized: "\(path(keys)): missing", comment: "A config.toml key that has to be there")
         case DecodingError.typeMismatch(_, let context), DecodingError.valueNotFound(_, let context),
              DecodingError.dataCorrupted(let context):
             return "\(path(context.codingPath)): \(context.debugDescription)"
@@ -524,6 +536,7 @@ struct Config: Decodable, Equatable {
         # Your own words for the built-in ones, which keep working; Settings › Keywords lists them all.
         # translate = "t"              # t bom dia, or t and Tab
         # commands = ";"               # ;left, ;quit, in place of :
+        # language = false             # not the words in your Mac's language (tempo for weather): English's and yours only
 
         [look]
         # accent = "system"            # copper (the default), system (your Mac's accent color), or a color: "#3478f6"
@@ -697,7 +710,7 @@ struct Hotkey: Equatable, Sendable, Decodable {
         let c = try decoder.singleValueContainer()
         let text = try c.decode(String.self)
         guard let hotkey = Hotkey(text) else {
-            throw DecodingError.dataCorruptedError(in: c, debugDescription: "can't read hotkey \"\(text)\" (try \"option+space\")")
+            throw DecodingError.dataCorruptedError(in: c, debugDescription: String(localized: "can't read hotkey \"\(text)\" (try \"option+space\")"))
         }
         self = hotkey
     }

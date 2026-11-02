@@ -81,7 +81,7 @@ func readProcesses() -> [ProcessUsage] {
 @MainActor func endProcess(_ pid: Int32, _ name: String) {
     guard kill(pid, SIGTERM) != 0 else { return }
     let error = errno
-    notify("Couldn't end \(name)", error == EPERM ? "It belongs to another user" : String(cString: strerror(error)))
+    notify(String(localized: "Couldn't end \(name)"), error == EPERM ? String(localized: "It belongs to another user") : String(cString: strerror(error)))
 }
 
 /// What `networkQuality` measured: download and upload in bits a second, latency idle and under load in milliseconds.
@@ -103,8 +103,8 @@ func parseSpeedTest(_ json: String) -> SpeedTest? {
     let connection = switch types.max(by: { $0.value < $1.value })?.key {
     case "wifi": "Wi-Fi"
     case "wiredEthernet": "Ethernet"
-    case "cellular": "Cellular"
-    default: object["interface_name"] as? String ?? "Network"
+    case "cellular": String(localized: "Cellular", comment: "How the speed test was connected")
+    default: object["interface_name"] as? String ?? String(localized: "Network", comment: "How the speed test was connected")
     }
     return SpeedTest(down: down, up: up, idle: idle, loaded: 60_000 / rpm, connection: connection)
 }
@@ -121,8 +121,8 @@ func parseSpeedProgress(_ text: String) -> SpeedTest? {
 
 /// The test running: its card already, with the speeds so far (none yet: zeros), the seconds ticking.
 func speedTestingRow(_ soFar: SpeedTest?, seconds: Int) -> LauncherResult {
-    LauncherResult(id: "speed", title: "Testing internet speed…", subtitle: "\(seconds) s · Esc stops it", icon: .symbol("speedometer"),
-                   score: .infinity, actionTitle: "", action: {},
+    LauncherResult(id: "speed", title: String(localized: "Testing internet speed…"), subtitle: String(localized: "\(seconds) s · Esc stops it"),
+                   icon: .symbol("speedometer"), score: .infinity, actionTitle: "", action: {},
                    answer: .speed(soFar ?? SpeedTest(down: 0, up: 0, idle: 0, loaded: 0, connection: ""), tested: .now, running: seconds))
 }
 
@@ -143,13 +143,14 @@ func speedParts(_ bitsPerSecond: Double) -> (value: String, unit: String) {
 func speedResult(_ test: SpeedTest, at date: Date = .now) -> LauncherResult {
     let (title, subtitle) = speedSummary(test)
     return LauncherResult(id: "speed", title: title, subtitle: subtitle, icon: .symbol("speedometer"), score: .infinity,
-                          actionTitle: "Copy", action: { copyToClipboard("\(title) · \(subtitle)") }, answer: .speed(test, tested: date))
+                          actionTitle: String(localized: "Copy", comment: "Enter on the speed test's result"),
+                          action: { copyToClipboard("\(title) · \(subtitle)") }, answer: .speed(test, tested: date))
 }
 
 /// The result row's title and subtitle.
 func speedSummary(_ test: SpeedTest) -> (title: String, subtitle: String) {
-    ("\(speedText(test.down)) down · \(speedText(test.up)) up",
-     "Latency \(Int(test.idle.rounded())) ms, \(Int(test.loaded.rounded())) ms under load · \(test.connection)")
+    (String(localized: "\(speedText(test.down)) down · \(speedText(test.up)) up"),
+     String(localized: "Latency \(Int(test.idle.rounded())) ms, \(Int(test.loaded.rounded())) ms under load · \(test.connection)"))
 }
 
 struct BatteryStatus: Equatable, Sendable {
@@ -164,9 +165,11 @@ struct BatteryStatus: Equatable, Sendable {
 /// "87%, charging, 1:05 to full", "87%, 3:12 left", "100%, charged".
 func batteryTitle(_ battery: BatteryStatus) -> String {
     let time = battery.minutes.map { String(format: "%d:%02d", $0 / 60, $0 % 60) }
-    let state: String? = if battery.charging { time.map { "charging, \($0) to full" } ?? "charging" }
-        else if battery.onPower { battery.percent >= 100 ? "charged" : "on power, not charging" }
-        else { time.map { "\($0) left" } }
+    let state: String? = if battery.charging {
+            time.map { String(localized: "charging, \($0) to full") } ?? String(localized: "charging", comment: "The battery, after its percent")
+        } else if battery.onPower {
+            battery.percent >= 100 ? String(localized: "charged", comment: "The battery, after its percent") : String(localized: "on power, not charging")
+        } else { time.map { String(localized: "\($0) left", comment: "Battery time left, after its percent") } }
     return (["\(battery.percent)%"] + (state.map { [$0] } ?? [])).joined(separator: ", ")
 }
 
@@ -265,9 +268,11 @@ struct LookupProvider: ResultProvider {
 
     var modes: [Mode] {
         guard isOn(.processes) else { return [] }
-        return [Mode(prefix: "port ", title: "Port", icon: .symbol("network"), hint: "A port number, like 3000"),
-         Mode(prefix: "cpu ", title: "Processes by CPU", icon: .symbol("cpu"), hint: "A name, or nothing for all"),
-         Mode(prefix: "memory ", title: "Processes by Memory", icon: .symbol("memorychip"), hint: "A name, or nothing for all")]
+        return [Mode(prefix: "port ", title: String(localized: "Port", comment: "Chip: what's listening on a port"), icon: .symbol("network"),
+                     hint: String(localized: "A port number, like 3000")),
+         Mode(prefix: "cpu ", title: String(localized: "Processes by CPU"), icon: .symbol("cpu"), hint: String(localized: "A name, or nothing for all")),
+         Mode(prefix: "memory ", title: String(localized: "Processes by Memory"), icon: .symbol("memorychip"),
+              hint: String(localized: "A name, or nothing for all"))]
     }
 
     /// In the CPU and Memory chips, every process; typed without them, the 8 busiest.
@@ -292,38 +297,43 @@ struct LookupProvider: ResultProvider {
         for (keyword, byMemory) in [("cpu", false), ("memory", true)] where lower == keyword || lower.hasPrefix(keyword + " ") {
             return processRows(lower.dropFirst(keyword.count).trimmingCharacters(in: .whitespaces), byMemory: byMemory, limit: limit)
         }
-        if let start = startRow(query, keyword: "memory", title: "Processes by Memory", hint: "What’s using memory, the most first", symbol: "memorychip")
-            ?? startRow(query, keyword: "cpu", title: "Processes by CPU", hint: "What’s using the processor, the busiest first", symbol: "cpu") {
+        if let start = startRow(query, keyword: "memory", title: "Processes by Memory", hint: String(localized: "What’s using memory, the most first"),
+                                symbol: "memorychip")
+            ?? startRow(query, keyword: "cpu", title: "Processes by CPU", hint: String(localized: "What’s using the processor, the busiest first"),
+                        symbol: "cpu") {
             return [start]
         }
         if lower == "port" || lower.hasPrefix("port ") { return portRows(lower.dropFirst(4).trimmingCharacters(in: .whitespaces)) }
-        if let start = startRow(query, keyword: "port", title: "Port", hint: "What’s listening on a port: port 3000", symbol: "network") {
+        if let start = startRow(query, keyword: "port", title: "Port", hint: String(localized: "What’s listening on a port: port 3000"), symbol: "network") {
             return [start]
         }
         return nil
     }
 
     /// 50, above apps, for the keyword: whole, or from `from` letters ("dis" is Discord's). Else its other names.
-    private func named(_ lower: String, keyword: String, title: String, from: Int? = nil) -> Double? {
+    private func named(_ lower: String, keyword: String, title: LocalizedStringResource, from: Int? = nil) -> Double? {
         if lower == keyword || (lower.count >= (from ?? keyword.count) && keyword.hasPrefix(lower)) { return 50 }
-        return otherNameScore(lower, title)
+        return otherNameScore(lower, title.key) ?? titles(title.key).dropFirst().compactMap { fuzzyScore(lower, $0) }.max() // "bateria": its translation
     }
 
     private func ipRows(_ score: Double) -> [LauncherResult] {
         let local = addresses().enumerated().map { index, entry in
-            LauncherResult(id: "ip:\(entry.address)", title: entry.address, subtitle: "Local IP · \(entry.interface)",
-                           icon: .symbol("network"), score: score - Double(index) / 100, actionTitle: "Copy",
+            LauncherResult(id: "ip:\(entry.address)", title: entry.address, subtitle: String(localized: "Local IP · \(entry.interface)"),
+                           icon: .symbol("network"), score: score - Double(index) / 100,
+                           actionTitle: String(localized: "Copy", comment: "Enter on an IP address"),
                            action: { copyToClipboard(entry.address) })
         }
         let lookUp = LauncherResult(
-            id: "ip:public", title: "Public IP", subtitle: "Enter asks api.ipify.org", icon: .symbol("globe"),
-            score: score - 0.5, actionTitle: "Look Up", action: {}, output: { _ in
+            id: "ip:public", title: String(localized: "Public IP"), subtitle: String(localized: "Enter asks api.ipify.org"), icon: .symbol("globe"),
+            score: score - 0.5, actionTitle: String(localized: "Look Up", comment: "Enter on Public IP: asks api.ipify.org"), action: {}, output: { _ in
                 guard let ip = await publicIP() else {
-                    return LauncherResult(id: "ip:public", title: "Couldn’t reach api.ipify.org", subtitle: "Offline, or something blocks it",
+                    return LauncherResult(id: "ip:public", title: String(localized: "Couldn’t reach api.ipify.org"),
+                                          subtitle: String(localized: "Offline, or something blocks it"),
                                           icon: .symbol("exclamationmark.triangle"), score: .infinity, actionTitle: "", action: {})
                 }
-                return LauncherResult(id: "ip:public", title: ip, subtitle: "Public IP · from api.ipify.org", icon: .symbol("globe"),
-                                      score: .infinity, actionTitle: "Copy", action: { copyToClipboard(ip) })
+                return LauncherResult(id: "ip:public", title: ip, subtitle: String(localized: "Public IP · from api.ipify.org"), icon: .symbol("globe"),
+                                      score: .infinity, actionTitle: String(localized: "Copy", comment: "Enter on an IP address"),
+                                      action: { copyToClipboard(ip) })
             })
         return local + [lookUp]
     }
@@ -332,8 +342,9 @@ struct LookupProvider: ResultProvider {
     /// the speeds so far as they're measured; Esc stops it. Then download, upload and latency, idle and under load;
     /// Enter copies them.
     private func speedRow(_ score: Double) -> LauncherResult {
-        LauncherResult(id: "speed", title: "Test Internet Speed", subtitle: "Download, upload and latency, with Apple’s servers",
-                       icon: .symbol("speedometer"), score: score, actionTitle: "Test", action: {}, output: { progress in
+        LauncherResult(id: "speed", title: String(localized: "Test Internet Speed"),
+                       subtitle: String(localized: "Download, upload and latency, with Apple’s servers"), icon: .symbol("speedometer"), score: score,
+                       actionTitle: String(localized: "Test", comment: "Enter on Test Internet Speed: runs it"), action: {}, output: { progress in
             let started = Date.now
             await progress(speedTestingRow(nil, seconds: 0))
             // A terminal sees the speeds as they're measured (a few times a second); the result goes to a file.
@@ -343,7 +354,8 @@ struct LookupProvider: ResultProvider {
                 await progress(speedTestingRow(parseSpeedProgress(shown), seconds: Int(Date.now.timeIntervalSince(started))))
             }
             guard let json = try? String(contentsOf: file, encoding: .utf8), let test = parseSpeedTest(json) else {
-                return LauncherResult(id: "speed", title: "Couldn’t test the speed", subtitle: "Offline, or Apple’s servers didn’t answer",
+                return LauncherResult(id: "speed", title: String(localized: "Couldn’t test the speed"),
+                                      subtitle: String(localized: "Offline, or Apple’s servers didn’t answer"),
                                       icon: .symbol("exclamationmark.triangle"), score: .infinity, actionTitle: "", action: {})
             }
             return speedResult(test)
@@ -352,13 +364,15 @@ struct LookupProvider: ResultProvider {
 
     private func batteryRow(_ score: Double) -> LauncherResult {
         guard let battery = battery() else {
-            return LauncherResult(id: "battery", title: "This Mac has no battery", icon: .symbol("powerplug"), score: score,
+            return LauncherResult(id: "battery", title: String(localized: "This Mac has no battery"), icon: .symbol("powerplug"), score: score,
                                   actionTitle: "", action: {})
         }
-        let details = ["Battery"] + [battery.health.map { "health \($0)" }, battery.cycles.map { "\($0) cycles" }].compactMap(\.self)
+        let details = [String(localized: "Battery")]
+            + [battery.health.map { String(localized: "health \($0)") }, battery.cycles.map { String(localized: "\($0) cycles") }].compactMap(\.self)
         let symbol = battery.charging ? "battery.100percent.bolt" : "battery.\([0, 25, 50, 75, 100].min { abs($0 - battery.percent) < abs($1 - battery.percent) }!)percent"
         return LauncherResult(id: "battery", title: batteryTitle(battery), subtitle: details.joined(separator: " · "), icon: .symbol(symbol),
-                              score: score, actionTitle: "Open Settings", action: { settingsPage("com.apple.Battery-Settings.extension") })
+                              score: score, actionTitle: String(localized: "Open Settings", comment: "Enter on the battery: opens Battery settings"),
+                              action: { settingsPage("com.apple.Battery-Settings.extension") })
     }
 
     private func diskRows(_ score: Double) -> [LauncherResult] {
@@ -367,8 +381,10 @@ struct LookupProvider: ResultProvider {
             let size = { (bytes: Int64) in bytes.formatted(.byteCount(style: .file)) }
             let startup = volume.path == "/"
             return LauncherResult(
-                id: "disk:\(volume.path)", title: "\(size(volume.free)) free of \(size(volume.total))", subtitle: "\(volume.name) · \(used)% used",
-                icon: .file(volume.path), score: score - Double(index) / 100, actionTitle: startup ? "Open Storage" : "Open",
+                id: "disk:\(volume.path)", title: String(localized: "\(size(volume.free)) free of \(size(volume.total))"),
+                subtitle: String(localized: "\(volume.name) · \(used)% used"), icon: .file(volume.path), score: score - Double(index) / 100,
+                actionTitle: startup ? String(localized: "Open Storage", comment: "Enter on the startup disk: opens Storage settings")
+                    : String(localized: "Open", comment: "Enter on a disk: opens it in Finder"),
                 action: {
                     if startup { settingsPage("com.apple.settings.Storage") } else { NSWorkspace.shared.open(URL(filePath: volume.path)) }
                 })
@@ -382,18 +398,20 @@ struct LookupProvider: ResultProvider {
         let found = processes().filter { process in words.allSatisfy { wordStarts(process.name).contains($0) } }
             .sorted { byMemory ? $0.memory > $1.memory : $0.cpu > $1.cpu }.prefix(limit)
         guard !found.isEmpty else {
-            return [LauncherResult(id: "process:none", title: "No process named “\(filter)”", icon: .symbol("cpu"), score: 50,
+            return [LauncherResult(id: "process:none", title: String(localized: "No process named “\(filter)”"), icon: .symbol("cpu"), score: 50,
                                    actionTitle: "", action: {})]
         }
         return found.enumerated().map { index, process in
-            let cpu = "\(formatNumber(process.cpu, decimals: 1...1))% CPU", memory = process.memory.formatted(.byteCount(style: .memory))
+            let cpu = String(localized: "\(formatNumber(process.cpu, decimals: 1...1))% CPU"), memory = process.memory.formatted(.byteCount(style: .memory))
             let (pid, name, isApp) = (process.pid, process.name, process.isApp)
             return LauncherResult(
-                id: "process:\(pid)", title: name, subtitle: (byMemory ? [memory, cpu] : [cpu, memory]).joined(separator: " · ") + " · pid \(pid)",
+                id: "process:\(pid)", title: name,
+                subtitle: (byMemory ? [memory, cpu] : [cpu, memory]).joined(separator: " · ") + " · " + String(localized: "pid \(String(pid))"),
                 icon: process.app.map { .file($0) } ?? .symbol("gearshape"), score: 50 - Double(index) / 1000,
-                actionTitle: isApp ? "Quit" : "End Process", action: {
+                actionTitle: isApp ? String(localized: "Quit", comment: "Enter on an app's process: quits the app") : String(localized: "End Process"),
+                action: {
                     if isApp, let app = NSRunningApplication(processIdentifier: pid) { app.terminate() } else { endProcess(pid, name) }
-                }, confirm: isApp ? "Quit \(name)?" : "End \(name) (pid \(pid))?")
+                }, confirm: isApp ? String(localized: "Quit \(name)?") : String(localized: "End \(name) (pid \(String(pid)))?"))
         }
     }
 
@@ -404,7 +422,8 @@ struct LookupProvider: ResultProvider {
             filter.isEmpty || (number ? listener.ports.contains { String($0).hasPrefix(filter) } : fuzzyScore(filter, listener.command) != nil)
         }
         guard !matching.isEmpty else {
-            return [LauncherResult(id: "port:none", title: number ? "Nothing is listening on port \(filter)" : "Nothing is listening",
+            return [LauncherResult(id: "port:none",
+                                   title: number ? String(localized: "Nothing is listening on port \(filter)") : String(localized: "Nothing is listening"),
                                    icon: .symbol("network"), score: 50, actionTitle: "", action: {})]
         }
         return matching.enumerated().map { index, listener in
@@ -412,10 +431,10 @@ struct LookupProvider: ResultProvider {
             let (pid, name) = (listener.pid, listener.command)
             return LauncherResult(
                 id: "port:\(listener.command)", title: name,
-                subtitle: "Listening on \(listener.ports.map(String.init).joined(separator: ", ")) · pid \(pid)",
+                subtitle: String(localized: "Listening on \(listener.ports.map(String.init).joined(separator: ", ")) · pid \(String(pid))"),
                 icon: NSRunningApplication(processIdentifier: pid)?.bundleURL.map { .file($0.path) } ?? .symbol("terminal"),
-                score: 50 - Double(index) / 100, actionTitle: "End Process", action: { endProcess(pid, name) },
-                confirm: "End \(name) (pid \(pid))? It’s listening on port \(port).")
+                score: 50 - Double(index) / 100, actionTitle: String(localized: "End Process"), action: { endProcess(pid, name) },
+                confirm: String(localized: "End \(name) (pid \(String(pid)))? It’s listening on port \(String(port))."))
         }
     }
 }

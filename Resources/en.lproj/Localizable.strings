@@ -1,0 +1,2493 @@
+/* Every piece of text Copperlight shows, written by `make strings`: don't edit it by hand. A language's
+   Localizable.strings has these keys, each with its translation on the right. */
+
+"  ·  %@" = "  ·  %@";
+
+"  ·  %@  ·  %@" = "  ·  %@  ·  %@";
+
+"\"%@\" is already a keyword" = "\"%@\" is already a keyword";
+
+"\"%@\" is already yours for %@" = "\"%@\" is already yours for %@";
+
+"\"%@\" starts a path" = "\"%@\" starts a path";
+
+"\"%@\": one word, no spaces" = "\"%@\": one word, no spaces";
+
+/* The Markdown the notes style, as you type it: keep its symbols */
+"# headings, **bold**, *italic*, `code`, lists, - [ ] checkboxes you can click, and links. The notes stay plain text files." = "# headings, **bold**, *italic*, `code`, lists, - [ ] checkboxes you can click, and links. The notes stay plain text files.";
+
+"%@ can't be opened in a profile" = "%@ can't be opened in a profile";
+
+"%@ days" = "%@ days";
+
+"%@ days ago" = "%@ days ago";
+
+"%@ didn't quit, so it wasn't relaunched" = "%@ didn't quit, so it wasn't relaunched";
+
+"%@ down · %@ up" = "%@ down · %@ up";
+
+"%@ failed" = "%@ failed";
+
+"%@ failed (exit %d)" = "%@ failed (exit %d)";
+
+"%@ failed to start" = "%@ failed to start";
+
+"%@ free of %@" = "%@ free of %@";
+
+"%@ h ahead" = "%@ h ahead";
+
+"%@ h behind" = "%@ h behind";
+
+/* The time where you are */
+"%@ here" = "%@ here";
+
+/* A saved layout: “5 windows in 3 apps” / A time in a place: 9:00 in Tokyo */
+"%@ in %@" = "%@ in %@";
+
+"%@ is connected" = "%@ is connected";
+
+"%@ is installed" = "%@ is installed";
+
+"%@ isn't installed" = "%@ isn't installed";
+
+/* Battery time left, after its percent */
+"%@ left" = "%@ left";
+
+/* A stock's change today */
+"%@ today" = "%@ today";
+
+"%@ weeks" = "%@ weeks";
+
+"%@ · %@" = "%@ · %@";
+
+/* How a shell line ended (“done”, “exit 1”), then how long it took in seconds */
+"%@ · %@ s" = "%@ · %@ s";
+
+"%@ · %lld%% used" = "%@ · %lld%% used";
+
+/* What's in the layout (“2 windows in 1 app”), then what to type to arrange them */
+"%@ · :layout %@ puts them back" = "%@ · :layout %@ puts them back";
+
+"%@ · ends %@" = "%@ · ends %@";
+
+/* A file's name */
+"%@ · its default app" = "%@ · its default app";
+
+/* An app's name, then: its window is minimized */
+"%@ · minimized" = "%@ · minimized";
+
+"%@ · now" = "%@ · now";
+
+"%@%% CPU" = "%@%% CPU";
+
+"%@%% of %@ is %@" = "%@%% of %@ is %@";
+
+"%@, so the default browser" = "%@, so the default browser";
+
+/* “Reveal in Finder: notes.txt” */
+"%@: %@" = "%@: %@";
+
+"%@: can't open %@" = "%@: can't open %@";
+
+/* A config.toml key that has to be there */
+"%@: missing" = "%@: missing";
+
+/* A layout's name, then why some windows stayed put */
+"%@: some apps aren’t open" = "%@: some apps aren’t open";
+
+"%lld" = "%lld";
+
+"%lld apps" = "%lld apps";
+
+"%lld characters" = "%lld characters";
+
+"%lld cycles" = "%lld cycles";
+
+"%lld events" = "%lld events";
+
+"%lld km/h" = "%lld km/h";
+
+"%lld lines" = "%lld lines";
+
+"%lld min" = "%lld min";
+
+"%lld min ago" = "%lld min ago";
+
+"%lld minutes" = "%lld minutes";
+
+"%lld minutes are up." = "%lld minutes are up.";
+
+/* pomo break is what to type */
+"%lld minutes are up. Time for a break: pomo break" = "%lld minutes are up. Time for a break: pomo break";
+
+"%lld minutes before" = "%lld minutes before";
+
+"%lld minutes · ends %@" = "%lld minutes · ends %@";
+
+"%lld more after it, in the order you copied them" = "%lld more after it, in the order you copied them";
+
+"%lld mph" = "%lld mph";
+
+"%lld ms" = "%lld ms";
+
+"%lld s" = "%lld s";
+
+"%lld s · Esc stops it" = "%lld s · Esc stops it";
+
+"%lld slots" = "%lld slots";
+
+"%lld windows" = "%lld windows";
+
+"%lld words" = "%lld words";
+
+"%lld:00" = "%lld:00";
+
+/* An age, short: 2 days */
+"%lldd" = "%lldd";
+
+/* An age, short: 3 hours */
+"%lldh" = "%lldh";
+
+/* An age, short: 5 minutes */
+"%lldm" = "%lldm";
+
+"%lld°" = "%lld°";
+
+"+%lld more" = "+%lld more";
+
+"1 app" = "1 app";
+
+"1 character" = "1 character";
+
+"1 day" = "1 day";
+
+"1 event" = "1 event";
+
+"1 line" = "1 line";
+
+"1 slot" = "1 slot";
+
+"1 week" = "1 week";
+
+"1 window" = "1 window";
+
+"1 word" = "1 word";
+
+/* What to type after timer: a length (h, m, s as they are), then what it's for */
+"10 min tea, 90s, 1h 30m" = "10 min tea, 90s, 1h 30m";
+
+"25 usd to eur, 0.1 btc in eur. Rates from Coinbase" = "25 usd to eur, 0.1 btc in eur. Rates from Coinbase";
+
+/* A stock's change over 7 days */
+"7 days" = "7 days";
+
+":! and a command" = ":! and a command";
+
+/* “:!git status” is typed as is */
+":!git status · runs on Enter" = ":!git status · runs on Enter";
+
+":left, :maximize, :window, saved layouts" = ":left, :maximize, :window, saved layouts";
+
+":shortcut and a shortcut's name" = ":shortcut and a shortcut's name";
+
+"=" = "=";
+
+"A city, or nothing for where you are" = "A city, or nothing for where you are";
+
+/* The f chip's placeholder */
+"A file's name" = "A file's name";
+
+"A meeting about to start" = "A meeting about to start";
+
+"A name, or nothing for all" = "A name, or nothing for all";
+
+"A name, or nothing for everyone" = "A name, or nothing for everyone";
+
+"A port number, like 3000" = "A port number, like 3000";
+
+/* The :! chip's placeholder; “git status” is typed as is */
+"A shell line: git status" = "A shell line: git status";
+
+"A step darker" = "A step darker";
+
+"A step lighter" = "A step lighter";
+
+"A stock, the weather, a person, a color: drawn big across the card. Off, they're plain rows like the rest." = "A stock, the weather, a person, a color: drawn big across the card. Off, they're plain rows like the rest.";
+
+"A ticker: AAPL, MGLU3.SA" = "A ticker: AAPL, MGLU3.SA";
+
+/* Placeholder in the Define chip / Placeholder in the Synonyms chip */
+"A word" = "A word";
+
+"A word for one: party" = "A word for one: party";
+
+"A word in its title or address, or nothing for all" = "A word in its title or address, or nothing for all";
+
+/* The Notes chip's empty field */
+"A word in them, or nothing for all" = "A word in them, or nothing for all";
+
+"A word or a sentence" = "A word or a sentence";
+
+/* A Settings pane */
+"About" = "About";
+
+"About This Mac" = "About This Mac";
+
+"Accent" = "Accent";
+
+/* A permission, as System Settings names it */
+"Accessibility" = "Accessibility";
+
+"Acknowledgements" = "Acknowledgements";
+
+/* Tab on a person: every way to reach them / Tab on a row: what you can do with it */
+"Actions" = "Actions";
+
+/* Enter on add note, todo or event */
+"Add" = "Add";
+
+"Add App…" = "Add App…";
+
+"Add Calendar Event" = "Add Calendar Event";
+
+"Add Command…" = "Add Command…";
+
+"Add Folder…" = "Add Folder…";
+
+"Add Reminder" = "Add Reminder";
+
+"Add Snippet…" = "Add Snippet…";
+
+"Add a name" = "Add a name";
+
+"Add events to" = "Add events to";
+
+"Add to %@" = "Add to %@";
+
+"Add to Note" = "Add to Note";
+
+"Add to-dos to" = "Add to-dos to";
+
+"Address" = "Address";
+
+"AirDrop" = "AirDrop";
+
+"AirDrop & Handoff" = "AirDrop & Handoff";
+
+"All day" = "All day";
+
+"All your notes, the last edited first" = "All your notes, the last edited first";
+
+/* Enter asks macOS for Calendars access / Enter asks macOS for Contacts access / Enter asks macOS for Location Services / Enter asks macOS for Reminders access / Enter asks macOS for camera access / Enter asks macOS for the permission / Enter asks macOS to let Copperlight control Things */
+"Allow" = "Allow";
+
+"Allow %@" = "Allow %@";
+
+"Allow Copperlight in Accessibility to %@" = "Allow Copperlight in Accessibility to %@";
+
+"Allow Copperlight in Accessibility to list windows" = "Allow Copperlight in Accessibility to list windows";
+
+"Allow Copperlight in Accessibility to save layouts" = "Allow Copperlight in Accessibility to save layouts";
+
+"Allow Copperlight in Accessibility to search menus" = "Allow Copperlight in Accessibility to search menus";
+
+"Allow Copperlight in Calendars to add events" = "Allow Copperlight in Calendars to add events";
+
+"Allow Copperlight in Reminders to add reminders" = "Allow Copperlight in Reminders to add reminders";
+
+"Allow Copperlight to control Things" = "Allow Copperlight to control Things";
+
+"Allow Copperlight to record the screen, then try again" = "Allow Copperlight to record the screen, then try again";
+
+"Allow Copperlight to see your calendars" = "Allow Copperlight to see your calendars";
+
+"Allow Copperlight to see your contacts" = "Allow Copperlight to see your contacts";
+
+"Allow Copperlight to see your reminders" = "Allow Copperlight to see your reminders";
+
+"Allow Copperlight to use Bluetooth" = "Allow Copperlight to use Bluetooth";
+
+"Allow Copperlight to use the camera" = "Allow Copperlight to use the camera";
+
+"Allow Full Disk Access to read codes from Messages" = "Allow Full Disk Access to read codes from Messages";
+
+"Allowed" = "Allowed";
+
+/* A new note */
+"An empty one" = "An empty one";
+
+/* Tab on made-up data: makes another */
+"Another" = "Another";
+
+"Another app" = "Another app";
+
+/* Settings › Features: the group of features that answer what you type */
+"Answers" = "Answers";
+
+"Answers in their own shape" = "Answers in their own shape";
+
+"Any (the browser decides)" = "Any (the browser decides)";
+
+"Anything: serendipity, Lisbon" = "Anything: serendipity, Lisbon";
+
+/* Stands for an app's name when it has none / What a command opens, in its editor */
+"App" = "App";
+
+"Appearance" = "Appearance";
+
+"Apple Account" = "Apple Account";
+
+"Apple Intelligence & Siri" = "Apple Intelligence & Siri";
+
+"Apple’s servers · %@" = "Apple’s servers · %@";
+
+"Application" = "Application";
+
+"Apps" = "Apps";
+
+"Apps are found by what they do too: “draw”, “noise”. Copperlight indexes each app's category and the files it opens, and with Apple Intelligence on, the Mac's own model adds words. Online, it adds Homebrew's public description (the whole list is downloaded, so nothing about your apps is sent) and the App Store's for apps you got there; with Homebrew installed, an app you don't have offers to install itself." = "Apps are found by what they do too: “draw”, “noise”. Copperlight indexes each app's category and the files it opens, and with Apple Intelligence on, the Mac's own model adds words. Online, it adds Homebrew's public description (the whole list is downloaded, so nothing about your apps is sent) and the App Store's for apps you got there; with Homebrew installed, an app you don't have offers to install itself.";
+
+"Apps you don't have, installed from their row" = "Apps you don't have, installed from their row";
+
+"Apps you open around this time" = "Apps you open around this time";
+
+/* Enter on a saved layout: puts its windows back */
+"Arrange" = "Arrange";
+
+"As an attachment" = "As an attachment";
+
+"Asked to cancel, or it isn't a network this Mac knows" = "Asked to cancel, or it isn't a network this Mac knows";
+
+"Asking Open-Meteo…" = "Asking Open-Meteo…";
+
+"Asking Wikipedia…" = "Asking Wikipedia…";
+
+"Asking Yahoo Finance…" = "Asking Yahoo Finance…";
+
+"Asks Todoist for today's and overdue tasks" = "Asks Todoist for today's and overdue tasks";
+
+"Asks for your location, once · or type a city" = "Asks for your location, once · or type a city";
+
+"Asks to control Finder, once" = "Asks to control Finder, once";
+
+"Asks to control Things, once" = "Asks to control Things, once";
+
+"Asks to control it, once" = "Asks to control it, once";
+
+"Asks to read your calendars, once" = "Asks to read your calendars, once";
+
+"Asks to read your contacts, once" = "Asks to read your contacts, once";
+
+"Asks to read your reminders, once" = "Asks to read your reminders, once";
+
+"Asks to use Bluetooth, once" = "Asks to use Bluetooth, once";
+
+"Asks to use the camera, once" = "Asks to use the camera, once";
+
+"Automatic" = "Automatic";
+
+"Awake until %@" = "Awake until %@";
+
+"Awake until you stop it" = "Awake until you stop it";
+
+"Base64 Decode" = "Base64 Decode";
+
+"Base64 Encode" = "Base64 Encode";
+
+"Battery" = "Battery";
+
+"Before you type. A meeting about to start: one with a call, from 10 minutes before; both need Calendars access, so type “meetings” once. What's running: a pomodoro, a timer, the stopwatch, keeping awake. Apps: the ones you open around this time on most days, learned from what you open here." = "Before you type. A meeting about to start: one with a call, from 10 minutes before; both need Calendars access, so type “meetings” once. What's running: a pomodoro, a timer, the stopwatch, keeping awake. Apps: the ones you open around this time on most days, learned from what you open here.";
+
+"Between %lld:00 and %lld:00, 30 minutes or more" = "Between %lld:00 and %lld:00, 30 minutes or more";
+
+"Bluetooth" = "Bluetooth";
+
+"Bookmarks and history" = "Bookmarks and history";
+
+"Bottom Half" = "Bottom Half";
+
+"Bottom Left Quarter" = "Bottom Left Quarter";
+
+"Bottom Right Quarter" = "Bottom Right Quarter";
+
+/* A pomodoro's break, running */
+"Break" = "Break";
+
+"Break's over" = "Break's over";
+
+/* Enter on a folder in a typed path: goes into it */
+"Browse" = "Browse";
+
+/* A Settings pane */
+"Browser" = "Browser";
+
+"Browser Tabs" = "Browser Tabs";
+
+"Browser tabs" = "Browser tabs";
+
+"Calculator" = "Calculator";
+
+/* Apple's Calendar app, by the name macOS gives it / Label: the event's calendar */
+"Calendar" = "Calendar";
+
+/* A permission, as System Settings names it */
+"Calendars" = "Calendars";
+
+/* A video call on a service not known / Label: the event's video call service */
+"Call" = "Call";
+
+/* The camera row: you, before a call */
+"Camera" = "Camera";
+
+"Can't translate %@" = "Can't translate %@";
+
+"Cancel" = "Cancel";
+
+/* How the speed test was connected */
+"Cellular" = "Cellular";
+
+"Center Third" = "Center Third";
+
+"Center Window" = "Center Window";
+
+"Characters" = "Characters";
+
+"Check browser and profile" = "Check browser and profile";
+
+"Check the connection and try again" = "Check the connection and try again";
+
+/* Enter on a : command that takes a name (:quit): fills it in / Enter on a file in :open with: fills it in, to pick an app / Enter on a file's Open With…: fills in :open with, to pick an app / Enter on a menu item of the app in front / Enter on an add row: types its name */
+"Choose" = "Choose";
+
+"Choose an app" = "Choose an app";
+
+"Choose…" = "Choose…";
+
+"Chrome, Brave, Edge, Vivaldi, Arc and Safari" = "Chrome, Brave, Edge, Vivaldi, Arc and Safari";
+
+"City" = "City";
+
+/* Weather conditions */
+"Clear" = "Clear";
+
+"Clear History" = "Clear History";
+
+"Click anywhere on the screen to copy its color" = "Click anywhere on the screen to copy its color";
+
+/* A Settings pane */
+"Clipboard" = "Clipboard";
+
+"Clipboard History" = "Clipboard History";
+
+"Clipboard history" = "Clipboard history";
+
+"Clipboard history is off: can't open clipboard.sqlite" = "Clipboard history is off: can't open clipboard.sqlite";
+
+"Close Window" = "Close Window";
+
+/* Weather conditions */
+"Cloudy" = "Cloudy";
+
+"Codes from Messages" = "Codes from Messages";
+
+"Color" = "Color";
+
+"Colors" = "Colors";
+
+/* A Settings pane */
+"Commands" = "Commands";
+
+"Commands: :left, :quit, :lock" = "Commands: :left, :quit, :lock";
+
+/* Enter on a reminder or to-do: marks it done */
+"Complete" = "Complete";
+
+"Complete in Things" = "Complete in Things";
+
+/* Enter on a question that asks first */
+"Confirm" = "Confirm";
+
+/* Enter on a Bluetooth device */
+"Connect" = "Connect";
+
+"Connect Bluetooth Device" = "Connect Bluetooth Device";
+
+"Connect Bluetooth Devices" = "Connect Bluetooth Devices";
+
+"Connect Todoist in Settings" = "Connect Todoist in Settings";
+
+"Connect Todoist in Settings › Options › To-dos" = "Connect Todoist in Settings › Options › To-dos";
+
+"Connect one, or use your iPhone's" = "Connect one, or use your iPhone's";
+
+/* A Bluetooth device's state */
+"Connected" = "Connected";
+
+/* The chip for finding a person */
+"Contact" = "Contact";
+
+"Contacts" = "Contacts";
+
+"Contrast: %@ on white, %@ on black" = "Contrast: %@ on white, %@ on black";
+
+"Control Center" = "Control Center";
+
+"Convert to" = "Convert to";
+
+/* Label: when a clipboard item was copied / Notification: output copied */
+"Copied" = "Copied";
+
+"Copied. To paste it too, allow Copperlight in Accessibility" = "Copied. To paste it too, allow Copperlight in Accessibility";
+
+"Copper" = "Copper";
+
+"Copperlight" = "Copperlight";
+
+"Copperlight Settings" = "Copperlight Settings";
+
+"Copperlight can't see your calendars" = "Copperlight can't see your calendars";
+
+"Copperlight can't see your contacts" = "Copperlight can't see your contacts";
+
+"Copperlight can't see your reminders" = "Copperlight can't see your reminders";
+
+"Copperlight can't use the camera" = "Copperlight can't use the camera";
+
+"Copperlight is built with these, each under the MIT License:" = "Copperlight is built with these, each under the MIT License:";
+
+"Copperlight is free and open source. © 2026 Robson Ramos." = "Copperlight is free and open source. © 2026 Robson Ramos.";
+
+/* Enter on Copy QR Code: copies the picture / Enter on a QR code's row / Enter on a Wi-Fi password: copies it / Enter on a calculation / Enter on a clipboard item / Enter on a clipboard item's action / Enter on a color: copies it / Enter on a currency conversion / Enter on a date answer / Enter on a file: copies it / Enter on a free slot / Enter on a person's number or email: copies it / Enter on a script filter's row: copies it / Enter on a shell line's output / Enter on a snippet: copies it / Enter on a spelling / Enter on a synonym / Enter on a text tool's result / Enter on a time in another place: copies the time / Enter on a translation / Enter on a unit conversion: copies the number / Enter on a verification code / Enter on an IP address / Enter on the speed test's result */
+"Copy" = "Copy";
+
+/* A calculation's row: Enter copies the result / A conversion's row: Enter copies it */
+"Copy %@" = "Copy %@";
+
+/* Enter on free's first row: copies every slot */
+"Copy All" = "Copy All";
+
+"Copy Command" = "Copy Command";
+
+"Copy File" = "Copy File";
+
+"Copy Link" = "Copy Link";
+
+"Copy Path" = "Copy Path";
+
+"Copy Picture" = "Copy Picture";
+
+"Copy QR Code" = "Copy QR Code";
+
+"Copy Text" = "Copy Text";
+
+"Copy Text from Screen" = "Copy Text from Screen";
+
+"Copy Without Pasting" = "Copy Without Pasting";
+
+"Copy colors as" = "Copy colors as";
+
+"Copy some text first" = "Copy some text first";
+
+"Copy text from the screen" = "Copy text from the screen";
+
+"Couldn't add the event" = "Couldn't add the event";
+
+"Couldn't add the reminder" = "Couldn't add the reminder";
+
+"Couldn't change Launch at Login" = "Couldn't change Launch at Login";
+
+"Couldn't clear clipboard history" = "Couldn't clear clipboard history";
+
+"Couldn't complete the reminder" = "Couldn't complete the reminder";
+
+"Couldn't end %@" = "Couldn't end %@";
+
+"Couldn't get the password for “%@”" = "Couldn't get the password for “%@”";
+
+"Couldn't move %@ to the Trash" = "Couldn't move %@ to the Trash";
+
+"Couldn't reach Open-Meteo" = "Couldn't reach Open-Meteo";
+
+"Couldn't reach Todoist" = "Couldn't reach Todoist";
+
+"Couldn't reach Wikipedia" = "Couldn't reach Wikipedia";
+
+"Couldn't reach Yahoo Finance" = "Couldn't reach Yahoo Finance";
+
+"Couldn't read Things" = "Couldn't read Things";
+
+"Couldn't run %@" = "Couldn't run %@";
+
+"Couldn't save config.toml: %@" = "Couldn't save config.toml: %@";
+
+"Couldn't save it in your keychain. Try Save again." = "Couldn't save it in your keychain. Try Save again.";
+
+"Couldn't save the QR code" = "Couldn't save the QR code";
+
+"Couldn't save the note" = "Couldn't save the note";
+
+"Couldn't save the picture" = "Couldn't save the picture";
+
+"Couldn't save to clipboard history" = "Couldn't save to clipboard history";
+
+"Couldn't tell where you are" = "Couldn't tell where you are";
+
+"Couldn't turn Wi-Fi off" = "Couldn't turn Wi-Fi off";
+
+"Couldn't turn Wi-Fi on" = "Couldn't turn Wi-Fi on";
+
+"Couldn’t connect %@" = "Couldn’t connect %@";
+
+"Couldn’t install %@" = "Couldn’t install %@";
+
+"Couldn’t reach api.ipify.org" = "Couldn’t reach api.ipify.org";
+
+"Couldn’t test the speed" = "Couldn’t test the speed";
+
+/* Text tool: counts words, characters and lines */
+"Count" = "Count";
+
+"Counts up in the menu bar" = "Counts up in the menu bar";
+
+/* Enter on New Note */
+"Create" = "Create";
+
+"Currency" = "Currency";
+
+"Current output" = "Current output";
+
+/* Names :dark in “… failed” notifications */
+"Dark Mode" = "Dark Mode";
+
+"Date & Time" = "Date & Time";
+
+"Date math" = "Date math";
+
+"Days Since a Date" = "Days Since a Date";
+
+"Days Until a Date" = "Days Until a Date";
+
+"Default" = "Default";
+
+"Default Browser" = "Default Browser";
+
+/* Chip: a word's dictionary entry */
+"Define" = "Define";
+
+/* Enter on a clipboard item's action / Enter on a clipboard item: deletes it from the history / Enter on a note to delete / Enter on a saved layout */
+"Delete" = "Delete";
+
+"Delete Layout" = "Delete Layout";
+
+"Delete Layout “%@”" = "Delete Layout “%@”";
+
+"Delete Note" = "Delete Note";
+
+"Delete Note: %@" = "Delete Note: %@";
+
+"Delete all clipboard history but the pinned items? This can't be undone." = "Delete all clipboard history but the pinned items? This can't be undone.";
+
+"Delete from History" = "Delete from History";
+
+"Desktop & Dock" = "Desktop & Dock";
+
+"Device Management" = "Device Management";
+
+"Dictionary" = "Dictionary";
+
+"Dictionary › Settings: tick a thesaurus" = "Dictionary › Settings: tick a thesaurus";
+
+"Dimensions" = "Dimensions";
+
+/* Enter on a connected Bluetooth device */
+"Disconnect" = "Disconnect";
+
+"Disk Space" = "Disk Space";
+
+"Displays" = "Displays";
+
+"Don't record copies made in" = "Don't record copies made in";
+
+"Download" = "Download";
+
+"Download %@ to translate here" = "Download %@ to translate here";
+
+"Download, upload and latency, with Apple’s servers" = "Download, upload and latency, with Apple’s servers";
+
+"Drag over anything to copy its text" = "Drag over anything to copy its text";
+
+/* Weather conditions */
+"Drizzle" = "Drizzle";
+
+"Each keyword's words in your Mac's language work beside the English ones. Off, only English's and yours do." = "Each keyword's words in your Mac's language work beside the English ones. Off, only English's and yours do.";
+
+"Each one is used on this Mac only" = "Each one is used on this Mac only";
+
+/* Clipboard history's section: before yesterday */
+"Earlier" = "Earlier";
+
+"Edit Command" = "Edit Command";
+
+"Edit Snippet" = "Edit Snippet";
+
+"Edit…" = "Edit…";
+
+/* Enter on a disk */
+"Eject" = "Eject";
+
+"Eject %@" = "Eject %@";
+
+"Eject Disk" = "Eject Disk";
+
+/* Enter on a person: emails them */
+"Email" = "Email";
+
+/* Chip: emoji by name */
+"Emoji" = "Emoji";
+
+"Empty Note" = "Empty Note";
+
+"Empty Trash" = "Empty Trash";
+
+"Empty the Trash? This can't be undone." = "Empty the Trash? This can't be undone.";
+
+"End %@ (pid %@)?" = "End %@ (pid %@)?";
+
+"End %@ (pid %@)? It’s listening on port %@." = "End %@ (pid %@)? It’s listening on port %@.";
+
+"End Process" = "End Process";
+
+"Enter asks api.ipify.org" = "Enter asks api.ipify.org";
+
+"Enter on a person" = "Enter on a person";
+
+"Esc stops it" = "Esc stops it";
+
+"Esc to cancel" = "Esc to cancel";
+
+"Event added" = "Event added";
+
+"Every executable file in ~/.config/copperlight/scripts is a command too, found by its file name." = "Every executable file in ~/.config/copperlight/scripts is a command too, found by its file name.";
+
+"Every server and permission" = "Every server and permission";
+
+"Every tab open in your browsers" = "Every tab open in your browsers";
+
+"Everything here is saved in ~/.config/copperlight/config.toml, with your comments kept. Edit it by hand any time: changes apply when you save." = "Everything here is saved in ~/.config/copperlight/config.toml, with your comments kept. Edit it by hand any time: changes apply when you save.";
+
+"Exit %d" = "Exit %d";
+
+"FaceTime" = "FaceTime";
+
+"Fake Address" = "Fake Address";
+
+"Fake Company" = "Fake Company";
+
+"Fake Email" = "Fake Email";
+
+"Fake IBAN" = "Fake IBAN";
+
+"Fake Name" = "Fake Name";
+
+"Fake Phone Number" = "Fake Phone Number";
+
+"Family" = "Family";
+
+/* A Settings pane */
+"Features" = "Features";
+
+"Feels like %@" = "Feels like %@";
+
+/* A file's kind, when macOS doesn't say / What a command opens, in its editor */
+"File" = "File";
+
+/* A Settings pane / The f chip: searches files only */
+"Files" = "Files";
+
+"Find the text in your photos, read on this Mac" = "Find the text in your photos, read on this Mac";
+
+"Focus" = "Focus";
+
+/* Weather conditions */
+"Fog" = "Fog";
+
+"For" = "For";
+
+/* How long until then: “For 2 hours” */
+"For %@" = "For %@";
+
+"For Pick Color and the colors you picked. A color you type shows every notation." = "For Pick Color and the colors you picked. A color you type shows every notation.";
+
+"For an amount without a target, like “25 usd”." = "For an amount without a target, like “25 usd”.";
+
+"For text without “to …”, like “translate bom dia”. Automatic: the first of your Mac’s languages the text isn’t in, which is also used when the text is already in this one." = "For text without “to …”, like “translate bom dia”. Automatic: the first of your Mac’s languages the text isn’t in, which is also used when the text is already in this one.";
+
+"For “weather” when Location Services is off for Copperlight, or you’d rather not share where you are." = "For “weather” when Location Services is off for Copperlight, or you’d rather not share where you are.";
+
+/* A running app's action / Enter on a running app */
+"Force Quit" = "Force Quit";
+
+"Force Quit %@" = "Force Quit %@";
+
+"Force Quit %@? Unsaved changes are lost." = "Force Quit %@? Unsaved changes are lost.";
+
+"Force Quit Application" = "Force Quit Application";
+
+"Forget" = "Forget";
+
+"Forget Key" = "Forget Key";
+
+"Forgotten" = "Forgotten";
+
+"Format JSON" = "Format JSON";
+
+"Free" = "Free";
+
+/* A day (today, next week), then 3 slots */
+"Free %@: %@" = "Free %@: %@";
+
+"Freezing rain" = "Freezing rain";
+
+"From 2 letters, or “f” and a name for files only. Uses Spotlight's index, so what Spotlight skips is skipped too." = "From 2 letters, or “f” and a name for files only. Uses Spotlight's index, so what Spotlight skips is skipped too.";
+
+"From Messages" = "From Messages";
+
+"From Yahoo Finance" = "From Yahoo Finance";
+
+"From the Mac's thesaurus" = "From the Mac's thesaurus";
+
+"Full size, as Space shows it in Finder" = "Full size, as Space shows it in Finder";
+
+"GNU GPL v3" = "GNU GPL v3";
+
+"Game Center" = "Game Center";
+
+"Game Controllers" = "Game Controllers";
+
+/* A Settings pane */
+"General" = "General";
+
+/* Enter on a file while an Open or Save dialog is in front */
+"Go There" = "Go There";
+
+/* Today's high and low */
+"H %@ · L %@" = "H %@ · L %@";
+
+"H %lld° L %lld°" = "H %lld° L %lld°";
+
+"HSL · hsl(27, 59%, 49%)" = "HSL · hsl(27, 59%, 49%)";
+
+"Heavy rain" = "Heavy rain";
+
+"Heavy showers" = "Heavy showers";
+
+"Heavy snow" = "Heavy snow";
+
+/* The weather's place: where this Mac is */
+"Here" = "Here";
+
+/* A color's notation */
+"Hex" = "Hex";
+
+"Hex · #c87533" = "Hex · #c87533";
+
+"Hex ↔ RGB" = "Hex ↔ RGB";
+
+/* Names :hidden files in “… failed” notifications */
+"Hidden Files" = "Hidden Files";
+
+/* A running app's action / Enter on a running app / Enter on a shell line that's running: hides the panel / Enter while a command runs / Enter while an app installs */
+"Hide" = "Hide";
+
+"Hide %@" = "Hide %@";
+
+"Hide Application" = "Hide Application";
+
+"Hide Others" = "Hide Others";
+
+"Hide results inside" = "Hide results inside";
+
+"History" = "History";
+
+"Hotkey, features, clipboard, files, browser, commands, snippets" = "Hotkey, features, clipboard, files, browser, commands, snippets";
+
+"IP Address" = "IP Address";
+
+"Image %@×%@" = "Image %@×%@";
+
+"Images" = "Images";
+
+/* The app a file opens in: “In Preview” */
+"In %@" = "In %@";
+
+"In %@ days" = "In %@ days";
+
+"Insert:" = "Insert:";
+
+/* Enter on an app you don't have: installs it */
+"Install" = "Install";
+
+"Install %@" = "Install %@";
+
+"Install with Homebrew" = "Install with Homebrew";
+
+"Installing %@…" = "Installing %@…";
+
+"Internet Accounts" = "Internet Accounts";
+
+"Internet speed · %@" = "Internet speed · %@";
+
+"Is it on, nearby, and free of another device?" = "Is it on, nearby, and free of another device?";
+
+"It belongs to another user" = "It belongs to another user";
+
+"It holds about 2,000 characters" = "It holds about 2,000 characters";
+
+"It needs your password: Enter copies the command for a terminal" = "It needs your password: Enter copies the command for a terminal";
+
+"Its pages, as rows: wi-fi, displays" = "Its pages, as rows: wi-fi, displays";
+
+"Its summary, from Wikipedia" = "Its summary, from Wikipedia";
+
+/* Enter on a meeting: opens its video call */
+"Join" = "Join";
+
+/* The call's service: Google Meet, Zoom… */
+"Join %@" = "Join %@";
+
+"Join Call" = "Join Call";
+
+"Keep Awake" = "Keep Awake";
+
+"Keep Awake for %@" = "Keep Awake for %@";
+
+"Keep Awake for a while" = "Keep Awake for a while";
+
+"Keep Awake until %@" = "Keep Awake until %@";
+
+/* Tab on a calculation: puts the result in the field */
+"Keep Going" = "Keep Going";
+
+"Keep awake" = "Keep awake";
+
+"Keep up to" = "Keep up to";
+
+"Keeping Awake" = "Keeping Awake";
+
+"Keyboard" = "Keyboard";
+
+/* A Settings pane */
+"Keywords" = "Keywords";
+
+/* A file's detail: its kind (“PDF document”) */
+"Kind" = "Kind";
+
+"Language & Region" = "Language & Region";
+
+"Language & Region → Translation Languages, once" = "Language & Region → Translation Languages, once";
+
+"Large Type" = "Large Type";
+
+"Large Type · from the clipboard" = "Large Type · from the clipboard";
+
+"Latency" = "Latency";
+
+"Latency %lld ms, %lld ms under load · %@" = "Latency %lld ms, %lld ms under load · %@";
+
+"Latest screenshots and downloads" = "Latest screenshots and downloads";
+
+"Launch at Login" = "Launch at Login";
+
+/* A Settings pane */
+"Launcher" = "Launcher";
+
+"Launches the app, or brings it forward." = "Launches the app, or brings it forward.";
+
+"Layout" = "Layout";
+
+/* “Layout · 2 windows in 1 app” */
+"Layout · %@" = "Layout · %@";
+
+"Learning" = "Learning";
+
+"Left Half" = "Left Half";
+
+"Left Third" = "Left Third";
+
+"Left Two Thirds" = "Left Two Thirds";
+
+"License" = "License";
+
+"Light rain" = "Light rain";
+
+"Light snow" = "Light snow";
+
+"Like this Mac" = "Like this Mac";
+
+"Lines" = "Lines";
+
+/* Label: the event's call link / What a command opens, in its editor */
+"Link" = "Link";
+
+"Links without tracking" = "Links without tracking";
+
+/* Enter on a row that opens a chip listing them / Enter on a script filter: lists what it prints / Enter on the Notes row: lists them in the Notes chip */
+"List" = "List";
+
+"Listening on %@ · pid %@" = "Listening on %@ · pid %@";
+
+"Live rate, %lld min ago" = "Live rate, %lld min ago";
+
+"Live rate, just now" = "Live rate, just now";
+
+"Loading…" = "Loading…";
+
+"Local IP · %@" = "Local IP · %@";
+
+"Location Services is off for Copperlight" = "Location Services is off for Copperlight";
+
+"Lock Screen" = "Lock Screen";
+
+"Log Out" = "Log Out";
+
+"Log out? Apps with unsaved changes ask first." = "Log out? Apps with unsaved changes ask first.";
+
+"Login Items & Extensions" = "Login Items & Extensions";
+
+"Look" = "Look";
+
+/* Enter on Public IP: asks api.ipify.org / Enter on a row that opens a chip */
+"Look Up" = "Look Up";
+
+"Look up app descriptions online" = "Look up app descriptions online";
+
+"Lorem Ipsum" = "Lorem Ipsum";
+
+"Mac commands" = "Mac commands";
+
+"Made on your Mac" = "Made on your Mac";
+
+"Maximize Window" = "Maximize Window";
+
+"Menu search" = "Menu search";
+
+/* Enter on a person: messages them */
+"Message" = "Message";
+
+"Message, call or email someone" = "Message, call or email someone";
+
+"Minify JSON" = "Minify JSON";
+
+"Minimize Window" = "Minimize Window";
+
+/* What to type after pomo: break and stop are typed as they are */
+"Minutes (50), break or stop" = "Minutes (50), break or stop";
+
+/* A file's detail: when it last changed */
+"Modified" = "Modified";
+
+"Mostly clear" = "Mostly clear";
+
+"Mouse" = "Mouse";
+
+"Move the note “%@” to the Trash?" = "Move the note “%@” to the Trash?";
+
+"Move to Next Display" = "Move to Next Display";
+
+"Move to Trash" = "Move to Trash";
+
+"Move “%@” to the Trash?" = "Move “%@” to the Trash?";
+
+/* :mute's row: turns the sound off */
+"Mute" = "Mute";
+
+"Mute Microphone" = "Mute Microphone";
+
+"Name" = "Name";
+
+/* A typed example, in English */
+"Needs a day or time: %@" = "Needs a day or time: %@";
+
+/* How the speed test was connected */
+"Network" = "Network";
+
+"New Command" = "New Command";
+
+"New Event" = "New Event";
+
+"New Note" = "New Note";
+
+"New Password" = "New Password";
+
+"New Reminder" = "New Reminder";
+
+"New Snippet" = "New Snippet";
+
+"New To-do" = "New To-do";
+
+"New UUID" = "New UUID";
+
+"New York, Tokyo" = "New York, Tokyo";
+
+"Next Track" = "Next Track";
+
+"Next meeting" = "Next meeting";
+
+"Next month" = "Next month";
+
+"Next week" = "Next week";
+
+/* The app isn't running */
+"No" = "No";
+
+"No codes in the last 15 minutes" = "No codes in the last 15 minutes";
+
+"No commands yet." = "No commands yet.";
+
+"No currency rates yet" = "No currency rates yet";
+
+"No definition for “%@”" = "No definition for “%@”";
+
+"No disks to eject" = "No disks to eject";
+
+"No folder at %@" = "No folder at %@";
+
+/* A day: today, tomorrow, Monday, next week */
+"No free time %@" = "No free time %@";
+
+/* “:layout save work” is typed */
+"No layouts yet: :layout save work" = "No layouts yet: :layout save work";
+
+"No more meetings today" = "No more meetings today";
+
+"No output" = "No output";
+
+"No paired Bluetooth devices" = "No paired Bluetooth devices";
+
+/* A Wi-Fi network without one */
+"No password" = "No password";
+
+"No place called %@" = "No place called %@";
+
+"No pomodoro running" = "No pomodoro running";
+
+"No process named “%@”" = "No process named “%@”";
+
+"No snippets yet." = "No snippets yet.";
+
+"No sound" = "No sound";
+
+"No spelling for “%@”" = "No spelling for “%@”";
+
+"No stock called %@" = "No stock called %@";
+
+"No synonyms for “%@”" = "No synonyms for “%@”";
+
+"No tab says “%@”" = "No tab says “%@”";
+
+"No tabs open" = "No tabs open";
+
+"No text there" = "No text there";
+
+"No timer running" = "No timer running";
+
+"No windows to save" = "No windows to save";
+
+/* No file chosen yet, in the command editor */
+"None" = "None";
+
+"Not a language pair Apple translates" = "Not a language pair Apple translates";
+
+"Not added: %@" = "Not added: %@";
+
+"Not saved: %@." = "Not saved: %@.";
+
+"Note" = "Note";
+
+"Note · %@" = "Note · %@";
+
+"Notes" = "Notes";
+
+"Notes with “%@”" = "Notes with “%@”";
+
+"Nothing" = "Nothing";
+
+"Nothing due today" = "Nothing due today";
+
+"Nothing for “%@”" = "Nothing for “%@”";
+
+"Nothing is listening" = "Nothing is listening";
+
+"Nothing is listening on port %@" = "Nothing is listening on port %@";
+
+"Nothing on Wikipedia for “%@”" = "Nothing on Wikipedia for “%@”";
+
+/* A permission, as System Settings names it */
+"Notifications" = "Notifications";
+
+/* Badge on an event going on / The weather's first hour */
+"Now" = "Now";
+
+"Nudge Down" = "Nudge Down";
+
+"Nudge Left" = "Nudge Left";
+
+"Nudge Right" = "Nudge Right";
+
+"Nudge Up" = "Nudge Up";
+
+"ORIGIN  " = "ORIGIN  ";
+
+"Off means off: no rows, no commands, nothing in the background, nothing sent, no permission asked for. Saved in config.toml under [features]." = "Off means off: no rows, no commands, nothing in the background, nothing sent, no permission asked for. Saved in config.toml under [features].";
+
+"Offline, or Apple’s servers didn’t answer" = "Offline, or Apple’s servers didn’t answer";
+
+"Offline, or something blocks it" = "Offline, or something blocks it";
+
+/* An app you often open at this time of day */
+"Often around this time" = "Often around this time";
+
+"Older items are deleted. Images take room (a screenshot is 1–5 MB); 0 keeps text only." = "Older items are deleted. Images take room (a screenshot is 1–5 MB); 0 keeps text only.";
+
+/* A file's action: opens it in its app / An app's action: opens it / Enter on Open in Calendar / Enter on Open in Contacts / Enter on a Wikipedia article: opens it / Enter on a clipboard item's action / Enter on a definition: opens it in Dictionary / Enter on a disk: opens it in Finder / Enter on a file in a typed path / Enter on a row, unless the row says otherwise / Enter on a script filter's row: opens it / Enter on a stock: opens it on Yahoo Finance / Enter on an app just installed / Enter on the row that opens the to-do app / Enter on the weather: opens the Weather app */
+"Open" = "Open";
+
+/* A row that opens a web address: Open github.com / Enter on a calendar row: the calendar app's name */
+"Open %@" = "Open %@";
+
+/* Names the apps that aren't open */
+"Open %@, then run it again" = "Open %@, then run it again";
+
+"Open Config" = "Open Config";
+
+"Open Copperlight" = "Open Copperlight";
+
+"Open Link" = "Open Link";
+
+"Open Photo Booth" = "Open Photo Booth";
+
+/* Enter on the battery: opens Battery settings */
+"Open Settings" = "Open Settings";
+
+/* Enter on the startup disk: opens Storage settings */
+"Open Storage" = "Open Storage";
+
+"Open System Settings" = "Open System Settings";
+
+"Open Things to See What's Due" = "Open Things to See What's Due";
+
+"Open Trash" = "Open Trash";
+
+/* Enter on an app in :open with */
+"Open With" = "Open With";
+
+"Open With: %@" = "Open With: %@";
+
+"Open With…" = "Open With…";
+
+"Open at Login" = "Open at Login";
+
+"Open config.toml" = "Open config.toml";
+
+"Open folders in" = "Open folders in";
+
+"Open in" = "Open in";
+
+/* The calendar app's name */
+"Open in %@" = "Open in %@";
+
+"Open in Browser" = "Open in Browser";
+
+"Open in Calendar" = "Open in Calendar";
+
+"Open in Contacts" = "Open in Contacts";
+
+"Open in Dictionary" = "Open in Dictionary";
+
+"Open in Finder" = "Open in Finder";
+
+"Open in Preview" = "Open in Preview";
+
+"Open in Terminal" = "Open in Terminal";
+
+"Open in Weather" = "Open in Weather";
+
+"Open in Wikipedia" = "Open in Wikipedia";
+
+"Open in Yahoo Finance" = "Open in Yahoo Finance";
+
+"Open links in" = "Open links in";
+
+"Open the ones to keep, then save again" = "Open the ones to keep, then save again";
+
+"Open this again from the menu bar, or type “welcome”." = "Open this again from the menu bar, or type “welcome”.";
+
+"Open-Meteo sent no forecast" = "Open-Meteo sent no forecast";
+
+"Open-Meteo · updated %@" = "Open-Meteo · updated %@";
+
+"Opens" = "Opens";
+
+"Opens the file in its default app." = "Opens the file in its default app.";
+
+/* Beside a permission Copperlight works without */
+"Optional" = "Optional";
+
+/* A Settings pane */
+"Options" = "Options";
+
+"Or copy some first" = "Or copy some first";
+
+/* Label: who asked */
+"Organizer" = "Organizer";
+
+/* Badge on a reminder past its time */
+"Overdue" = "Overdue";
+
+"Pages from your browser, by title" = "Pages from your browser, by title";
+
+"Pair one in System Settings" = "Pair one in System Settings";
+
+"Partly cloudy" = "Partly cloudy";
+
+"Password managers are on the list from the start. Copies marked as passwords are never recorded." = "Password managers are on the list from the start. Copies marked as passwords are never recorded.";
+
+/* Enter on a clipboard item / Enter on a clipboard item's action / Enter on a file: pastes it into the app you were in / Enter on a paste tool's result / Enter on a snippet: pastes it / Enter on an emoji: pastes it into the app you were in / Enter on the next clipboard item to paste in order */
+"Paste" = "Paste";
+
+"Paste Next: %@" = "Paste Next: %@";
+
+"Paste as Markdown" = "Paste as Markdown";
+
+"Paste as Plain Text" = "Paste as Plain Text";
+
+"Paste in Order from Here" = "Paste in Order from Here";
+
+"Paste into your apps, move and switch windows" = "Paste into your apps, move and switch windows";
+
+"Paste it here" = "Paste it here";
+
+"Paste to %@" = "Paste to %@";
+
+/* Label: who's coming */
+"People" = "People";
+
+"Permissions" = "Permissions";
+
+/* A permission, as System Settings names it / Apple's Photos app, by the name macOS gives it */
+"Photos" = "Photos";
+
+/* Enter on Pick Color */
+"Pick" = "Pick";
+
+"Pick Color" = "Pick Color";
+
+/* A clipboard item's action: kept first, never cleared */
+"Pin" = "Pin";
+
+/* Clipboard history's section: the pinned items */
+"Pinned" = "Pinned";
+
+"Play or Pause" = "Play or Pause";
+
+/* The pomodoro timer */
+"Pomodoro" = "Pomodoro";
+
+"Pomodoro and timers" = "Pomodoro and timers";
+
+"Pomodoro done" = "Pomodoro done";
+
+/* Chip: what's listening on a port */
+"Port" = "Port";
+
+/* Then the hotkey's keys, then “from any app to open it” */
+"Press" = "Press";
+
+/* Tab on a row: shows its text beside the list */
+"Preview" = "Preview";
+
+"Previous Track" = "Previous Track";
+
+"Previous close" = "Previous close";
+
+"Printers & Scanners" = "Printers & Scanners";
+
+"Privacy" = "Privacy";
+
+"Privacy & Security" = "Privacy & Security";
+
+/* Where System Settings has it, in its own words / Where it is in System Settings */
+"Privacy & Security → Accessibility" = "Privacy & Security → Accessibility";
+
+/* System Settings' pages, by the names macOS gives them */
+"Privacy & Security → Automation" = "Privacy & Security → Automation";
+
+/* Where it is in System Settings */
+"Privacy & Security → Bluetooth" = "Privacy & Security → Bluetooth";
+
+/* System Settings' pages, by the names macOS gives them */
+"Privacy & Security → Calendars" = "Privacy & Security → Calendars";
+
+/* System Settings' pages, by the names macOS gives them */
+"Privacy & Security → Calendars → Copperlight: Full Access" = "Privacy & Security → Calendars → Copperlight: Full Access";
+
+/* System Settings' pages, by the names macOS gives them */
+"Privacy & Security → Camera → Copperlight" = "Privacy & Security → Camera → Copperlight";
+
+/* System Settings' pages, by the names macOS gives them */
+"Privacy & Security → Contacts" = "Privacy & Security → Contacts";
+
+/* System Settings' pages, by the names macOS gives them */
+"Privacy & Security → Full Disk Access → Copperlight" = "Privacy & Security → Full Disk Access → Copperlight";
+
+/* System Settings' pages, by the names macOS gives them */
+"Privacy & Security → Reminders" = "Privacy & Security → Reminders";
+
+/* Where to allow it: System Settings' pages, by the names macOS gives them */
+"Privacy & Security → Screen & System Audio Recording. Copperlight only reads the part you drag over." = "Privacy & Security → Screen & System Audio Recording. Copperlight only reads the part you drag over.";
+
+"Processes" = "Processes";
+
+"Processes by CPU" = "Processes by CPU";
+
+"Processes by Memory" = "Processes by Memory";
+
+"Profile" = "Profile";
+
+"Public IP" = "Public IP";
+
+"Public IP · from api.ipify.org" = "Public IP · from api.ipify.org";
+
+"QR Code" = "QR Code";
+
+"QR Code for “%@”" = "QR Code for “%@”";
+
+"QR code" = "QR code";
+
+"QR code copied" = "QR code copied";
+
+"QR code · from the clipboard" = "QR code · from the clipboard";
+
+"QR codes" = "QR codes";
+
+"Quick Look" = "Quick Look";
+
+/* A running app's action / Enter on a running app / Enter on an app's process: quits the app */
+"Quit" = "Quit";
+
+"Quit %@" = "Quit %@";
+
+"Quit %@?" = "Quit %@?";
+
+"Quit All Apps" = "Quit All Apps";
+
+"Quit Application" = "Quit Application";
+
+"Quit Copperlight" = "Quit Copperlight";
+
+"Quit Other Apps" = "Quit Other Apps";
+
+"Quit every app but the one in front? Apps with unsaved changes ask first." = "Quit every app but the one in front? Apps with unsaved changes ask first.";
+
+"Quit every app? Apps with unsaved changes ask first." = "Quit every app? Apps with unsaved changes ask first.";
+
+"RGB · rgb(200, 117, 51)" = "RGB · rgb(200, 117, 51)";
+
+/* Weather conditions */
+"Rain" = "Rain";
+
+/* A time today (14:05) or a date (Oct 23) */
+"Rate from %@" = "Rate from %@";
+
+"Rate from yesterday" = "Rate from yesterday";
+
+"Ready the moment your Mac starts" = "Ready the moment your Mac starts";
+
+"Recent Documents" = "Recent Documents";
+
+"Record Screen" = "Record Screen";
+
+/* A running app's action / Enter on a running app */
+"Relaunch" = "Relaunch";
+
+"Relaunch %@" = "Relaunch %@";
+
+"Relaunch Application" = "Relaunch Application";
+
+/* What add todo makes: a reminder */
+"Reminder" = "Reminder";
+
+"Reminder added" = "Reminder added";
+
+/* A permission, as System Settings names it / Apple's Reminders app, by the name macOS gives it */
+"Reminders" = "Reminders";
+
+"Reminders list" = "Reminders list";
+
+"Reminders that are due" = "Reminders that are due";
+
+"Reminders that are due, add todo" = "Reminders that are due, add todo";
+
+"Remove" = "Remove";
+
+"Replace the layout “%@”?" = "Replace the layout “%@”?";
+
+"Replace the running break (%@ left) with %lld minutes?" = "Replace the running break (%@ left) with %lld minutes?";
+
+"Replace the running break (%@ left) with a %lld-minute break?" = "Replace the running break (%@ left) with a %lld-minute break?";
+
+"Replace the running pomodoro (%@ left) with %lld minutes?" = "Replace the running pomodoro (%@ left) with %lld minutes?";
+
+"Replace the running pomodoro (%@ left) with a %lld-minute break?" = "Replace the running pomodoro (%@ left) with a %lld-minute break?";
+
+"Replace the running timer (%@ left) with %@?" = "Replace the running timer (%@ left) with %@?";
+
+"Replace the running timer (%@ left) with one until %@?" = "Replace the running timer (%@ left) with one until %@?";
+
+"Restart" = "Restart";
+
+"Restart the Mac? Apps with unsaved changes ask first." = "Restart the Mac? Apps with unsaved changes ask first.";
+
+"Restore Window" = "Restore Window";
+
+"Reveal in Finder" = "Reveal in Finder";
+
+"Right Half" = "Right Half";
+
+"Right Third" = "Right Third";
+
+"Right Two Thirds" = "Right Two Thirds";
+
+"Rows you pick come first" = "Rows you pick come first";
+
+/* Enter on :awake's row: stops keeping the Mac awake / Enter on a : command (:lock): runs it / Enter on a :awake row: keeps the Mac awake / Enter on a Shortcut / Enter on a script / Enter on a shell command from config.toml / Enter on a shell line */
+"Run" = "Run";
+
+"Run %@?" = "Run %@?";
+
+"Run Shell Command" = "Run Shell Command";
+
+"Run Shortcut" = "Run Shortcut";
+
+"Run Shortcut: %@" = "Run Shortcut: %@";
+
+"Run and Copy" = "Run and Copy";
+
+/* An app that's open / An app's detail: whether it's open now */
+"Running" = "Running";
+
+"Running apps" = "Running apps";
+
+"Running… Esc stops it" = "Running… Esc stops it";
+
+"Runs" = "Runs";
+
+"Runs in your login shell (zsh -l), in your home folder. A failure shows as a notification." = "Runs in your login shell (zsh -l), in your home folder. A failure shows as a notification.";
+
+"SHA-256" = "SHA-256";
+
+/* Enter on :layout save / Enter on a QR code's row: saves it to Downloads / Enter on a clipboard item's action */
+"Save" = "Save";
+
+"Save Layout" = "Save Layout";
+
+"Save Layout “%@”" = "Save Layout “%@”";
+
+"Save to Downloads" = "Save to Downloads";
+
+"Saved in your keychain" = "Saved in your keychain";
+
+"Saved “%@”" = "Saved “%@”";
+
+/* Names :screen saver in “… failed” notifications */
+"Screen Saver" = "Screen Saver";
+
+"Screen Time" = "Screen Time";
+
+/* The row that opens the screenshot toolbar */
+"Screenshot" = "Screenshot";
+
+"Screenshot toolbar (⌘⇧5)" = "Screenshot toolbar (⌘⇧5)";
+
+"Screenshot toolbar, ready to record" = "Screenshot toolbar, ready to record";
+
+"Scripts" = "Scripts";
+
+"Scripts folder" = "Scripts folder";
+
+/* Enter on Search Contacts: opens the chip / Enter on the web search row */
+"Search" = "Search";
+
+"Search %@ for “%@”" = "Search %@ for “%@”";
+
+"Search Contacts" = "Search Contacts";
+
+"Search Your Contacts" = "Search Your Contacts";
+
+"Search clipboard history, : for commands…" = "Search clipboard history, : for commands…";
+
+"Search engine" = "Search engine";
+
+"Search in" = "Search in";
+
+"Search past copies" = "Search past copies";
+
+"See %@’s Tabs" = "See %@’s Tabs";
+
+"See Due Reminders" = "See Due Reminders";
+
+"See Today's Meetings" = "See Today's Meetings";
+
+"See What's Due in Things" = "See What's Due in Things";
+
+"See When You're Free" = "See When You're Free";
+
+"See Which Wi-Fi You're On" = "See Which Wi-Fi You're On";
+
+"See Your Month" = "See Your Month";
+
+"See Your Week" = "See Your Week";
+
+"See Yourself" = "See Yourself";
+
+/* Enter on Copy Text from Screen: you drag over the screen */
+"Select" = "Select";
+
+"Select files in Finder and press the hotkey" = "Select files in Finder and press the hotkey";
+
+"Selected in Finder" = "Selected in Finder";
+
+"Send in Mail" = "Send in Mail";
+
+"Send in Messages" = "Send in Messages";
+
+/* Enter on :volume's row: sets the volume */
+"Set" = "Set";
+
+"Set Volume" = "Set Volume";
+
+"Set Volume to %lld%%" = "Set Volume to %lld%%";
+
+/* Copperlight's Settings pages */
+"Settings › Options › To-dos" = "Settings › Options › To-dos";
+
+"Settings › Options › To-dos: paste your Todoist key" = "Settings › Options › To-dos: paste your Todoist key";
+
+"Settings…" = "Settings…";
+
+"Sharing" = "Sharing";
+
+/* The :! chip: runs a shell line / What a command opens, in its editor */
+"Shell" = "Shell";
+
+"Shortcuts" = "Shortcuts";
+
+/* Enter on Large Type: shows the text big / Enter on a clipboard item's action: Large Type / Enter on a row that opens the QR Code chip / Enter on due's row: asks Todoist / Enter on wifi password: asks macOS for it */
+"Show" = "Show";
+
+"Show Desktop" = "Show Desktop";
+
+"Show What's Due in Todoist" = "Show What's Due in Todoist";
+
+"Show the Password for “%@”" = "Show the Password for “%@”";
+
+"Show the next meeting" = "Show the next meeting";
+
+/* Weather conditions */
+"Showers" = "Showers";
+
+"Shut Down" = "Shut Down";
+
+"Shut down the Mac? Apps with unsaved changes ask first." = "Shut down the Mac? Apps with unsaved changes ask first.";
+
+"Since %@" = "Since %@";
+
+/* A file's detail / Label: a file's size */
+"Size" = "Size";
+
+"Sleep" = "Sleep";
+
+"Sleep Displays" = "Sleep Displays";
+
+/* A Settings pane */
+"Snippets" = "Snippets";
+
+/* Weather conditions */
+"Snow" = "Snow";
+
+"Snow showers" = "Snow showers";
+
+"Software Update" = "Software Update";
+
+"Sort Lines" = "Sort Lines";
+
+"Sound" = "Sound";
+
+"Source code" = "Source code";
+
+"Speed test" = "Speed test";
+
+/* Chip: a word spelled right */
+"Spell" = "Spell";
+
+"Spelled right" = "Spelled right";
+
+"Spelling" = "Spelling";
+
+"Spelling of “%@”" = "Spelling of “%@”";
+
+"Spotlight" = "Spotlight";
+
+/* Enter on a date question: puts it in the field / Enter on a keyword's row: puts it in the field / Enter on a timer, pomodoro or stopwatch row: starts it */
+"Start" = "Start";
+
+"Start Pomodoro" = "Start Pomodoro";
+
+"Start Screen Saver" = "Start Screen Saver";
+
+"Start Stopwatch" = "Start Stopwatch";
+
+"Start Timer" = "Start Timer";
+
+"Start Typing" = "Start Typing";
+
+"Started %@" = "Started %@";
+
+"Starting with “%@”" = "Starting with “%@”";
+
+"Startup Disk" = "Startup Disk";
+
+/* Chip: a stock's price */
+"Stock" = "Stock";
+
+"Stock Price of %@" = "Stock Price of %@";
+
+"Stocks" = "Stocks";
+
+/* Enter on Stop Pasting in Order / Enter on a running timer, pomodoro or stopwatch: stops it / Esc on the speed test while it runs */
+"Stop" = "Stop";
+
+"Stop Break" = "Stop Break";
+
+"Stop Keeping Awake" = "Stop Keeping Awake";
+
+"Stop Pasting in Order" = "Stop Pasting in Order";
+
+"Stop Pomodoro" = "Stop Pomodoro";
+
+"Stop Stopwatch" = "Stop Stopwatch";
+
+"Stop Timer" = "Stop Timer";
+
+"Stop Timer: %@" = "Stop Timer: %@";
+
+"Stop keeping the Mac awake?" = "Stop keeping the Mac awake?";
+
+"Stop the break?" = "Stop the break?";
+
+"Stop the pomodoro?" = "Stop the pomodoro?";
+
+"Stop the stopwatch?" = "Stop the stopwatch?";
+
+"Stop the timer?" = "Stop the timer?";
+
+"Stopped after %lld s" = "Stopped after %lld s";
+
+"Stopwatch" = "Stopwatch";
+
+"Storage" = "Storage";
+
+"Style Markdown as you type" = "Style Markdown as you type";
+
+/* Enter on a sound output: plays through it / Enter on a window: brings it forward */
+"Switch" = "Switch";
+
+"Switch Sound Output" = "Switch Sound Output";
+
+"Switch to Tab" = "Switch to Tab";
+
+"Switch to Window" = "Switch to Window";
+
+/* Chip: a word's synonyms */
+"Synonyms" = "Synonyms";
+
+"System Settings" = "System Settings";
+
+/* A browser tab's row: what it is */
+"Tab" = "Tab";
+
+/* Chip: the browsers' open tabs */
+"Tabs" = "Tabs";
+
+"Take a Break" = "Take a Break";
+
+"Terminal" = "Terminal";
+
+/* Enter on Test Internet Speed: runs it */
+"Test" = "Test";
+
+"Test Internet Speed" = "Test Internet Speed";
+
+"Testing internet speed" = "Testing internet speed";
+
+"Testing internet speed…" = "Testing internet speed…";
+
+"Text" = "Text";
+
+"Text copied" = "Text copied";
+
+"Text in image" = "Text in image";
+
+"Text in photo" = "Text in photo";
+
+"Text in photos" = "Text in photos";
+
+/* A file found by the text in it */
+"Text inside" = "Text inside";
+
+"Text inside files" = "Text inside files";
+
+"Text or a link, or nothing for what you copied" = "Text or a link, or nothing for what you copied";
+
+"Text tools" = "Text tools";
+
+"Text you paste by name" = "Text you paste by name";
+
+"Text, or nothing for what you copied" = "Text, or nothing for what you copied";
+
+"That key can't be the hotkey. Use a letter, a number, Space or an F-key, with modifiers." = "That key can't be the hotkey. Use a letter, a number, Space or an F-key, with modifiers.";
+
+"That’s it. It opens over any app, and Esc puts it away." = "That’s it. It opens over any app, and Esc puts it away.";
+
+"The Mac’s dictionary" = "The Mac’s dictionary";
+
+"The app didn't quit, so it wasn't relaunched" = "The app didn't quit, so it wasn't relaunched";
+
+"The calendars that count, for meetings, week, month, free and the next meeting. Free looks within your working hours. Open in is where Enter on week and month goes." = "The calendars that count, for meetings, week, month, free and the next meeting. Free looks within your working hours. Open in is where Enter on week and month goes.";
+
+"The field's edge, the selected row, chips and the titles over answers. Your Mac's follows the color chosen in System Settings › Appearance." = "The field's edge, the selected row, chips and the titles over answers. Your Mac's follows the color chosen in System Settings › Appearance.";
+
+"The hotkey, permissions, Open at Login" = "The hotkey, permissions, Open at Login";
+
+"The last one" = "The last one";
+
+"The last row of every search, so Enter on something nothing else matches searches the web." = "The last row of every search, so Enter on something nothing else matches searches the web.";
+
+"The links, apps, files and shell lines in config.toml" = "The links, apps, files and shell lines in config.toml";
+
+"The list new to-dos go in, and the lists whose reminders count, for “due” and the empty launcher." = "The list new to-dos go in, and the lists whose reminders count, for “due” and the empty launcher.";
+
+"The menus of the app in front, after :" = "The menus of the app in front, after :";
+
+"The next meeting, meetings, week, month, free time, add event" = "The next meeting, meetings, week, month, free time, add event";
+
+"The notification's sound" = "The notification's sound";
+
+"The number alone, for a spreadsheet" = "The number alone, for a spreadsheet";
+
+"The only global shortcut. Everything else is typed in the launcher." = "The only global shortcut. Everything else is typed in the launcher.";
+
+"The password for “%@”" = "The password for “%@”";
+
+"The rows you pick rise, and come first for what you typed: pick Slack after “ss” and “ss” is Slack from then on. Kept on this Mac, in state.json. Off, nothing new is kept and what's there isn't used. Forget deletes it." = "The rows you pick rise, and come first for what you typed: pick Slack after “ss” and “ss” is Slack from then on. Kept on this Mac, in state.json. Off, nothing new is kept and what's there isn't used. Forget deletes it.";
+
+"The scripts folder, as rows" = "The scripts folder, as rows";
+
+"The todos you add" = "The todos you add";
+
+"The windows on screen, where they are now" = "The windows on screen, where they are now";
+
+/* A meeting's title · how soon */
+"Then Enter joins %@" = "Then Enter joins %@";
+
+"There's no Reminders list" = "There's no Reminders list";
+
+"This Mac has no battery" = "This Mac has no battery";
+
+"This Mac has no camera" = "This Mac has no camera";
+
+"This Mac has no thesaurus turned on" = "This Mac has no thesaurus turned on";
+
+"This Mac isn't on Wi-Fi" = "This Mac isn't on Wi-Fi";
+
+"This change can't be saved without rewriting your config.toml, so it wasn't. Edit the file instead." = "This change can't be saved without rewriting your config.toml, so it wasn't. Edit the file instead.";
+
+"This month" = "This month";
+
+"This week" = "This week";
+
+"Thunderstorm" = "Thunderstorm";
+
+"Thunderstorm with hail" = "Thunderstorm with hail";
+
+"Time Machine" = "Time Machine";
+
+"Time zones" = "Time zones";
+
+"Timer" = "Timer";
+
+"Timer done" = "Timer done";
+
+"Timers" = "Timers";
+
+"Timers, and how shell lines ended" = "Timers, and how shell lines ended";
+
+"To a device nearby" = "To a device nearby";
+
+"To paste in Finder or an email" = "To paste in Finder or an email";
+
+"To share it in a message" = "To share it in a message";
+
+"To-do added in %@" = "To-do added in %@";
+
+"To-do added in Todoist" = "To-do added in Todoist";
+
+"To-dos" = "To-dos";
+
+"To-dos are added and read on your Mac. macOS asks once to let Copperlight control Things." = "To-dos are added and read on your Mac. macOS asks once to let Copperlight control Things.";
+
+"To-dos are added in TickTick, without their date. “due” still reads Reminders." = "To-dos are added in TickTick, without their date. “due” still reads Reminders.";
+
+/* A day: today / How far a date is from today */
+"Today" = "Today";
+
+"Today's events" = "Today's events";
+
+"Today’s meetings, and the events you add" = "Today’s meetings, and the events you add";
+
+"Todoist didn't accept the key" = "Todoist didn't accept the key";
+
+"Todoist didn't answer" = "Todoist didn't answer";
+
+"Todoist key" = "Todoist key";
+
+"Toggle Dark Mode" = "Toggle Dark Mode";
+
+"Toggle Fullscreen" = "Toggle Fullscreen";
+
+"Toggle Hidden Files" = "Toggle Hidden Files";
+
+"Toggle Microphone" = "Toggle Microphone";
+
+"Toggle Mute" = "Toggle Mute";
+
+"Toggle Wi-Fi" = "Toggle Wi-Fi";
+
+/* A day: tomorrow / How far a date is from today */
+"Tomorrow" = "Tomorrow";
+
+"Too long for a QR code" = "Too long for a QR code";
+
+"Top Half" = "Top Half";
+
+"Top Left Quarter" = "Top Left Quarter";
+
+"Top Right Quarter" = "Top Right Quarter";
+
+"Touch ID & Password" = "Touch ID & Password";
+
+"Trackpad" = "Trackpad";
+
+"Transfer or Reset" = "Transfer or Reset";
+
+/* Chip: translates text */
+"Translate" = "Translate";
+
+"Translate to" = "Translate to";
+
+"Translate to %@" = "Translate to %@";
+
+"Try again in a moment" = "Try again in a moment";
+
+"Try another spelling, or a bigger town nearby" = "Try another spelling, or a bigger town nearby";
+
+"Try other words" = "Try other words";
+
+"Turn Dark Mode Off" = "Turn Dark Mode Off";
+
+"Turn Dark Mode On" = "Turn Dark Mode On";
+
+"Turn Wi-Fi Off" = "Turn Wi-Fi Off";
+
+"Turn Wi-Fi On" = "Turn Wi-Fi On";
+
+"Type a city instead: weather lisbon" = "Type a city instead: weather lisbon";
+
+"Type a city, or set yours in Settings" = "Type a city, or set yours in Settings";
+
+"Type a command's name in the launcher. One named like a built-in (screenshot, add todo) replaces it." = "Type a command's name in the launcher. One named like a built-in (screenshot, add todo) replaces it.";
+
+"Type a date: dec 25, friday, christmas" = "Type a date: dec 25, friday, christmas";
+
+"Type a length, like 10 min" = "Type a length, like 10 min";
+
+/* What to type: timer and lengths (h, m, s) as they are */
+"Type a length: timer 10 min tea" = "Type a length: timer 10 min tea";
+
+"Type a level from 0 to 100" = "Type a level from 0 to 100";
+
+"Type a name to find them" = "Type a name to find them";
+
+/* “:layout save work” is typed */
+"Type a name: :layout save work" = "Type a name: :layout save work";
+
+"Type a shell line" = "Type a shell line";
+
+"Type a snippet's name in the launcher and press Enter to paste its text into the app you were in." = "Type a snippet's name in the launcher and press Enter to paste its text into the app you were in.";
+
+"Type a subject: wiki Lisbon" = "Type a subject: wiki Lisbon";
+
+"Type a ticker, like AAPL" = "Type a ticker, like AAPL";
+
+"Type a ticker: stock AAPL" = "Type a ticker: stock AAPL";
+
+"Type a word for one: emoji party" = "Type a word for one: emoji party";
+
+"Type a word: define serendipity" = "Type a word: define serendipity";
+
+"Type a word: spell definately" = "Type a word: spell definately";
+
+"Type a word: synonyms happy" = "Type a word: synonyms happy";
+
+/* The launcher's empty field */
+"Type anything" = "Type anything";
+
+/* The examples are typed as they are */
+"Type how long: 2h, 90 min, until 18:00" = "Type how long: 2h, 90 min, until 18:00";
+
+"Type it. Press Enter." = "Type it. Press Enter.";
+
+"Type text after “%@”, or copy it first" = "Type text after “%@”, or copy it first";
+
+"Type text or a link" = "Type text or a link";
+
+"Type text or a link, or use what you copied" = "Type text or a link, or use what you copied";
+
+"Type text to show it big: large 555-0100" = "Type text to show it big: large 555-0100";
+
+"Type text, or copy it; add “to spanish” for another language" = "Type text, or copy it; add “to spanish” for another language";
+
+/* wifi password is what to type, then a network's name */
+"Type the network's name: wifi password Home" = "Type the network's name: wifi password Home";
+
+"Type the text to show" = "Type the text to show";
+
+"Type to filter" = "Type to filter";
+
+/* What was typed */
+"Type “%@” again to see it" = "Type “%@” again to see it";
+
+"Type “camera” again to see yourself" = "Type “camera” again to see yourself";
+
+"Type “due” again to see them" = "Type “due” again to see them";
+
+"Type “due” in the launcher once to let Copperlight see your reminders; then pick the lists that count here." = "Type “due” in the launcher once to let Copperlight see your reminders; then pick the lists that count here.";
+
+"Type “meetings” again to see them" = "Type “meetings” again to see them";
+
+"Type “meetings” in the launcher once to let Copperlight see your calendars; then pick the ones that count here. Free looks within your working hours." = "Type “meetings” in the launcher once to let Copperlight see your calendars; then pick the ones that count here. Free looks within your working hours.";
+
+"Type “tabs” again to see them" = "Type “tabs” again to see them";
+
+"Type “time” to see the time now in each, how far ahead or behind, and the day." = "Type “time” to see the time now in each, how far ahead or behind, and the day.";
+
+"Typed addresses, the search row, and link commands without their own browser. Profiles work in Chrome, Brave, Edge, Vivaldi and Firefox." = "Typed addresses, the search row, and link commands without their own browser. Profiles work in Chrome, Brave, Edge, Vivaldi and Firefox.";
+
+"UPPERCASE" = "UPPERCASE";
+
+"URL Decode" = "URL Decode";
+
+"URL Encode" = "URL Encode";
+
+"Under load" = "Under load";
+
+"Unhide All Apps" = "Unhide All Apps";
+
+"Units" = "Units";
+
+"Unix Time ↔ Date" = "Unix Time ↔ Date";
+
+/* An app not known */
+"Unknown" = "Unknown";
+
+/* :mute's row: turns the sound back on */
+"Unmute" = "Unmute";
+
+"Unmute Microphone" = "Unmute Microphone";
+
+/* A clipboard item's action: no longer kept first */
+"Unpin" = "Unpin";
+
+/* When it ends: “Until 18:00” */
+"Until %@" = "Until %@";
+
+"Until you stop it" = "Until you stop it";
+
+/* An event or reminder without a title */
+"Untitled" = "Untitled";
+
+"Upload" = "Upload";
+
+"Use %@" = "Use %@";
+
+"Use What's Selected in Finder" = "Use What's Selected in Finder";
+
+"Users & Groups" = "Users & Groups";
+
+"Using the last valid config" = "Using the last valid config";
+
+"VPN" = "VPN";
+
+/* An app's detail */
+"Version" = "Version";
+
+/* The sound's: names :volume in “… failed” notifications */
+"Volume" = "Volume";
+
+"Waiting for the first download from Coinbase" = "Waiting for the first download from Coinbase";
+
+"Wallet & Apple Pay" = "Wallet & Apple Pay";
+
+"Wallpaper" = "Wallpaper";
+
+/* Chip: the weather / Weather conditions it has no words for */
+"Weather" = "Weather";
+
+"Weather Where You Are" = "Weather Where You Are";
+
+"Weather in %@" = "Weather in %@";
+
+"Website" = "Website";
+
+"Weeks Since a Date" = "Weeks Since a Date";
+
+"Weeks Until a Date" = "Weeks Until a Date";
+
+"Welcome screen" = "Welcome screen";
+
+/* Before the app's name, which shows in the accent's gradient */
+"Welcome to" = "Welcome to";
+
+"Welcome to Copperlight" = "Welcome to Copperlight";
+
+"What a pomodoro, a break or a timer plays when it ends." = "What a pomodoro, a break or a timer plays when it ends.";
+
+"What's running" = "What's running";
+
+"What’s listening on a port: port 3000" = "What’s listening on a port: port 3000";
+
+"What’s using memory, the most first" = "What’s using memory, the most first";
+
+"What’s using the processor, the busiest first" = "What’s using the processor, the busiest first";
+
+"When it opens" = "When it opens";
+
+"When it's done" = "When it's done";
+
+"When they have no number or address for it, Enter sends a message. Tab still lists every way to reach them." = "When they have no number or address for it, Enter sends a message. Tab still lists every way to reach them.";
+
+/* A file's detail: its folder / An app's detail: its folder / Label: the event's place */
+"Where" = "Where";
+
+"Where :terminal opens a folder, or a file's folder." = "Where :terminal opens a folder, or a file's folder.";
+
+"Where links open" = "Where links open";
+
+"Where to find it: Todoist › Settings › Integrations › Developer" = "Where to find it: Todoist › Settings › Integrations › Developer";
+
+/* The weather's place when its town has no name */
+"Where you are" = "Where you are";
+
+"Where you are, or a city: weather lisbon" = "Where you are, or a city: weather lisbon";
+
+"Whole folder or file names, anywhere in the path, like node_modules." = "Whole folder or file names, anywhere in the path, like node_modules.";
+
+"Wi-Fi" = "Wi-Fi";
+
+"Wi-Fi password" = "Wi-Fi password";
+
+"Wi-Fi · scan to join" = "Wi-Fi · scan to join";
+
+"Wikipedia" = "Wikipedia";
+
+"Wikipedia: %@" = "Wikipedia: %@";
+
+"Wind %@" = "Wind %@";
+
+"Windows" = "Windows";
+
+"Windows and the Mac" = "Windows and the Mac";
+
+"With Homebrew" = "With Homebrew";
+
+"With Homebrew · %@" = "With Homebrew · %@";
+
+/* The text typed after a Shortcut's name, its input */
+"With “%@”" = "With “%@”";
+
+"Without Location Services, macOS keeps it from apps" = "Without Location Services, macOS keeps it from apps";
+
+"Words in %@" = "Words in %@";
+
+"Working hours end" = "Working hours end";
+
+"Working hours start" = "Working hours start";
+
+"Yahoo Finance has no such ticker" = "Yahoo Finance has no such ticker";
+
+"Yahoo Finance's symbol: MGLU3.SA, ^BVSP" = "Yahoo Finance's symbol: MGLU3.SA, ^BVSP";
+
+/* The app is running */
+"Yes" = "Yes";
+
+/* A day: yesterday / How far a date is from today */
+"Yesterday" = "Yesterday";
+
+/* What a percent off takes away: 20% off 80 */
+"You save %@" = "You save %@";
+
+"Your Mac" = "Your Mac";
+
+"Your Mac's accent color" = "Your Mac's accent color";
+
+"Your cities" = "Your cities";
+
+"Your colors show here once you’ve picked some" = "Your colors show here once you’ve picked some";
+
+"Your commands" = "Your commands";
+
+"Your key stays in your Mac's keychain. Copperlight asks Todoist only when you add a to-do, show what's due or complete one." = "Your key stays in your Mac's keychain. Copperlight asks Todoist only when you add a to-do, show what's due or complete one.";
+
+"Your last note · Esc hides it" = "Your last note · Esc hides it";
+
+"Your notes that say it" = "Your notes that say it";
+
+"Your open tabs, by title" = "Your open tabs, by title";
+
+"Your own color" = "Your own color";
+
+"Your words work beside the built-in ones: with t for translate, “t bom dia”, or t and Tab. A word of symbols works stuck to what follows: ; for : is ;left. Your word takes the place of what it would find: t alone no longer finds apps. Separate several with commas. Saved in config.toml under [keywords]." = "Your words work beside the built-in ones: with t for translate, “t bom dia”, or t and Tab. A word of symbols works stuck to what follows: ; for : is ;left. Your word takes the place of what it would find: t alone no longer finds apps. Separate several with commas. Saved in config.toml under [keywords].";
+
+/* Settings › Features: the group of features for your own things (notes, files) */
+"Yours" = "Yours";
+
+/* copper and system are config.toml words */
+"a color like \"#3478f6\", or \"copper\" or \"system\"" = "a color like \"#3478f6\", or \"copper\" or \"system\"";
+
+/* Goes in “Paste Next: …” */
+"a picture" = "a picture";
+
+"a word for %@ is empty" = "a word for %@ is empty";
+
+/* Ends “Allow Copperlight in Accessibility to …” */
+"arrange windows" = "arrange windows";
+
+"at most" = "at most";
+
+/* A label on a person's card, lowercase like Contacts' own */
+"birthday" = "birthday";
+
+"camelCase" = "camelCase";
+
+"camera: see yourself before a call" = "camera: see yourself before a call";
+
+"can't read hotkey \"%@\" (try \"option+space\")" = "can't read hotkey \"%@\" (try \"option+space\")";
+
+"cd ~/code/api && docker compose up -d" = "cd ~/code/api && docker compose up -d";
+
+/* The battery, after its percent */
+"charged" = "charged";
+
+/* The battery, after its percent */
+"charging" = "charging";
+
+"charging, %@ to full" = "charging, %@ to full";
+
+"clip: what you copied, kept on this Mac" = "clip: what you copied, kept on this Mac";
+
+"codes: the latest verification codes, to copy" = "codes: the latest verification codes, to copy";
+
+"config.toml" = "config.toml";
+
+"config.toml has a mistake (%@). Fix it there and these settings come back." = "config.toml has a mistake (%@). Fix it there and these settings come back.";
+
+"config.toml: %@" = "config.toml: %@";
+
+/* Enter on a person: phones them (the verb; a meeting's “Call” is a noun) */
+"contact.call" = "Call";
+
+/* Ends “Allow Copperlight in Accessibility to …” */
+"control what's playing" = "control what's playing";
+
+"copperlight.app" = "copperlight.app";
+
+"days" = "days";
+
+/* A shell line ended without an error */
+"done" = "done";
+
+/* A meeting over */
+"ended" = "ended";
+
+"ends %@" = "ends %@";
+
+"exit %d" = "exit %d";
+
+/* A shell line's exit status */
+"exit %lld" = "exit %lld";
+
+/* Then the words config.toml takes, in quotes */
+"expected %@" = "expected %@";
+
+"expected a 3-letter currency code like \"EUR\"" = "expected a 3-letter currency code like \"EUR\"";
+
+/* After “Press” and the hotkey's keys */
+"from any app to open it" = "from any app to open it";
+
+"from the clipboard" = "from the clipboard";
+
+"github.com/robsonpbr/copperlight" = "github.com/robsonpbr/copperlight";
+
+/* Ends “Allow Copperlight in Accessibility to …” */
+"go there in the dialog" = "go there in the dialog";
+
+"health %@" = "health %@";
+
+"https://github.com/search?q={query}" = "https://github.com/search?q={query}";
+
+"in %lld h" = "in %lld h";
+
+"in %lld h %lld min" = "in %lld h %lld min";
+
+"in %lld min" = "in %lld min";
+
+"items" = "items";
+
+"just now" = "just now";
+
+"large and any text, across the screen" = "large and any text, across the screen";
+
+/* Then the TOML reader's own message */
+"line %@: %@" = "line %@: %@";
+
+/* Ends “Allow Copperlight in Accessibility to …” */
+"lock the screen" = "lock the screen";
+
+"lowercase" = "lowercase";
+
+"macOS asks for your Mac's password first" = "macOS asks for your Mac's password first";
+
+"macOS tells apps the network's name only with Location Services" = "macOS tells apps the network's name only with Location Services";
+
+"macOS uses this shortcut too, and it wins. Turn it off in System Settings › Keyboard › Keyboard Shortcuts, or record another one." = "macOS uses this shortcut too, and it wins. Turn it off in System Settings › Keyboard › Keyboard Shortcuts, or record another one.";
+
+/* Ends “Allow Copperlight in Accessibility to …” */
+"manage windows" = "manage windows";
+
+"must be 0 (no images) or more" = "must be 0 (no images) or more";
+
+"must be 1 or more" = "must be 1 or more";
+
+"must be 1 to 240" = "must be 1 to 240";
+
+"must be 1 to 60 minutes" = "must be 1 to 60 minutes";
+
+"no browser named \"%@\"" = "no browser named \"%@\"";
+
+/* A to-do typed without a day */
+"no date" = "no date";
+
+"no default browser" = "no default browser";
+
+"no feature by that name (Settings › Features lists them)" = "no feature by that name (Settings › Features lists them)";
+
+"no keyword by that name (Settings › Keywords lists them)" = "no keyword by that name (Settings › Keywords lists them)";
+
+/* A meeting going on, where how soon it starts goes / An age, short: under a minute */
+"now" = "now";
+
+"on power, not charging" = "on power, not charging";
+
+"optional, like Work" = "optional, like Work";
+
+/* A number's or email's label, lowercase like Contacts' own */
+"other" = "other";
+
+/* Ends “Allow Copperlight in Accessibility to …” */
+"paste" = "paste";
+
+/* Ends “Allow Copperlight in Accessibility to …” */
+"paste emoji" = "paste emoji";
+
+/* Ends “Allow Copperlight in Accessibility to …” */
+"paste files" = "paste files";
+
+/* Ends “Allow Copperlight in Accessibility to …” */
+"paste snippets" = "paste snippets";
+
+"pid %@" = "pid %@";
+
+"qr and a link or any text" = "qr and a link or any text";
+
+/* Two places' clocks agree */
+"same time" = "same time";
+
+/* Ends “Allow Copperlight in Accessibility to …” */
+"save window layouts" = "save window layouts";
+
+"screenshots, downloads: newest first, Enter pastes one" = "screenshots, downloads: newest first, Enter pastes one";
+
+"snake_case" = "snake_case";
+
+"speed, against Apple's servers" = "speed, against Apple's servers";
+
+"stock aapl. Prices from Yahoo Finance" = "stock aapl. Prices from Yahoo Finance";
+
+"stopped after %lld s" = "stopped after %lld s";
+
+"translate bom dia, on this Mac" = "translate bom dia, on this Mac";
+
+"unknown %@ profile \"%@\"" = "unknown %@ profile \"%@\"";
+
+/* url, app, file and shell are config.toml words: keep them */
+"unknown type \"%@\" (expected url, app, file or shell)" = "unknown type \"%@\" (expected url, app, file or shell)";
+
+/* An event from the day before: the time it ends */
+"until %@" = "until %@";
+
+"utm_, fbclid and the like taken off the links you copy" = "utm_, fbclid and the like taken off the links you copy";
+
+"weather lisbon. Forecasts from Open-Meteo" = "weather lisbon. Forecasts from Open-Meteo";
+
+/* The week of the year a date is in */
+"week %lld" = "week %lld";
+
+"what you type, like github" = "what you type, like github";
+
+"what you type, like sig" = "what you type, like sig";
+
+"wifi password, with a QR code to join" = "wifi password, with a QR code to join";
+
+"wiki lisbon. Summaries from Wikipedia" = "wiki lisbon. Summaries from Wikipedia";
+
+/* TickTick's link takes no date */
+"without its date" = "without its date";
+
+/* work_start and work_end are config.toml keys: keep them */
+"work_start must come before work_end, 0 to 24" = "work_start must come before work_end, 0 to 24";
+
+"your words" = "your words";
+
+"{query} in the address takes the text typed after the name: “gh copperlight” searches for copperlight." = "{query} in the address takes the text typed after the name: “gh copperlight” searches for copperlight.";
+
+"| %@ |" = "| %@ |";
+
+"°C and km/h" = "°C and km/h";
+
+"°F and mph" = "°F and mph";
+
+"“%@” is a command’s word: pick another name" = "“%@” is a command’s word: pick another name";
+
+"… %lld more characters" = "… %lld more characters";
+
+"↑ brings back what you ran" = "↑ brings back what you ran";

@@ -156,16 +156,16 @@ actor AppProvider: ResultProvider {
 
     /// Every match: the launcher adds frecency (the id is the path) and sorts, so cutting here could drop a favorite.
     func results(for query: String) -> [LauncherResult] {
-        let words = appQueryWords(query)
+        let words = appQueryWords(query), runningLabel = String(localized: "Running", comment: "An app that's open")
         let installed: [LauncherResult] = apps.compactMap { app in
             // By what it does, the matching word says why: "draw" → Illustrator, "draw".
-            let named = fuzzyScore(query, app.name) ?? otherNameScore(query, app.name)
+            let named = appNameScore(query, name: app.name, path: app.path)
             let described = named == nil && !words.isEmpty ? terms[app.path].flatMap { appInfoMatch(words, $0) } : nil
             guard let match = named ?? described?.score else { return nil }
             let path = app.path
             return LauncherResult(
                 id: path, title: app.name,
-                subtitle: [app.running ? "Running" : nil, described?.term].compactMap { $0 }.joined(separator: " · "),
+                subtitle: [app.running ? runningLabel : nil, described?.term].compactMap { $0 }.joined(separator: " · "),
                 icon: .file(path), score: match + (app.running ? 0.3 : 0),
                 action: { NSWorkspace.shared.openApplication(at: URL(filePath: path), configuration: .init()) },
                 actions: {
@@ -194,22 +194,34 @@ let brewPath = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"].first { FileMan
 /// says so, and Enter copies the command for a terminal.
 func installRow(_ token: String, name: String, desc: String, brew: String, score: Double) -> LauncherResult {
     let id = "install:\(token)", icon = LauncherResult.Icon.symbol("arrow.down.app")
-    return LauncherResult(id: id, title: "Install \(name)", subtitle: "With Homebrew · \(desc)", icon: icon, score: score,
-                          actionTitle: "Install", action: {}, output: { progress in
+    return LauncherResult(id: id, title: String(localized: "Install \(name)"), subtitle: String(localized: "With Homebrew · \(desc)"), icon: icon,
+                          score: score, actionTitle: String(localized: "Install", comment: "Enter on an app you don't have: installs it"), action: {},
+                          output: { progress in
         let run = await runTool(URL(filePath: brew), ["install", "--cask", token], mergeErrors: true, timeout: 1800) { soFar in
-            await progress(LauncherResult(id: id, title: "Installing \(name)…", subtitle: "Esc stops it", icon: icon, score: .infinity,
-                                          actionTitle: "Hide", action: {}, preview: soFar))
+            await progress(LauncherResult(id: id, title: String(localized: "Installing \(name)…"), subtitle: String(localized: "Esc stops it"),
+                                          icon: icon, score: .infinity,
+                                          actionTitle: String(localized: "Hide", comment: "Enter while an app installs"), action: {}, preview: soFar))
         }
         guard run.succeeded else {
             let command = "brew install --cask \(token)"
-            let reason = run.output.contains("sudo:") ? "It needs your password: Enter copies the command for a terminal"
+            let reason = run.output.contains("sudo:") ? String(localized: "It needs your password: Enter copies the command for a terminal")
                 : run.message.split(separator: "\n").last.map(String.init) ?? ""
-            return LauncherResult(id: id, title: "Couldn’t install \(name)", subtitle: reason, icon: .symbol("exclamationmark.triangle"),
-                                  score: .infinity, actionTitle: "Copy Command", action: { copyToClipboard(command) }, preview: run.output)
+            return LauncherResult(id: id, title: String(localized: "Couldn’t install \(name)"), subtitle: reason,
+                                  icon: .symbol("exclamationmark.triangle"), score: .infinity, actionTitle: String(localized: "Copy Command"),
+                                  action: { copyToClipboard(command) }, preview: run.output)
         }
         let app = URL(filePath: "/Applications/\(name).app")
         let there = FileManager.default.fileExists(atPath: app.path)
-        return LauncherResult(id: id, title: "\(name) is installed", subtitle: "With Homebrew", icon: icon, score: .infinity,
-                              actionTitle: there ? "Open" : "", action: { if there { NSWorkspace.shared.open(app) } }, preview: run.output)
+        return LauncherResult(id: id, title: String(localized: "\(name) is installed"), subtitle: String(localized: "With Homebrew"), icon: icon,
+                              score: .infinity, actionTitle: there ? String(localized: "Open", comment: "Enter on an app just installed") : "",
+                              action: { if there { NSWorkspace.shared.open(app) } }, preview: run.output)
     })
+}
+
+/// An app found by its name in Finder ("Mensagens", on a Mac in Portuguese) or its file's ("Messages": English for
+/// Apple's apps), and by other names for either (`otherNames` is keyed by the English names).
+func appNameScore(_ query: String, name: String, path: String) -> Double? {
+    let file = URL(filePath: path).deletingPathExtension().lastPathComponent
+    let names = file == name ? [name] : [name, file]
+    return names.compactMap { fuzzyScore(query, $0) }.max() ?? names.lazy.compactMap { otherNameScore(query, $0) }.first
 }

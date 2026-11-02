@@ -9,6 +9,18 @@ jobs:
       - run: brew install xcodegen
       - run: xcodebuild -version
       - run: make test
+      # The English list of every piece of text is written by `make strings`, never by hand (TRANSLATING.md).
+      - name: English list is current
+        run: make strings && git diff --exit-code Resources/en.lproj
+      # On a pull request, the app itself, for a translator to try their language without building it.
+      - name: App for this pull request
+        if: github.event_name == 'pull_request'
+        run: make release RELEASE_IDENTITY=-
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'pull_request'
+        with:
+          name: Copperlight
+          path: build/Copperlight.zip
       # The quiet log names the failing tests only; this prints each failed check, with its values.
       - name: Failed checks
         if: failure()

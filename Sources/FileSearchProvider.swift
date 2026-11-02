@@ -63,7 +63,10 @@ actor FileSearchProvider: ResultProvider {
     static let prefix = "f "
     private var settings = Config.Files()
     nonisolated var patient: Bool { true } // it waits for a pause in typing, then asks Spotlight
-    nonisolated var modes: [Mode] { [Mode(prefix: Self.prefix, title: "Files", icon: .symbol("doc.text.magnifyingglass"), hint: "A file's name")] }
+    nonisolated var modes: [Mode] {
+        [Mode(prefix: Self.prefix, title: String(localized: "Files", comment: "The f chip: searches files only"),
+              icon: .symbol("doc.text.magnifyingglass"), hint: String(localized: "A file's name", comment: "The f chip's placeholder"))]
+    }
 
     func setSettings(_ settings: Config.Files) { self.settings = settings }
 
@@ -91,7 +94,8 @@ actor FileSearchProvider: ResultProvider {
             let path = hit.path, folder = shortParentPath(path)
             return LauncherResult(
                 id: "file:\(path)", title: hit.name, subtitle: folder,
-                accessory: inside ? (hit.image ? "Text in image" : "Text inside") : "", // says why, as long names hide the subtitle
+                accessory: !inside ? "" : hit.image ? String(localized: "Text in image") // says why, as long names hide the subtitle
+                    : String(localized: "Text inside", comment: "A file found by the text in it"),
                 icon: .file(path), score: (inside ? -2 : -1) - Double(index) / 1000,
                 action: { _ = NSWorkspace.shared.open(URL(filePath: path)) },
                 actions: { [self] in fileActionRows(path, terminal: await terminalApp()) },

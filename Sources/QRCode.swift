@@ -20,7 +20,10 @@ func qrCode(_ text: String) -> CGImage? {
 struct QRCodeProvider: ResultProvider {
     private static let icon = LauncherResult.Icon.symbol("qrcode")
     private let clipboard: @Sendable () async -> String?
-    var modes: [Mode] { [Mode(prefix: "qr ", title: "QR Code", icon: Self.icon, hint: "Text or a link, or nothing for what you copied")] }
+    var modes: [Mode] {
+        [Mode(prefix: "qr ", title: String(localized: "QR Code"), icon: Self.icon,
+              hint: String(localized: "Text or a link, or nothing for what you copied"))]
+    }
 
     init(clipboard: @escaping @Sendable () async -> String? = { @MainActor in Clip.current(withHTML: false).text }) {
         self.clipboard = clipboard
@@ -30,12 +33,14 @@ struct QRCodeProvider: ResultProvider {
     func results(for query: String) async -> [LauncherResult] {
         let lower = query.lowercased()
         let offer = { (title: String, completion: String) in
-            [LauncherResult(id: "builtin:qr", title: title, subtitle: completion == "qr " ? "Type text or a link, or use what you copied" : "",
-                            icon: Self.icon, score: 50, actionTitle: "Show", action: {}, completion: completion)]
+            [LauncherResult(id: "builtin:qr", title: title,
+                            subtitle: completion == "qr " ? String(localized: "Type text or a link, or use what you copied") : "", icon: Self.icon,
+                            score: 50, actionTitle: String(localized: "Show", comment: "Enter on a row that opens the QR Code chip"), action: {},
+                            completion: completion)]
         }
-        if lower.count >= 2, "qr code".hasPrefix(lower) { return offer("QR Code", "qr ") }
+        if lower.count >= 2, "qr code".hasPrefix(lower) { return offer(String(localized: "QR Code"), "qr ") }
         guard lower.hasPrefix("qr ") else { return [] }
-        return offer("QR Code for “\(oneLine(query.dropFirst(3).trimmingCharacters(in: .whitespaces)))”", query)
+        return offer(String(localized: "QR Code for “\(oneLine(query.dropFirst(3).trimmingCharacters(in: .whitespaces)))”"), query)
     }
 
     func modeResults(for query: String) async -> [LauncherResult] {
@@ -44,22 +49,27 @@ struct QRCodeProvider: ResultProvider {
         let note = { (title: String, subtitle: String) in
             [LauncherResult(id: "qr", title: title, subtitle: subtitle, icon: Self.icon, score: 50, actionTitle: "", action: {})]
         }
-        guard !text.isEmpty else { return note("Type text or a link", "Or copy some first") }
-        guard let code = qrCode(text) else { return note("Too long for a QR code", "It holds about 2,000 characters") }
-        let answer = Answer.picture(code, kicker: "QR code" + (typed.isEmpty ? " · from the clipboard" : ""), title: oneLine(text),
-                                    subtitle: "Made on your Mac")
+        guard !text.isEmpty else { return note(String(localized: "Type text or a link"), String(localized: "Or copy some first")) }
+        guard let code = qrCode(text) else {
+            return note(String(localized: "Too long for a QR code"), String(localized: "It holds about 2,000 characters"))
+        }
+        let kicker = typed.isEmpty ? String(localized: "QR code · from the clipboard") : String(localized: "QR code")
+        let answer = Answer.picture(code, kicker: kicker, title: oneLine(text), subtitle: String(localized: "Made on your Mac"))
         let link = URL(string: text).map { ["http", "https"].contains($0.scheme?.lowercased() ?? "") && !text.contains(" ") } ?? false
+        let copy = String(localized: "Copy", comment: "Enter on a QR code's row")
+        let save = String(localized: "Save", comment: "Enter on a QR code's row: saves it to Downloads")
         let rows: [(id: String, title: String, symbol: String, actionTitle: String, action: @MainActor @Sendable () -> Void)] = [
-            ("qr", "Copy Picture", "doc.on.doc", "Copy", { copyPicture(code) }),
-            ("qr:save", "Save to Downloads", "square.and.arrow.down", "Save", {
+            ("qr", String(localized: "Copy Picture"), "doc.on.doc", copy, { copyPicture(code) }),
+            ("qr:save", String(localized: "Save to Downloads"), "square.and.arrow.down", save, {
                 let stamp = Date.now.formatted(.iso8601.year().month().day().time(includingFractionalSeconds: false)).replacing(":", with: ".")
                 let file = URL.downloadsDirectory.appending(path: "QR Code \(stamp).png")
                 do {
                     try NSBitmapImageRep(cgImage: code).representation(using: .png, properties: [:])?.write(to: file)
                     NSWorkspace.shared.activateFileViewerSelecting([file])
-                } catch { notify("Couldn't save the QR code", error.localizedDescription) }
+                } catch { notify(String(localized: "Couldn't save the QR code"), error.localizedDescription) }
             }),
-            ("qr:text", link ? "Copy Link" : "Copy Text", link ? "link" : "text.alignleft", "Copy", { copyToClipboard(text) }),
+            ("qr:text", link ? String(localized: "Copy Link") : String(localized: "Copy Text"), link ? "link" : "text.alignleft", copy,
+             { copyToClipboard(text) }),
         ]
         return rows.enumerated().map { index, row in
             LauncherResult(id: row.id, title: row.title, icon: .symbol(row.symbol), score: 50 - Double(index) / 100, actionTitle: row.actionTitle,

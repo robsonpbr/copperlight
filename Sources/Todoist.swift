@@ -101,9 +101,9 @@ enum TodoistFailure: Error, Equatable {
 
     var title: String {
         switch self {
-        case .rejected: "Todoist didn't accept the key"
-        case .offline: "Couldn't reach Todoist"
-        case .server: "Todoist didn't answer"
+        case .rejected: String(localized: "Todoist didn't accept the key")
+        case .offline: String(localized: "Couldn't reach Todoist")
+        case .server: String(localized: "Todoist didn't answer")
         }
     }
 }
@@ -148,18 +148,25 @@ actor TodoistDue {
 
 /// `add todo …` with Todoist: sends it, then says so.
 @MainActor func addToTodoist(_ title: String, due: CaptureDate?) {
-    guard let key = TodoistKey.read() else { return notify("Connect Todoist in Settings", "Settings › Options › To-dos") }
+    guard let key = TodoistKey.read() else {
+        return notify(String(localized: "Connect Todoist in Settings"),
+                      String(localized: "Settings › Options › To-dos", comment: "Copperlight's Settings pages"))
+    }
     Task {
         switch await TodoistDue.shared.add(title, due: due, key: key, send: urlSessionSend) {
-        case .success: notify("To-do added in Todoist", [title, due.map { whenText($0, end: false) }].compactMap(\.self).joined(separator: " · "))
-        case .failure(let failure): notify(failure.title, "Not added: \(title)") // what you typed, not lost
+        case .success:
+            notify(String(localized: "To-do added in Todoist"), [title, due.map { whenText($0, end: false) }].compactMap(\.self).joined(separator: " · "))
+        case .failure(let failure): notify(failure.title, String(localized: "Not added: \(title)")) // what you typed, not lost
         }
     }
 }
 
 /// Enter on a Todoist task: completes it there.
 @MainActor func completeInTodoist(_ id: String) {
-    guard let key = TodoistKey.read() else { return notify("Connect Todoist in Settings", "Settings › Options › To-dos") }
+    guard let key = TodoistKey.read() else {
+        return notify(String(localized: "Connect Todoist in Settings"),
+                      String(localized: "Settings › Options › To-dos", comment: "Copperlight's Settings pages"))
+    }
     Task {
         switch await todoistSend(todoistCloseRequest(id, key: key), send: urlSessionSend) {
         case .success: await TodoistDue.shared.drop(id)

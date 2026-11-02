@@ -2085,7 +2085,7 @@ private let macOS26 = ProcessInfo.processInfo.isOperatingSystemAtLeast(Operating
 // MARK: Command groups
 
 @Test func commandGroups() async {
-    let verb = { (keyword: String, title: String) in Verb(keyword: keyword, title: title, icon: .symbol("x"), run: {}) }
+    let verb = { (keyword: String, title: LocalizedStringResource) in Verb(keyword: keyword, title: title, icon: .symbol("x"), run: {}) }
     let verbs = VerbProvider(verbs: [verb("left", "Left Half"), verb("left third", "Left Third"), verb("right", "Right Half"),
                                      verb("volume", "Set Volume"), verb("volume mute", "Mute")])
     #expect(Set(await verbs.results(for: ":volume").map(\.title)) == ["Set Volume", "Mute"]) // the group, nothing fuzzy
@@ -2417,12 +2417,12 @@ private struct Speak: ResultProvider {
 }
 
 @Test func portRows() async {
-    let lookups = LookupProvider(listeners: { [Listener(pid: 812, command: "node", ports: [3000, 9229]),
+    let lookups = LookupProvider(listeners: { [Listener(pid: 81_200, command: "node", ports: [3000, 9229]),
                                               Listener(pid: 90, command: "postgres", ports: [5432])] })
     #expect(await lookups.results(for: "port").map(\.title) == ["node", "postgres"])
     let node = await lookups.results(for: "port 3000")
-    #expect(node.map(\.title) == ["node"] && node[0].subtitle == "Listening on 3000, 9229 · pid 812")
-    #expect(node[0].confirm == "End node (pid 812)? It’s listening on port 3000." && node[0].actionTitle == "End Process")
+    #expect(node.map(\.title) == ["node"] && node[0].subtitle == "Listening on 3000, 9229 · pid 81200")
+    #expect(node[0].confirm == "End node (pid 81200)? It’s listening on port 3000." && node[0].actionTitle == "End Process")
     #expect(await lookups.results(for: "port 30").map(\.title) == ["node"]) // narrows as you type
     #expect(await lookups.results(for: "port post").map(\.title) == ["postgres"]) // or by name
     #expect(await lookups.results(for: "port 8080").map(\.title) == ["Nothing is listening on port 8080"])
@@ -4660,4 +4660,208 @@ private let thesaurusHappy = "happy adjective 1 Melissa came in looking happy an
     #expect(pickerNames(["Work", "Calendar", "Calendar", "Home"]) == ["Calendar", "Home", "Work"])
     #expect(pickerChoice("Work", among: ["Calendar", "Work"]) == "Work")
     #expect(pickerChoice("Old name", among: ["Calendar", "Work"]) == nil && pickerChoice(nil, among: ["Work"]) == nil)
+}
+
+// MARK: Languages
+
+/// The repository's folder, for its language files.
+private let repository = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+
+/// A `.strings` file's lines, as key → translation.
+func stringsTable(_ text: String) throws -> [String: String] {
+    guard let table = try PropertyListSerialization.propertyList(from: Data(text.utf8), format: nil) as? [String: String] else {
+        throw CocoaError(.propertyListReadCorrupt)
+    }
+    return table
+}
+
+/// Why a language file can't be read, naming it, for the translator who opened the pull request.
+private struct FileProblem: Error, CustomStringConvertible { let description: String }
+
+private func languageFile(_ language: String, _ name: String) throws -> [String: String] {
+    do {
+        return try stringsTable(String(contentsOf: repository.appending(path: "Resources/\(language).lproj/\(name).strings"), encoding: .utf8))
+    } catch {
+        throw FileProblem(description: "Resources/\(language).lproj/\(name).strings: \(error)")
+    }
+}
+
+/// The English keywords file lists every keyword with letters (not `:` or `:!`), each as itself, for a translator to
+/// replace.
+@Test func englishKeywordsAreCurrent() throws {
+    let table = try languageFile("en", "Keywords")
+    #expect(Set(table.keys) == Set(Keyword.all.filter { $0.contains(where: \.isLetter) }))
+    #expect(table.allSatisfy { $0.key == $0.value })
+}
+
+/// The English permission prompts are the ones project.yml gives the app.
+@Test func englishInfoPlistIsCurrent() throws {
+    let table = try languageFile("en", "InfoPlist")
+    let keys = ["NSAppleEventsUsageDescription", "NSBluetoothAlwaysUsageDescription", "NSCalendarsFullAccessUsageDescription",
+                "NSCalendarsWriteOnlyAccessUsageDescription", "NSCameraUsageDescription", "NSContactsUsageDescription",
+                "NSLocationUsageDescription", "NSLocationWhenInUseUsageDescription", "NSPhotoLibraryUsageDescription",
+                "NSRemindersFullAccessUsageDescription"]
+    #expect(Set(table.keys) == Set(keys))
+    for key in keys { #expect(table[key] == Bundle.main.infoDictionary?[key] as? String, "\(key)") }
+}
+
+/// A placeholder's type for each argument, in argument order: `%2$@ %1$lld` → ["lld", "@"]. `%%` is a percent sign.
+func placeholders(_ text: String) -> [String] {
+    let found = text.matches(of: #/%(?:(\d+)\$)?[-+ 0#]*\d*(?:\.\d+)?(hh|h|ll|l|q|L|z|t|j)?([@dDiuUxXoOfFeEgGcCsSpaA%])/#)
+    var next = 1
+    return found.compactMap { match -> (Int, String)? in
+        guard match.output.3 != "%" else { return nil }
+        let position = match.output.1.flatMap { Int($0) } ?? { defer { next += 1 }; return next }()
+        let kind = String(match.output.2 ?? "") + match.output.3
+        return (position, kind == "d" || kind == "ld" ? "lld" : kind) // an integer is an integer
+    }.sorted { $0.0 < $1.0 }.map(\.1)
+}
+
+/// The translations whose placeholders aren't their English's, as "key: why".
+func placeholderProblems(english: [String: String], translated: [String: String]) -> [String] {
+    translated.keys.sorted().compactMap { key in
+        guard let original = english[key] else { return nil } // no longer in English: `make translations` lists it
+        let (want, got) = (placeholders(original), placeholders(translated[key]!))
+        return want == got ? nil : "\(key): has \(got.map { "%" + $0 }), needs \(want.map { "%" + $0 })"
+    }
+}
+
+/// What's wrong in a language's Keywords.strings: a key that isn't a keyword, a word that's an English keyword, a word
+/// given twice.
+func keywordFileProblems(_ table: [String: String], keywords: [String]) -> [String] {
+    var seen: [String: String] = [:]
+    var problems: [String] = []
+    for key in table.keys.sorted() {
+        guard keywords.contains(key) else { problems.append("\(key): not a keyword"); continue }
+        for word in table[key]!.split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces).lowercased() }) where word != key {
+            if keywords.contains(word) { problems.append("\(key): \(word) is already the keyword \(word)") }
+            if let other = seen[word] { problems.append("\(key): \(word) is also a word for \(other)") }
+            seen[word] = key
+        }
+    }
+    return problems
+}
+
+/// A broken line is caught, and the error says where.
+@Test func stringsFileProblems() throws {
+    let text = try String(contentsOf: repository.appending(path: "Tests/Fixtures/strings/bad-line.txt"), encoding: .utf8)
+    #expect { try stringsTable(text) } throws: { "\($0)".contains("line") }
+}
+
+/// A translation keeps its English's placeholders: the same types, in any order.
+@Test func placeholderRules() {
+    #expect(placeholderProblems(english: ["Open %@": "Open %@"], translated: ["Open %@": "Abrir"]).count == 1)
+    #expect(placeholderProblems(english: ["%lld events": "%lld events"], translated: ["%lld events": "%@ eventos"]).count == 1)
+    #expect(placeholderProblems(english: ["%1$@ in %2$@": "%1$@ in %2$@"], translated: ["%1$@ in %2$@": "%2$@: %1$@"]).isEmpty)
+    #expect(placeholderProblems(english: ["%@ in %@": "%@ in %@"], translated: ["%@ in %@": "%2$@ em %1$@"]).isEmpty)
+    #expect(placeholderProblems(english: ["59%, 49%": "59%, 49%"], translated: ["59%, 49%": "59 %, 49 %"]).isEmpty) // not placeholders
+}
+
+/// A language's keywords: each a keyword, no word that's already a keyword, no word twice.
+@Test func keywordFileRules() throws {
+    let text = try String(contentsOf: repository.appending(path: "Tests/Fixtures/strings/keyword-collision.txt"), encoding: .utf8)
+    let problems = keywordFileProblems(try stringsTable(text), keywords: Keyword.all)
+    #expect(problems.contains { $0.hasPrefix("nonsense:") } && problems.contains { $0.contains("define is already") }
+            && problems.contains { $0.contains("tempo is also") })
+    #expect(keywordFileProblems(["weather": "tempo, clima", "week": "semana"], keywords: Keyword.all).isEmpty)
+}
+
+/// Every language folder's three files read, keep their English's placeholders, and have sound keywords.
+@Test func everyLanguageIsValid() throws {
+    let folders = try FileManager.default.contentsOfDirectory(atPath: repository.appending(path: "Resources").path).filter { $0.hasSuffix(".lproj") }
+    #expect(folders.contains("en.lproj"))
+    for folder in folders {
+        let language = folder.replacing(".lproj", with: "")
+        for name in ["Localizable", "InfoPlist"] {
+            #expect(placeholderProblems(english: try languageFile("en", name), translated: try languageFile(language, name)).isEmpty, "\(folder)/\(name)")
+        }
+        #expect(keywordFileProblems(try languageFile(language, "Keywords"), keywords: Keyword.all).isEmpty, "\(folder)/Keywords")
+    }
+}
+
+/// A language's words for the keywords stand for them, as your own words do, the English ones left out; your own words win.
+@MainActor @Test func languageWordsExpand() {
+    let words = languageKeywords(["weather": "tempo, clima", "add todo": "adicionar tarefa", "define": "define", "week": "  Semana , "])
+    #expect(words == ["tempo": "weather", "clima": "weather", "adicionar tarefa": "add todo", "semana": "week"])
+    let model = SearchModel(providers: [])
+    model.keywords = words.merging(["tempo": "timer"]) { _, own in own }
+    #expect(model.expanded("tempo lisboa") == "timer lisboa" && model.expanded("clima lisboa") == "weather lisboa")
+    #expect(model.expanded("adicionar tarefa pagar a renda") == "add todo pagar a renda")
+}
+
+/// `[keywords] language = false` turns a language's words off; they're on unless it says so.
+@Test func keywordsLanguageSwitch() throws {
+    #expect(try Config.parse("[keywords]\nlanguage = false").keywords.language == false)
+    #expect(try Config.parse("").keywords.language == true)
+    #expect(throws: (any Error).self) { try Config.parse("[keywords]\nlnguage = true") }
+}
+
+/// A title is found by its English and, on a Mac in another language, by its translation.
+@Test func titlesInEitherLanguage() {
+    let portuguese = ["Pick Color": "Escolher Cor", "Shut Down": "Desligar"]
+    let translate = { (english: String) in portuguese[english] ?? english }
+    #expect(titles("Pick Color", translate: translate) == ["Pick Color", "Escolher Cor"])
+    #expect(titles("Battery", translate: translate) == ["Battery"]) // not translated yet: English only
+    #expect(titles("Pick Color") == ["Pick Color"]) // the tests run in English
+    #expect(titleScore("Shut Down", translate: translate) { fuzzyScore("desl", $0) } != nil)
+    #expect(titleScore("Shut Down", translate: translate) { fuzzyScore("shut", $0) } != nil)
+}
+
+/// On a Mac in another language Finder names Apple's apps in it ("Mensagens"); their files keep the English name, so
+/// typing either finds them, and their other names (sms) still work.
+@Test func appsByEitherName() {
+    let messages = "/System/Applications/Messages.app"
+    #expect(appNameScore("messages", name: "Mensagens", path: messages) != nil)
+    #expect(appNameScore("mensagens", name: "Mensagens", path: messages) != nil)
+    #expect(appNameScore("sms", name: "Mensagens", path: messages) != nil)
+    #expect(appNameScore("notes", name: "Mensagens", path: messages) == nil)
+    #expect(appNameScore("saf", name: "Safari", path: "/Applications/Safari.app") != nil) // one name, as before
+}
+
+/// A language's word mustn't be the name of one of the Mac's own apps in that language, nor start one ("notas" is
+/// Notes in Portuguese): typing the app's name would open the keyword instead.
+@Test func languageWordsDontHideApps() throws {
+    let folders = try FileManager.default.contentsOfDirectory(atPath: repository.appending(path: "Resources").path)
+        .filter { $0.hasSuffix(".lproj") && $0 != "en.lproj" }
+    let apps = ["/System/Applications", "/System/Applications/Utilities"].flatMap { folder in
+        ((try? FileManager.default.contentsOfDirectory(atPath: folder)) ?? []).filter { $0.hasSuffix(".app") }.map { "\(folder)/\($0)" }
+    }
+    for folder in folders {
+        let code = folder.replacing(".lproj", with: "").replacing("-", with: "_") // Apple's tables say pt_BR
+        let names = apps.compactMap { app -> String? in
+            guard let data = FileManager.default.contents(atPath: "\(app)/Contents/Resources/InfoPlist.loctable"),
+                  let table = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: [String: Any]] else { return nil }
+            return (table[code]?["CFBundleDisplayName"] ?? table[code]?["CFBundleName"]) as? String
+        }.map { $0.lowercased() }
+        #expect(names.count > 10, "\(folder): the Mac's apps' names in it")
+        for word in languageKeywords(try languageFile(folder.replacing(".lproj", with: ""), "Keywords")).keys {
+            let app = names.first { $0 == word || $0.hasPrefix(word + " ") }
+            #expect(app == nil, "\(folder): “\(word)” hides the app \(app ?? "")")
+        }
+    }
+}
+
+/// `free friday` works on a Mac in another language, whose weekday names are its own: those work too.
+@Test func freeWeekdayInEitherLanguage() {
+    var calendar = Calendar(identifier: .gregorian)
+    (calendar.locale, calendar.timeZone) = (Locale(identifier: "pt_BR"), TimeZone(identifier: "America/Sao_Paulo")!)
+    let monday = calendar.date(from: DateComponents(year: 2026, month: 11, day: 2, hour: 8))!
+    let friday = calendar.date(from: DateComponents(year: 2026, month: 11, day: 6))!
+    #expect(freeDays("free friday", now: monday, calendar: calendar)?.days == [friday])
+    #expect(freeDays("free sexta-feira", now: monday, calendar: calendar)?.days == [friday])
+}
+
+/// A language's words work without their accents too (reunioes), and give way to your own commands' and snippets' names.
+@Test func languageWordsYieldAndFold() {
+    let words = languageKeywords(["meetings": "reuniões", "stopwatch": "cronômetro", "note": "nota"], taken: ["nota"])
+    #expect(words == ["reuniões": "meetings", "reunioes": "meetings", "cronômetro": "stopwatch", "cronometro": "stopwatch"])
+}
+
+/// Translate's languages: typed in English after "to" (german), shown in the Mac's language (alemão), once each.
+@Test func translateLanguagesShownInYours() {
+    let languages = [Locale.Language(identifier: "de"), Locale.Language(identifier: "pt-BR"), Locale.Language(identifier: "pt-PT")]
+    #expect(TranslateProvider.choices(from: languages, locale: Locale(identifier: "pt_BR")).map { "\($0.key)=\($0.name)" }
+            == ["german=alemão", "portuguese=português"])
+    #expect(TranslateProvider.choices(from: languages, locale: Locale(identifier: "en_US")).map { "\($0.key)=\($0.name)" }
+            == ["german=German", "portuguese=Portuguese"])
 }

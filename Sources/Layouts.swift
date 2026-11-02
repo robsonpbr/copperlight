@@ -18,8 +18,10 @@ struct SavedLayout: Codable, Equatable, Sendable {
 
     /// "5 windows in 3 apps".
     var summary: String {
-        let apps = Set(windows.map(\.app)).count
-        return "\(windows.count) window\(windows.count == 1 ? "" : "s") in \(apps) app\(apps == 1 ? "" : "s")"
+        let count = windows.count, apps = Set(windows.map(\.app)).count
+        let windowsText = count == 1 ? String(localized: "1 window") : String(localized: "\(count) windows")
+        let appsText = apps == 1 ? String(localized: "1 app") : String(localized: "\(apps) apps")
+        return String(localized: "\(windowsText) in \(appsText)", comment: "A saved layout: “5 windows in 3 apps”")
     }
 }
 
@@ -50,7 +52,7 @@ func restoredFrame(_ frame: CGRect, screen: CGRect, screens: [CGRect]) -> CGRect
 /// The windows on screen now, what `:layout save` keeps. Hidden apps, minimized and full-screen windows stay out, and
 /// so does Copperlight. nil without Accessibility. ponytail: the current Space's windows, as `:window` sees them.
 @MainActor func captureWindows() -> [SavedWindow]? {
-    guard hasAccessibility("save window layouts") else { return nil }
+    guard hasAccessibility(String(localized: "save window layouts", comment: "Ends “Allow Copperlight in Accessibility to …”")) else { return nil }
     let apps = NSWorkspace.shared.runningApplications
         .filter { $0.activationPolicy == .regular && !$0.isHidden && $0.processIdentifier != getpid() && $0.bundleIdentifier != nil }
     return apps.flatMap { app in
@@ -66,7 +68,7 @@ func restoredFrame(_ frame: CGRect, screen: CGRect, screens: [CGRect]) -> CGRect
 /// Puts a layout's windows back, each app's matched by title, then in order. Apps that aren't running stay out, and a
 /// notification names them. ponytail: doesn't open them; launching them and waiting for their windows if people ask.
 @MainActor func applyLayout(_ layout: SavedLayout) {
-    guard hasAccessibility("arrange windows") else { return }
+    guard hasAccessibility(String(localized: "arrange windows", comment: "Ends “Allow Copperlight in Accessibility to …”")) else { return }
     let screens = NSScreen.screens.map(\.visibleFrame)
     var missing: [String] = []
     for (bundle, saved) in Dictionary(grouping: layout.windows, by: \.app) {
@@ -83,7 +85,10 @@ func restoredFrame(_ frame: CGRect, screen: CGRect, screens: [CGRect]) -> CGRect
             setFrame(window, restoredFrame(was.frame, screen: was.screen, screens: screens))
         }
     }
-    if !missing.isEmpty { notify("\(layout.name): some apps aren’t open", "Open \(missing.sorted().joined(separator: ", ")), then run it again") }
+    if !missing.isEmpty {
+        notify(String(localized: "\(layout.name): some apps aren’t open", comment: "A layout's name, then why some windows stayed put"),
+               String(localized: "Open \(missing.sorted().joined(separator: ", ")), then run it again", comment: "Names the apps that aren't open"))
+    }
 }
 
 extension Verb {
@@ -100,33 +105,39 @@ extension Verb {
         return [
             Verb(keyword: "layout save", title: "Save Layout", icon: .symbol("square.and.arrow.down"), targets: { name in
                 guard !name.isEmpty else {
-                    return [LauncherResult(id: "layout-save", title: "Type a name: :layout save work", icon: .symbol("square.and.arrow.down"),
-                                           score: 50, actionTitle: "", action: {})]
+                    return [LauncherResult(id: "layout-save",
+                                           title: String(localized: "Type a name: :layout save work", comment: "“:layout save work” is typed"),
+                                           icon: .symbol("square.and.arrow.down"), score: 50, actionTitle: "", action: {})]
                 }
                 guard !["save", "delete"].contains(name.lowercased()) else {
-                    return [LauncherResult(id: "layout-save", title: "“\(name)” is a command’s word: pick another name",
+                    return [LauncherResult(id: "layout-save", title: String(localized: "“\(name)” is a command’s word: pick another name"),
                                            icon: .symbol("square.and.arrow.down"), score: 50, actionTitle: "", action: {})]
                 }
                 let existing = await all().first { same($0, name) }
                 return [LauncherResult(
-                    id: "layout-save", title: "Save Layout “\(name)”", subtitle: "The windows on screen, where they are now",
-                    icon: .symbol("square.and.arrow.down"), score: 50, actionTitle: "Save", action: {},
-                    confirm: existing.map { "Replace the layout “\($0.name)”?" },
+                    id: "layout-save", title: String(localized: "Save Layout “\(name)”"),
+                    subtitle: String(localized: "The windows on screen, where they are now"),
+                    icon: .symbol("square.and.arrow.down"), score: 50, actionTitle: String(localized: "Save", comment: "Enter on :layout save"),
+                    action: {},
+                    confirm: existing.map { String(localized: "Replace the layout “\($0.name)”?") },
                     output: { _ in
                         await MainActor.run {
                             guard let windows = capture() else {
-                                return LauncherResult(id: "layout-save", title: "Allow Copperlight in Accessibility to save layouts",
-                                                      subtitle: "Privacy & Security → Accessibility", icon: .symbol("lock.shield"),
-                                                      score: .infinity, actionTitle: "", action: {})
+                                return LauncherResult(id: "layout-save", title: String(localized: "Allow Copperlight in Accessibility to save layouts"),
+                                                      subtitle: String(localized: "Privacy & Security → Accessibility",
+                                                                       comment: "Where it is in System Settings"),
+                                                      icon: .symbol("lock.shield"), score: .infinity, actionTitle: "", action: {})
                             }
                             guard !windows.isEmpty else {
-                                return LauncherResult(id: "layout-save", title: "No windows to save", subtitle: "Open the ones to keep, then save again",
+                                return LauncherResult(id: "layout-save", title: String(localized: "No windows to save"),
+                                                      subtitle: String(localized: "Open the ones to keep, then save again"),
                                                       icon: .symbol("macwindow"), score: .infinity, actionTitle: "", action: {})
                             }
                             let layout = SavedLayout(name: existing?.name ?? name, windows: windows, saved: .now)
                             keep(all().filter { !same($0, name) } + [layout])
-                            return LauncherResult(id: "layout-save", title: "Saved “\(layout.name)”",
-                                                  subtitle: "\(layout.summary) · :layout \(layout.name.lowercased()) puts them back",
+                            return LauncherResult(id: "layout-save", title: String(localized: "Saved “\(layout.name)”"),
+                                                  subtitle: String(localized: "\(layout.summary) · :layout \(layout.name.lowercased()) puts them back",
+                                                                   comment: "What's in the layout (“2 windows in 1 app”), then what to type to arrange them"),
                                                   icon: .symbol("checkmark.circle"), score: .infinity, actionTitle: "", action: {})
                         }
                     })]
@@ -134,21 +145,27 @@ extension Verb {
             Verb(keyword: "layout delete", title: "Delete Layout", icon: .symbol("trash"), targets: { filter in
                 await all().enumerated().compactMap { index, layout in
                     guard let score = filter.isEmpty ? -0.01 * Double(index) : fuzzyScore(filter, layout.name) else { return nil }
-                    return LauncherResult(id: "layout-delete:\(layout.name.lowercased())", title: "Delete Layout “\(layout.name)”",
-                                          subtitle: "Layout · \(layout.summary)", icon: .symbol("trash"), score: score, actionTitle: "Delete",
+                    return LauncherResult(id: "layout-delete:\(layout.name.lowercased())", title: String(localized: "Delete Layout “\(layout.name)”"),
+                                          subtitle: String(localized: "Layout · \(layout.summary)", comment: "“Layout · 2 windows in 1 app”"),
+                                          icon: .symbol("trash"), score: score,
+                                          actionTitle: String(localized: "Delete", comment: "Enter on a saved layout"),
                                           action: { keep(all().filter { !same($0, layout.name) }) }, staysOpen: true)
                 }
             }),
             Verb(keyword: "layout", title: "Layout", icon: .symbol("rectangle.3.group"), targets: { filter in
                 let layouts = await all()
                 guard !layouts.isEmpty || !filter.isEmpty else {
-                    return [LauncherResult(id: "layout:none", title: "No layouts yet: :layout save work", icon: .symbol("rectangle.3.group"),
-                                           score: 0, actionTitle: "", action: {})]
+                    return [LauncherResult(id: "layout:none",
+                                           title: String(localized: "No layouts yet: :layout save work", comment: "“:layout save work” is typed"),
+                                           icon: .symbol("rectangle.3.group"), score: 0, actionTitle: "", action: {})]
                 }
                 return layouts.enumerated().compactMap { index, layout in
                     guard let score = filter.isEmpty ? -0.01 * Double(index) : fuzzyScore(filter, layout.name) else { return nil }
-                    return LauncherResult(id: "layout:\(layout.name.lowercased())", title: layout.name, subtitle: "Layout · \(layout.summary)",
-                                          icon: .symbol("rectangle.3.group"), score: score, actionTitle: "Arrange", action: { apply(layout) })
+                    return LauncherResult(id: "layout:\(layout.name.lowercased())", title: layout.name,
+                                          subtitle: String(localized: "Layout · \(layout.summary)", comment: "“Layout · 2 windows in 1 app”"),
+                                          icon: .symbol("rectangle.3.group"), score: score,
+                                          actionTitle: String(localized: "Arrange", comment: "Enter on a saved layout: puts its windows back"),
+                                          action: { apply(layout) })
                 }
             }),
         ]

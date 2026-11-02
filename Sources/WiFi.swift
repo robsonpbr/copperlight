@@ -55,10 +55,14 @@ actor WiFiProvider: ResultProvider {
         let typed = query.dropFirst(prefix.count).trimmingCharacters(in: .whitespaces)
         guard let name = typed.isEmpty ? network() : typed else { return [unknown()] }
         if let known = revealed[name], known.at.timeIntervalSinceNow > -600 { return card(name, known.password) }
-        return [LauncherResult(id: "wifi:\(name)", title: "Show the Password for “\(name)”", subtitle: "macOS asks for your Mac's password first",
-                               icon: Self.icon, score: 50, actionTitle: "Show", action: { [self] in
+        return [LauncherResult(id: "wifi:\(name)", title: String(localized: "Show the Password for “\(name)”"),
+                               subtitle: String(localized: "macOS asks for your Mac's password first"), icon: Self.icon, score: 50,
+                               actionTitle: String(localized: "Show", comment: "Enter on wifi password: asks macOS for it"), action: { [self] in
             Task {
-                guard await reveal(name) else { return notify("Couldn't get the password for “\(name)”", "Asked to cancel, or it isn't a network this Mac knows") }
+                guard await reveal(name) else {
+                    return notify(String(localized: "Couldn't get the password for “\(name)”"),
+                                  String(localized: "Asked to cancel, or it isn't a network this Mac knows"))
+                }
                 show(query)
             }
         })]
@@ -73,11 +77,15 @@ actor WiFiProvider: ResultProvider {
 
     private func card(_ name: String, _ password: String) -> [LauncherResult] {
         guard let code = qrCode(wifiJoinText(network: name, password: password)) else { return [] }
-        let answer = Answer.picture(code, kicker: "Wi-Fi · scan to join", title: name, subtitle: password.isEmpty ? "No password" : password)
-        return [LauncherResult(id: "wifi:\(name)", title: password, subtitle: "The password for “\(name)”", icon: Self.icon, score: 50,
-                               actionTitle: "Copy", action: { copyToClipboard(password) }, answer: answer),
-                LauncherResult(id: "wifi:qr", title: "Copy QR Code", subtitle: "To share it in a message", icon: .symbol("qrcode"),
-                               score: 49.9, actionTitle: "Copy", action: { copyPicture(code) })]
+        let answer = Answer.picture(code, kicker: String(localized: "Wi-Fi · scan to join"), title: name,
+                                    subtitle: password.isEmpty ? String(localized: "No password", comment: "A Wi-Fi network without one") : password)
+        return [LauncherResult(id: "wifi:\(name)", title: password, subtitle: String(localized: "The password for “\(name)”"), icon: Self.icon,
+                               score: 50, actionTitle: String(localized: "Copy", comment: "Enter on a Wi-Fi password: copies it"),
+                               action: { copyToClipboard(password) }, answer: answer),
+                LauncherResult(id: "wifi:qr", title: String(localized: "Copy QR Code"), subtitle: String(localized: "To share it in a message"),
+                               icon: .symbol("qrcode"), score: 49.9,
+                               actionTitle: String(localized: "Copy", comment: "Enter on Copy QR Code: copies the picture"),
+                               action: { copyPicture(code) })]
     }
 
     /// Without the network's name: Location Services lets macOS say it, or you type it.
@@ -86,9 +94,12 @@ actor WiFiProvider: ResultProvider {
             LauncherResult(id: "wifi", title: title, subtitle: subtitle, icon: Self.icon, score: 50, actionTitle: actionTitle, action: action)
         }
         if located() == .unasked {
-            return row("See Which Wi-Fi You're On", "macOS tells apps the network's name only with Location Services", "Allow", { Locator.shared.ask() })
+            return row(String(localized: "See Which Wi-Fi You're On"),
+                       String(localized: "macOS tells apps the network's name only with Location Services"),
+                       String(localized: "Allow", comment: "Enter asks macOS for Location Services"), { Locator.shared.ask() })
         }
-        return row("Type the network's name: wifi password Home",
-                   located() == .refused ? "Without Location Services, macOS keeps it from apps" : "This Mac isn't on Wi-Fi", "", {})
+        return row(String(localized: "Type the network's name: wifi password Home", comment: "wifi password is what to type, then a network's name"),
+                   located() == .refused ? String(localized: "Without Location Services, macOS keeps it from apps")
+                       : String(localized: "This Mac isn't on Wi-Fi"), "", {})
     }
 }

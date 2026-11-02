@@ -160,8 +160,9 @@ struct PhotoTextProvider: ResultProvider {
             let id = hit.id
             return LauncherResult(
                 id: "photo:\(id)", title: line.map(String.init) ?? text,
-                subtitle: (["Photos"] + [hit.created?.formatted(day)].compactMap { $0 }).joined(separator: " · "),
-                accessory: "Text in photo", icon: .image("photo:\(id)") { photoImageNow(id, size: 64) },
+                subtitle: ([String(localized: "Photos", comment: "Apple's Photos app, by the name macOS gives it")]
+                           + [hit.created?.formatted(day)].compactMap { $0 }).joined(separator: " · "),
+                accessory: String(localized: "Text in photo"), icon: .image("photo:\(id)") { photoImageNow(id, size: 64) },
                 score: -1.5 - Double(index) / 1000, action: { openPhoto(id) },
                 preview: "", // the photo, so you see where the text is
                 previewImage: { photoImageNow(id, size: 900).map { NSImage(cgImage: $0, size: .zero) } })

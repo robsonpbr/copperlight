@@ -45,7 +45,11 @@ func countdown(_ seconds: TimeInterval) -> String {
         var minutes: Int
         var isBreak: Bool? = nil // nil in state.json from before breaks: a pomodoro
 
-        var title: String { isBreak == true ? "Break" : "Pomodoro" }
+        var title: String {
+            isBreak == true ? String(localized: "Break", comment: "A pomodoro's break, running")
+                : String(localized: "Pomodoro", comment: "The pomodoro timer")
+        }
+        var stopTitle: String { isBreak == true ? String(localized: "Stop Break") : String(localized: "Stop Pomodoro") }
     }
 
     private static let stateSection = "pomodoro"
@@ -85,7 +89,7 @@ func countdown(_ seconds: TimeInterval) -> String {
     private func show() {
         if item == nil, let running {
             item = countdownItem(symbol: running.isBreak == true ? "cup.and.saucer" : "timer", name: running.title,
-                                 stop: "Stop \(running.title)", target: self, action: #selector(stopFromMenu))
+                                 stop: running.stopTitle, target: self, action: #selector(stopFromMenu))
         }
         if timer == nil { timer = everySecond { [weak self] in self?.tick() } }
         tick()
@@ -100,9 +104,10 @@ func countdown(_ seconds: TimeInterval) -> String {
         }
         stop()
         if running.isBreak == true {
-            notify("Break's over", "\(running.minutes) minutes are up.", sound: true)
+            notify(String(localized: "Break's over"), String(localized: "\(running.minutes) minutes are up."), sound: true)
         } else {
-            notify("Pomodoro done", "\(running.minutes) minutes are up. Time for a break: pomo break", sound: true)
+            notify(String(localized: "Pomodoro done"), String(localized: "\(running.minutes) minutes are up. Time for a break: pomo break",
+                                                               comment: "pomo break is what to type"), sound: true)
         }
     }
 
@@ -133,7 +138,10 @@ func countdown(_ seconds: TimeInterval) -> String {
 /// `pomo`, `pomo 50`, `pomo stop` in the launcher.
 struct PomodoroProvider: ResultProvider {
     let pomodoro: Pomodoro
-    var modes: [Mode] { [Mode(prefix: "pomo ", title: "Pomodoro", icon: .symbol("timer"), hint: "Minutes (50), break or stop")] }
+    var modes: [Mode] {
+        [Mode(prefix: "pomo ", title: String(localized: "Pomodoro", comment: "The pomodoro timer"), icon: .symbol("timer"),
+              hint: String(localized: "Minutes (50), break or stop", comment: "What to type after pomo: break and stop are typed as they are"))]
+    }
 
     func results(for query: String) async -> [LauncherResult] {
         let pomodoro = pomodoro // before the first closure that uses it: Xcode 26 rejects a capture of a later declaration
@@ -143,31 +151,38 @@ struct PomodoroProvider: ResultProvider {
         let left = running.map { countdown(remaining(until: $0.deadline)) }
         // Plain "pomo" offers what makes sense now: not starting the one that's running. Asked for ("pomo 50"), it asks.
         let (offered, onBreak) = (commands.count > 1, running.map { $0.isBreak == true })
+        let start = String(localized: "Start", comment: "Enter on a timer, pomodoro or stopwatch row: starts it")
+        let stop = String(localized: "Stop", comment: "Enter on a running timer, pomodoro or stopwatch: stops it")
         // Scores above apps (they top out at 1.8): typing "pomo" means this.
         return commands.compactMap { command in
             switch command {
             case .start(let minutes):
                 if offered, onBreak == false { return nil }
                 return LauncherResult(
-                    id: "pomodoro:start", title: "Start Pomodoro", subtitle: "\(minutes) minutes",
-                    icon: .symbol("timer"), score: 50, actionTitle: "Start", action: { pomodoro.start(minutes: minutes) },
-                    confirm: left.map { "Replace the running \(running!.title.lowercased()) (\($0) left) with \(minutes) minutes?" })
+                    id: "pomodoro:start", title: String(localized: "Start Pomodoro"), subtitle: String(localized: "\(minutes) minutes"),
+                    icon: .symbol("timer"), score: 50, actionTitle: start, action: { pomodoro.start(minutes: minutes) },
+                    confirm: left.map { running!.isBreak == true ? String(localized: "Replace the running break (\($0) left) with \(minutes) minutes?")
+                        : String(localized: "Replace the running pomodoro (\($0) left) with \(minutes) minutes?") })
             case .startBreak(let minutes):
                 if offered, onBreak == true { return nil }
                 return LauncherResult(
-                    id: "pomodoro:break", title: "Take a Break", subtitle: "\(minutes) minutes",
-                    icon: .symbol("cup.and.saucer"), score: 50, actionTitle: "Start", action: { pomodoro.start(minutes: minutes, isBreak: true) },
-                    confirm: left.map { "Replace the running \(running!.title.lowercased()) (\($0) left) with a \(minutes)-minute break?" })
+                    id: "pomodoro:break", title: String(localized: "Take a Break"), subtitle: String(localized: "\(minutes) minutes"),
+                    icon: .symbol("cup.and.saucer"), score: 50, actionTitle: start, action: { pomodoro.start(minutes: minutes, isBreak: true) },
+                    confirm: left.map {
+                        running!.isBreak == true ? String(localized: "Replace the running break (\($0) left) with a \(minutes)-minute break?")
+                            : String(localized: "Replace the running pomodoro (\($0) left) with a \(minutes)-minute break?")
+                    })
             case .stop:
                 if let running {
                     return LauncherResult(
-                        id: "pomodoro:stop", title: "Stop \(running.title)",
-                        subtitle: "\(running.minutes) minutes · ends \(running.deadline.formatted(date: .omitted, time: .shortened))",
-                        icon: .symbol("stop.fill"), score: 51, actionTitle: "Stop", action: { pomodoro.stop() }, ticking: .down(to: running.deadline))
+                        id: "pomodoro:stop", title: running.stopTitle,
+                        subtitle: String(localized: "\(running.minutes) minutes · ends \(running.deadline.formatted(date: .omitted, time: .shortened))"),
+                        icon: .symbol("stop.fill"), score: 51, actionTitle: stop, action: { pomodoro.stop() },
+                        ticking: .down(to: running.deadline))
                 }
                 // "pomo stop" with nothing running says so; plain "pomo" just offers to start.
                 return commands.count > 1 ? nil : LauncherResult(
-                    id: "pomodoro:stop", title: "No pomodoro running",
+                    id: "pomodoro:stop", title: String(localized: "No pomodoro running"),
                     icon: .symbol("timer"), score: 51, actionTitle: "", action: {})
             }
         }

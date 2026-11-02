@@ -1,0 +1,12 @@
+/* O que o macOS mostra quando o Copperlight pede uma permissão. */
+
+"NSAppleEventsUsageDescription" = "O Copperlight lista as abas abertas do seu navegador, para que Enter vá até uma em vez de abri-la de novo, executa os comandos do Mac que você digita (:empty trash, :dark mode) e lê e conclui suas tarefas no Things, se você o escolher.";
+"NSBluetoothAlwaysUsageDescription" = "O Copperlight lista os dispositivos Bluetooth emparelhados com este Mac quando você digita “:connect”, para conectar ou desconectar um deles.";
+"NSCalendarsFullAccessUsageDescription" = "O Copperlight mostra as reuniões de hoje quando você digita “meetings”, com Entrar para chamadas de vídeo, e sua semana quando você digita “week”.";
+"NSCalendarsWriteOnlyAccessUsageDescription" = "O Copperlight adiciona os eventos que você digita (add event …).";
+"NSCameraUsageDescription" = "O Copperlight mostra sua câmera quando você digita “camera”, para você se ver antes de uma chamada. Nada é gravado.";
+"NSContactsUsageDescription" = "O Copperlight encontra pessoas nos seus contatos enquanto você digita o nome, para enviar mensagem, ligar ou mandar e-mail. Eles ficam neste Mac.";
+"NSLocationUsageDescription" = "O Copperlight mostra o tempo onde você está quando você digita “weather”. Só uma localização arredondada, de cerca de um quilômetro, vai para o serviço de meteorologia.";
+"NSLocationWhenInUseUsageDescription" = "O Copperlight mostra o tempo onde você está quando você digita “weather”. Só uma localização arredondada, de cerca de um quilômetro, vai para o serviço de meteorologia.";
+"NSPhotoLibraryUsageDescription" = "O Copperlight lê o texto das suas fotos, neste Mac, para que digitar “29.99” encontre a foto de uma etiqueta de preço.";
+"NSRemindersFullAccessUsageDescription" = "O Copperlight adiciona os lembretes que você digita (add todo …).";

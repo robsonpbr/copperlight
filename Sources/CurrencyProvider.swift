@@ -41,13 +41,15 @@ func parseRates(_ data: Data) -> [String: Double]? {
 /// "Rate from yesterday", "Rate from Oct 23".
 func rateAge(_ updated: Date, now: Date = .now) -> String {
     let minutes = Int(now.timeIntervalSince(updated) / 60), calendar = Calendar.current
-    if minutes < 1 { return "Live rate, just now" }
-    if minutes < 60 { return "Live rate, \(minutes) min ago" }
-    if calendar.isDate(updated, inSameDayAs: now) { return "Rate from " + updated.formatted(date: .omitted, time: .shortened) }
-    if let yesterday = calendar.date(byAdding: .day, value: -1, to: now), calendar.isDate(updated, inSameDayAs: yesterday) {
-        return "Rate from yesterday"
+    if minutes < 1 { return String(localized: "Live rate, just now") }
+    if minutes < 60 { return String(localized: "Live rate, \(minutes) min ago") }
+    if calendar.isDate(updated, inSameDayAs: now) {
+        return String(localized: "Rate from \(updated.formatted(date: .omitted, time: .shortened))", comment: "A time today (14:05) or a date (Oct 23)")
     }
-    return "Rate from " + updated.formatted(.dateTime.month(.abbreviated).day())
+    if let yesterday = calendar.date(byAdding: .day, value: -1, to: now), calendar.isDate(updated, inSameDayAs: yesterday) {
+        return String(localized: "Rate from yesterday")
+    }
+    return String(localized: "Rate from \(updated.formatted(.dateTime.month(.abbreviated).day()))", comment: "A time today (14:05) or a date (Oct 23)")
 }
 
 /// A currency's flag: its code's first two letters as regional indicators (EUR → 🇪🇺, the EU's). Empty for a currency
@@ -100,10 +102,13 @@ func currencyRows(_ query: CurrencyQuery, rates: [String: Double], updated: Date
                             toName: name(query.to), toCode: query.to,
                             rate: "1 \(query.from) = \(formatNumber(rate, decimals: rate < 0.01 ? 2...8 : 2...4)) \(query.to)",
                             when: rateAge(updated, now: now))
-    return [LauncherResult(id: "currency", title: "Copy " + shown, icon: .symbol("arrow.left.arrow.right"), score: 10, actionTitle: "Copy",
+    let copy = String(localized: "Copy", comment: "Enter on a currency conversion")
+    return [LauncherResult(id: "currency", title: String(localized: "Copy \(shown)", comment: "A conversion's row: Enter copies it"),
+                           icon: .symbol("arrow.left.arrow.right"), score: 10, actionTitle: copy,
                            action: { copyToClipboard(shown) }, answer: .currency(card)),
-            LauncherResult(id: "currency:number", title: "Copy " + number, subtitle: "The number alone, for a spreadsheet",
-                           icon: .symbol("number"), score: 9.99, actionTitle: "Copy", action: { copyToClipboard(number) }, answer: .currency(card))]
+            LauncherResult(id: "currency:number", title: String(localized: "Copy \(number)", comment: "A conversion's row: Enter copies it"),
+                           subtitle: String(localized: "The number alone, for a spreadsheet"),
+                           icon: .symbol("number"), score: 9.99, actionTitle: copy, action: { copyToClipboard(number) }, answer: .currency(card))]
 }
 
 /// Answers from the in-memory copy of rates.json only; the fetch runs when the launcher opens.
@@ -142,8 +147,8 @@ actor CurrencyProvider: ResultProvider {
     func results(for query: String) -> [LauncherResult] {
         guard let parsed = parseCurrency(query, defaultTarget: defaultTarget) else { return [] }
         guard !rates.isEmpty else {
-            return [LauncherResult(id: "currency", title: "No currency rates yet",
-                                   subtitle: "Waiting for the first download from Coinbase",
+            return [LauncherResult(id: "currency", title: String(localized: "No currency rates yet"),
+                                   subtitle: String(localized: "Waiting for the first download from Coinbase"),
                                    icon: .symbol("exclamationmark.triangle"), score: 10, actionTitle: "", action: {})]
         }
         return currencyRows(parsed, rates: rates, updated: fetched)

@@ -138,28 +138,29 @@ struct ColorProvider: ResultProvider {
     /// `[colors] copy`: the notation a picked color is copied in.
     var copies: @Sendable () -> ColorNotation = { ColorProvider.chosenNotation.withLock { $0 } }
     static let chosenNotation = Mutex(ColorNotation.hex)
+    private static var copyTitle: String { String(localized: "Copy", comment: "Enter on a color: copies it") }
 
     func results(for query: String) async -> [LauncherResult] {
         if let (color, typed) = parseColor(query) {
             let notations = ColorNotation.allCases.filter { $0 != typed } + [typed]
             return notations.enumerated().map { index, notation in row(color, notation, score: 50 - Double(index) / 10) }
-                + [(0.25, "A step lighter"), (-0.25, "A step darker")].enumerated().map { index, step in
+                + [(0.25, String(localized: "A step lighter")), (-0.25, String(localized: "A step darker"))].enumerated().map { index, step in
                     let shade = color.mixed(step.0)
                     return LauncherResult(id: "color:\(step.1)", title: shade.hex, subtitle: step.1, icon: .color(shade), score: 49.6 - Double(index) / 10,
-                                          actionTitle: "Copy", action: { copyToClipboard(shade.hex) }, answer: .color(color))
+                                          actionTitle: Self.copyTitle, action: { copyToClipboard(shade.hex) }, answer: .color(color))
                 }
         }
         let lower = query.lowercased().trimmingCharacters(in: .whitespaces)
         if lower == "colors" || lower == "colours" || otherNameScore(lower, "Your Colors") != nil { return await keptRows() }
-        guard let score = lower.count >= 3 && "pick color".hasPrefix(lower) ? 50 : fuzzyScore(query, "Pick Color") ?? otherNameScore(query, "Pick Color")
+        guard let score = lower.count >= 3 && "pick color".hasPrefix(lower) ? 50 : titleScore("Pick Color", { fuzzyScore(query, $0) }) ?? otherNameScore(query, "Pick Color")
         else { return [] }
-        return [pickRow(subtitle: "Click anywhere on the screen to copy its color", score: score)]
+        return [pickRow(subtitle: String(localized: "Click anywhere on the screen to copy its color"), score: score)]
     }
 
     private func pickRow(subtitle: String, score: Double) -> LauncherResult {
         let notation = copies()
-        return LauncherResult(id: "builtin:pick color", title: "Pick Color", subtitle: subtitle, icon: .symbol("eyedropper"), score: score,
-                              actionTitle: "Pick", action: { [show, store] in
+        return LauncherResult(id: "builtin:pick color", title: String(localized: "Pick Color"), subtitle: subtitle, icon: .symbol("eyedropper"),
+                              score: score, actionTitle: String(localized: "Pick", comment: "Enter on Pick Color"), action: { [show, store] in
             NSColorSampler().show { picked in
                 guard let color = picked.flatMap(RGBColor.init) else { return } // Esc: nothing picked
                 Task { @MainActor in
@@ -181,15 +182,16 @@ struct ColorProvider: ResultProvider {
             let text = color.text(notation)
             return LauncherResult(id: "color:kept:\(picked.hex)", title: text, subtitle: notation == .hex ? color.rgb : color.hex,
                                   accessory: shortAge(picked.at, now: now), icon: .color(color), score: 50 - Double(index) / 1000,
-                                  actionTitle: "Copy", action: { copyToClipboard(text) },
+                                  actionTitle: Self.copyTitle, action: { copyToClipboard(text) },
                                   answer: .color(color))
         }
-        return rows.isEmpty ? [pickRow(subtitle: "Your colors show here once you’ve picked some", score: 50)] : rows
+        return rows.isEmpty ? [pickRow(subtitle: String(localized: "Your colors show here once you’ve picked some"), score: 50)] : rows
     }
 
     private func row(_ color: RGBColor, _ notation: ColorNotation, score: Double) -> LauncherResult {
         let text = color.text(notation)
-        return LauncherResult(id: "color:\(notation)", title: text, accessory: notation == .hex ? "Hex" : "\(notation)".uppercased(),
-                              icon: .color(color), score: score, actionTitle: "Copy", action: { copyToClipboard(text) }, answer: .color(color))
+        return LauncherResult(id: "color:\(notation)", title: text,
+                              accessory: notation == .hex ? String(localized: "Hex", comment: "A color's notation") : "\(notation)".uppercased(),
+                              icon: .color(color), score: score, actionTitle: Self.copyTitle, action: { copyToClipboard(text) }, answer: .color(color))
     }
 }

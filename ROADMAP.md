@@ -64,6 +64,9 @@ Roughly in that order, then a few weeks of daily use with fixes only.
 
 ## Done
 
+- **v0.15:** Copperlight in your Mac's language: Portuguese from Brazil and from Portugal first, each keyword with
+  words in your language beside the English ones, and three plain text files to add a language
+  ([TRANSLATING.md](TRANSLATING.md)).
 - **v0.14:** your own calendar and to-do apps, all optional: Google Calendar or Outlook for Open Calendar, the calendar
   `add event` uses, and Things, TickTick or Todoist for `add todo` and `due`.
 - **v0.13:** a privacy page: every server Copperlight contacts, every permission and every file it keeps. `free

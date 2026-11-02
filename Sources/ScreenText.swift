@@ -27,18 +27,21 @@ struct ScreenTextProvider: ResultProvider {
     func results(for query: String) async -> [LauncherResult] {
         let lower = query.lowercased()
         let prefix = (lower.count >= 6 && "copy text from screen".hasPrefix(lower)) || (lower.count >= 4 && "text from screen".hasPrefix(lower))
-        guard let score = prefix ? 50 : fuzzyScore(query, "Copy Text from Screen") ?? otherNameScore(query, "Copy Text from Screen")
+        guard let score = prefix ? 50 : titleScore("Copy Text from Screen", { fuzzyScore(query, $0) }) ?? otherNameScore(query, "Copy Text from Screen")
         else { return [] }
-        return [LauncherResult(id: "builtin:copy text", title: "Copy Text from Screen", subtitle: "Drag over anything to copy its text",
-                               icon: .symbol("text.viewfinder"), score: score, actionTitle: "Select", action: { [show] in copyTextFromScreen(show: show) })]
+        return [LauncherResult(id: "builtin:copy text", title: String(localized: "Copy Text from Screen"),
+                               subtitle: String(localized: "Drag over anything to copy its text"), icon: .symbol("text.viewfinder"), score: score,
+                               actionTitle: String(localized: "Select", comment: "Enter on Copy Text from Screen: you drag over the screen"),
+                               action: { [show] in copyTextFromScreen(show: show) })]
     }
 }
 
 @MainActor private func copyTextFromScreen(show: @escaping @MainActor @Sendable (String) -> Void) {
     guard CGPreflightScreenCaptureAccess() else {
         CGRequestScreenCaptureAccess()
-        return notify("Allow Copperlight to record the screen, then try again",
-                      "Privacy & Security → Screen & System Audio Recording. Copperlight only reads the part you drag over.")
+        return notify(String(localized: "Allow Copperlight to record the screen, then try again"),
+                      String(localized: "Privacy & Security → Screen & System Audio Recording. Copperlight only reads the part you drag over.",
+                             comment: "Where to allow it: System Settings' pages, by the names macOS gives them"))
     }
     let file = FileManager.default.temporaryDirectory.appending(path: "copperlight-\(UUID().uuidString).png")
     Task {
@@ -49,10 +52,10 @@ struct ScreenTextProvider: ResultProvider {
         let (text, codes) = await Task.detached { readScreenshot(image) }.value
         if let code = codes.first {
             copyToClipboard(code)
-            return code.hasPrefix("http://") || code.hasPrefix("https://") ? show(code) : notify("QR code copied", oneLine(code))
+            return code.hasPrefix("http://") || code.hasPrefix("https://") ? show(code) : notify(String(localized: "QR code copied"), oneLine(code))
         }
-        guard !text.isEmpty else { return notify("No text there") }
+        guard !text.isEmpty else { return notify(String(localized: "No text there")) }
         copyToClipboard(text)
-        notify("Text copied", oneLine(text))
+        notify(String(localized: "Text copied"), oneLine(text))
     }
 }

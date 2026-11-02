@@ -66,17 +66,22 @@ struct StockProvider: ResultProvider {
     var pause = Duration.milliseconds(350)
     var locale = Locale.current
     var fetch: @Sendable (String) async -> Data? = { await fetchStockChart($0) }
-    var modes: [Mode] { [Mode(prefix: "stock ", title: "Stock", icon: .symbol(Self.icon), hint: "A ticker: AAPL, MGLU3.SA")] }
+    var modes: [Mode] {
+        [Mode(prefix: "stock ", title: String(localized: "Stock", comment: "Chip: a stock's price"), icon: .symbol(Self.icon),
+              hint: String(localized: "A ticker: AAPL, MGLU3.SA"))]
+    }
 
     func results(for query: String) async -> [LauncherResult] {
-        if let start = startRow(query, keyword: "stock", title: "Stock", hint: "Type a ticker: stock AAPL", symbol: Self.icon) {
+        if let start = startRow(query, keyword: "stock", title: "Stock", hint: String(localized: "Type a ticker: stock AAPL"), symbol: Self.icon) {
             return [start]
         }
         let typed = query.dropFirst(6).trimmingCharacters(in: .whitespaces)
         guard query.lowercased().hasPrefix("stock "), let symbol = stockSymbol(typed) else { return [] }
         // Under the files and apps it may also be, over the search row; Tab (or Enter) makes it the chip, which asks.
-        return [LauncherResult(id: "stock:offer", title: "Stock Price of \(symbol)", subtitle: "From Yahoo Finance",
-                               icon: .symbol(Self.icon), score: -5, actionTitle: "Look Up", action: {}, completion: "stock " + typed)]
+        return [LauncherResult(id: "stock:offer", title: String(localized: "Stock Price of \(symbol)"),
+                               subtitle: String(localized: "From Yahoo Finance"), icon: .symbol(Self.icon), score: -5,
+                               actionTitle: String(localized: "Look Up", comment: "Enter on a row that opens a chip"), action: {},
+                               completion: "stock " + typed)]
     }
 
     func modeResults(for query: String) async -> [LauncherResult] {
@@ -85,8 +90,9 @@ struct StockProvider: ResultProvider {
         guard let symbol = stockSymbol(typed) else { return [note("Type a ticker, like AAPL", "Yahoo Finance's symbol: MGLU3.SA, ^BVSP")] }
         if let cached = Self.cache.withLock({ $0[symbol] }), Date.now.timeIntervalSince(cached.fetched) < 60 { return [row(cached.quote)] }
         // The card's shape at once, with the ticker; the price fills it in.
-        return [LauncherResult(id: "stock", title: "Stock Price of \(symbol)", subtitle: "Asking Yahoo Finance…", icon: .symbol(Self.icon),
-                               score: 50, actionTitle: "", action: {}, answer: .stock(.loading(symbol)), later: { await quote(symbol) })]
+        return [LauncherResult(id: "stock", title: String(localized: "Stock Price of \(symbol)"),
+                               subtitle: String(localized: "Asking Yahoo Finance…"), icon: .symbol(Self.icon), score: 50, actionTitle: "", action: {},
+                               answer: .stock(.loading(symbol)), later: { await quote(symbol) })]
     }
 
     private func quote(_ symbol: String) async -> [LauncherResult] {
@@ -98,8 +104,9 @@ struct StockProvider: ResultProvider {
         return [row(quote)]
     }
 
-    private func note(_ title: String, _ subtitle: String) -> LauncherResult {
-        LauncherResult(id: "stock", title: title, subtitle: subtitle, icon: .symbol(Self.icon), score: 50, actionTitle: "", action: {})
+    private func note(_ title: LocalizedStringResource, _ subtitle: LocalizedStringResource) -> LauncherResult {
+        LauncherResult(id: "stock", title: String(localized: title), subtitle: String(localized: subtitle), icon: .symbol(Self.icon), score: 50,
+                       actionTitle: "", action: {})
     }
 
     private func row(_ quote: StockQuote) -> LauncherResult {
@@ -110,17 +117,20 @@ struct StockProvider: ResultProvider {
         let today = quote.previousClose.map(change)
         let url = URL(string: "https://finance.yahoo.com/quote/\(quote.symbol)")
         let up = quote.previousClose.map { quote.price >= $0 } ?? true
-        let facts: [(String, String?)] = [("Previous close", quote.previousClose.map(money)), ("7 days", quote.closes.first.map(change))]
+        let facts: [(String, String?)] = [(String(localized: "Previous close"), quote.previousClose.map(money)),
+                                          (String(localized: "7 days", comment: "A stock's change over 7 days"), quote.closes.first.map(change))]
         let card = StockCard(
             kicker: "\(quote.symbol) · \(quote.name)", price: money(quote.price),
-            change: today.map { "\(up ? "▲" : "▼") \($0.trimmingPrefix(/[+\-−]/)) today" } ?? "", up: up,
+            change: today.map { (up ? "▲ " : "▼ ") + String(localized: "\($0.trimmingPrefix(/[+\-−]/)) today") } ?? "", up: up,
             corner: [quote.time?.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(locale)), quote.exchange.isEmpty ? nil : quote.exchange]
                 .compactMap(\.self).joined(separator: " · "),
             closes: quote.closes, previousClose: quote.previousClose,
-            facts: facts.compactMap { label, value in value.map { (label, $0) } }, action: "Open in Yahoo Finance")
+            facts: facts.compactMap { label, value in value.map { (label, $0) } }, action: String(localized: "Open in Yahoo Finance"))
         return LauncherResult(
             id: "stock:\(quote.symbol)", title: money(quote.price),
-            subtitle: [quote.symbol, quote.name, today.map { "\($0) today" }].compactMap(\.self).joined(separator: " · "),
-            icon: .symbol(Self.icon), score: 50, actionTitle: "Open", action: { if let url { NSWorkspace.shared.open(url) } }, answer: .stock(card))
+            subtitle: [quote.symbol, quote.name, today.map { String(localized: "\($0) today", comment: "A stock's change today") }]
+                .compactMap(\.self).joined(separator: " · "),
+            icon: .symbol(Self.icon), score: 50, actionTitle: String(localized: "Open", comment: "Enter on a stock: opens it on Yahoo Finance"),
+            action: { if let url { NSWorkspace.shared.open(url) } }, answer: .stock(card))
     }
 }

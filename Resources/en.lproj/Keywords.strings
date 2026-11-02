@@ -1,0 +1,41 @@
+/* The words people type for each built-in keyword. Translate the right side: several words, separated by commas,
+   all work. The English ones always work too. */
+
+"colors" = "colors";
+"pick color" = "pick color";
+"qr" = "qr";
+"stock" = "stock";
+"weather" = "weather";
+"wiki" = "wiki";
+"define" = "define";
+"synonyms" = "synonyms";
+"spell" = "spell";
+"translate" = "translate";
+"emoji" = "emoji";
+"large" = "large";
+"speed" = "speed";
+"cpu" = "cpu";
+"memory" = "memory";
+"port" = "port";
+"clip" = "clip";
+"note" = "note";
+"add note" = "add note";
+"contact" = "contact";
+"codes" = "codes";
+"screenshots" = "screenshots";
+"downloads" = "downloads";
+"wifi password" = "wifi password";
+"meetings" = "meetings";
+"week" = "week";
+"month" = "month";
+"free" = "free";
+"add event" = "add event";
+"due" = "due";
+"add todo" = "add todo";
+"f" = "f";
+"tabs" = "tabs";
+"timer" = "timer";
+"pomo" = "pomo";
+"stopwatch" = "stopwatch";
+"copy text" = "copy text";
+"camera" = "camera";

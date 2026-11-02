@@ -4,7 +4,7 @@ import CryptoKit
 /// A text tool, found by name (`json`, `upper hello`). It works on the text typed after its name, or on
 /// the clipboard when there's none. Enter copies the result; the `paste` ones paste it.
 struct TextTool: Sendable {
-    let name: String, title: String, icon: String
+    let name: String, title: LocalizedStringResource, icon: String // the title in this Mac's language; its English is otherNames' key
     var pastes = false
 }
 
@@ -30,7 +30,7 @@ let textTools = [
     TextTool(name: "lower", title: "lowercase", icon: "textformat"),
     TextTool(name: "snake", title: "snake_case", icon: "textformat"),
     TextTool(name: "camel", title: "camelCase", icon: "textformat"),
-    TextTool(name: "count", title: "Count", icon: "textformat.123"),
+    TextTool(name: "count", title: LocalizedStringResource("Count", comment: "Text tool: counts words, characters and lines"), icon: "textformat.123"),
     TextTool(name: "json", title: "Format JSON", icon: "curlybraces"),
     TextTool(name: "uuid", title: "New UUID", icon: "number"),
     TextTool(name: "unix", title: "Unix Time ↔ Date", icon: "clock"),
@@ -100,9 +100,10 @@ func runTextTool(_ name: String, typed: String?, clip: Clip, now: Date = .now, t
     case "sha256": return SHA256.hash(data: Data(input.utf8)).map { String(format: "%02x", $0) }.joined()
     case "hex": return convertColor(input)
     case "count":
-        func count(_ n: Int, _ noun: String) -> String { "\(n) \(noun)\(n == 1 ? "" : "s")" }
-        return [count(input.split(whereSeparator: \.isWhitespace).count, "word"), count(input.count, "character"),
-                count(lines(input).count, "line")].joined(separator: " · ")
+        let (wordCount, characterCount, lineCount) = (input.split(whereSeparator: \.isWhitespace).count, input.count, lines(input).count)
+        return [wordCount == 1 ? String(localized: "1 word") : String(localized: "\(wordCount) words"),
+                characterCount == 1 ? String(localized: "1 character") : String(localized: "\(characterCount) characters"),
+                lineCount == 1 ? String(localized: "1 line") : String(localized: "\(lineCount) lines")].joined(separator: " · ")
     default: return nil
     }
 }
@@ -256,7 +257,8 @@ struct TextToolProvider: ResultProvider {
             let typed = rest.trimmingCharacters(in: .whitespaces)
             return (tool, typed.isEmpty ? nil : typed)
         }.first
-        let starts = named == nil && query.count >= 3 ? textTools.filter { $0.name.hasPrefix(query.lowercased()) || otherNameScore(query, $0.title) != nil } : []
+        let starts = named == nil && query.count >= 3
+            ? textTools.filter { $0.name.hasPrefix(query.lowercased()) || otherNameScore(query, $0.title.key) != nil } : []
         guard named != nil || !starts.isEmpty else { return [] }
         let clip = await Clip.current(withHTML: (named.map { [$0.0] } ?? starts).contains { $0.name == "paste markdown" })
         if let (tool, typed) = named { return row(tool, typed: typed, clip: clip, score: 50, hint: typed == nil).map { [$0] } ?? [] }
@@ -265,11 +267,11 @@ struct TextToolProvider: ResultProvider {
 
     /// nil when the tool can't use its input; with `hint`, a row saying how to give it some instead.
     private func row(_ tool: TextTool, typed: String?, clip: Clip, score: Double, hint: Bool) -> LauncherResult? {
-        let id = "builtin:\(tool.name)", icon = LauncherResult.Icon.symbol(tool.icon)
+        let id = "builtin:\(tool.name)", icon = LauncherResult.Icon.symbol(tool.icon), title = String(localized: tool.title)
         guard let output = runTextTool(tool.name, typed: typed, clip: clip) else {
             guard hint else { return nil }
-            let how = tool.pastes ? "Copy some text first" : "Type text after “\(tool.name)”, or copy it first"
-            return LauncherResult(id: id, title: tool.title, subtitle: how, icon: icon, score: score,
+            let how = tool.pastes ? String(localized: "Copy some text first") : String(localized: "Type text after “\(tool.name)”, or copy it first")
+            return LauncherResult(id: id, title: title, subtitle: how, icon: icon, score: score,
                                   actionTitle: "", action: {})
         }
         let madeUp = ["uuid", "password"].contains(tool.name) || tool.name.hasPrefix("fake ") // new each time: Tab makes another
@@ -278,12 +280,14 @@ struct TextToolProvider: ResultProvider {
         // A long result shows in the preview pane, so the row names the tool ("paste plain" and "paste markdown"
         // looked alike, cut short beside the pane). A short one is the row, with the tool's name at the right edge;
         // selected, the paste tools say which paste Enter does there.
-        return LauncherResult(id: id, title: long ? tool.title : oneLine(output), subtitle: fromClipboard ? "from the clipboard" : "",
-                              accessory: long ? "" : tool.title, icon: icon, score: score,
-                              actionTitle: tool.pastes ? (long ? "Paste" : tool.title) : "Copy", action: {
+        return LauncherResult(id: id, title: long ? title : oneLine(output), subtitle: fromClipboard ? String(localized: "from the clipboard") : "",
+                              accessory: long ? "" : title, icon: icon, score: score,
+                              actionTitle: tool.pastes ? (long ? String(localized: "Paste", comment: "Enter on a paste tool's result") : title)
+                                  : String(localized: "Copy", comment: "Enter on a text tool's result"), action: {
             copyToClipboard(output)
-            if tool.pastes, hasAccessibility("paste") { sendPaste() }
-        }, more: madeUp ? (label: "Another", fill: tool.name + (typed.map { " " + $0 } ?? "")) : nil, preview: long ? output : nil)
+            if tool.pastes, hasAccessibility(String(localized: "paste", comment: "Ends “Allow Copperlight in Accessibility to …”")) { sendPaste() }
+        }, more: madeUp ? (label: String(localized: "Another", comment: "Tab on made-up data: makes another"),
+                           fill: tool.name + (typed.map { " " + $0 } ?? "")) : nil, preview: long ? output : nil)
     }
 }
 

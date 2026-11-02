@@ -85,28 +85,32 @@ func dateMath(_ query: String, now: Date = .now, calendar: Calendar = .current, 
     let today = calendar.startOfDay(for: now)
     let style = Date.FormatStyle(date: .complete, time: .omitted, locale: locale, calendar: calendar, timeZone: calendar.timeZone)
     let daysAway = { (date: Date) in calendar.dateComponents([.day], from: today, to: calendar.startOfDay(for: date)).day! }
-    let count = { (n: Int, noun: String) in "\(n.formatted(.number.locale(locale))) \(noun)\(n == 1 ? "" : "s")" }
+    let number = { (n: Int) in n.formatted(.number.locale(locale)) }
+    let dayCount = { (n: Int) in n == 1 ? String(localized: "1 day") : String(localized: "\(number(n)) days") }
+    let weekCount = { (n: Int) in n == 1 ? String(localized: "1 week") : String(localized: "\(number(n)) weeks") }
     let read = { (text: Substring, past: Bool) in readDate(String(text), now: now, calendar: calendar, past: past)?.date }
 
     func dateRow(_ date: Date, score: Double = 10) -> DateAnswer {
         let days = daysAway(date)
         let when = switch days {
-        case 0: "Today"
-        case 1: "Tomorrow"
-        case -1: "Yesterday"
-        case 2...: "In \(count(days, "day"))"
-        default: "\(count(-days, "day")) ago"
+        case 0: String(localized: "Today", comment: "How far a date is from today")
+        case 1: String(localized: "Tomorrow", comment: "How far a date is from today")
+        case -1: String(localized: "Yesterday", comment: "How far a date is from today")
+        case 2...: String(localized: "In \(number(days)) days")
+        default: String(localized: "\(number(-days)) days ago")
         }
-        return DateAnswer(title: date.formatted(style), subtitle: "\(when) · week \(calendar.component(.weekOfYear, from: date))", score: score)
+        let week = String(localized: "week \(calendar.component(.weekOfYear, from: date))", comment: "The week of the year a date is in")
+        return DateAnswer(title: date.formatted(style), subtitle: "\(when) · \(week)", score: score)
     }
 
     // How long until, or since
     if let match = text.wholeMatch(of: #/(days|weeks) (until|till|til|to|before|since|from|after) (.+)/#) {
         guard let date = read(match.3, ["since", "from", "after"].contains(match.2)) else { return nil }
         let days = daysAway(date), total = abs(days)
-        let title = match.1 == "days" || total < 7 ? count(total, "day")
-            : [count(total / 7, "week"), total % 7 == 0 ? nil : count(total % 7, "day")].compactMap(\.self).joined(separator: ", ")
-        return DateAnswer(title: title, subtitle: "\(days < 0 ? "Since" : "Until") \(date.formatted(style))")
+        let title = match.1 == "days" || total < 7 ? dayCount(total)
+            : [weekCount(total / 7), total % 7 == 0 ? nil : dayCount(total % 7)].compactMap(\.self).joined(separator: ", ")
+        let formatted = date.formatted(style)
+        return DateAnswer(title: title, subtitle: days < 0 ? String(localized: "Since \(formatted)") : String(localized: "Until \(formatted)"))
     }
     // That week's weekday
     if let match = text.wholeMatch(of: #/([a-z]+) in (a|an|\d{1,4}) weeks?/#), let weekday = named(match.1, in: weekdayNames),
@@ -136,7 +140,10 @@ func dateMath(_ query: String, now: Date = .now, calendar: Calendar = .current, 
         let days = daysAway(time)
         return DateAnswer(title: time.formatted(Date.FormatStyle(date: .omitted, time: .shortened, locale: locale, calendar: calendar,
                                                                  timeZone: calendar.timeZone)),
-                          subtitle: days == 0 ? "Today" : days == 1 ? "Tomorrow" : days == -1 ? "Yesterday" : time.formatted(style), isTime: true)
+                          subtitle: days == 0 ? String(localized: "Today", comment: "How far a date is from today")
+                              : days == 1 ? String(localized: "Tomorrow", comment: "How far a date is from today")
+                              : days == -1 ? String(localized: "Yesterday", comment: "How far a date is from today") : time.formatted(style),
+                          isTime: true)
     }
     // A date alone. Just a weekday's name ranks low: it may be an app's; an ISO date ranks over its subtraction.
     guard let (date, plainWeekday) = readDate(text, now: now, calendar: calendar) else { return nil }
@@ -168,10 +175,10 @@ func dateSuggestions(_ query: String, now: Date = .now, calendar: Calendar = .cu
         }
     }
     guard text.count >= 3 else { return [] }
-    let questions = [("days until ", "Days Until a Date"), ("days since ", "Days Since a Date"),
-                     ("weeks until ", "Weeks Until a Date"), ("weeks since ", "Weeks Since a Date")]
+    let questions = [("days until ", String(localized: "Days Until a Date")), ("days since ", String(localized: "Days Since a Date")),
+                     ("weeks until ", String(localized: "Weeks Until a Date")), ("weeks since ", String(localized: "Weeks Since a Date"))]
     return questions.filter { $0.0.hasPrefix(text) }.map { start, title in
-        DateAnswer(title: title, subtitle: "Type a date: dec 25, friday, christmas", score: 1, completion: start)
+        DateAnswer(title: title, subtitle: String(localized: "Type a date: dec 25, friday, christmas"), score: 1, completion: start)
     }
 }
 
@@ -181,7 +188,9 @@ struct DateMathProvider: ResultProvider {
         return answers.map { answer in
             LauncherResult(id: "date:\(answer.accessory)\(answer.completion ?? "")", title: answer.title, subtitle: answer.subtitle,
                            accessory: answer.accessory, icon: .symbol(answer.isTime ? "clock" : "calendar"), score: answer.score,
-                           actionTitle: answer.completion == nil ? "Copy" : "Start", action: { copyToClipboard(answer.title) },
+                           actionTitle: answer.completion == nil ? String(localized: "Copy", comment: "Enter on a date answer")
+                               : String(localized: "Start", comment: "Enter on a date question: puts it in the field"),
+                           action: { copyToClipboard(answer.title) },
                            completion: answer.completion)
         }
     }

@@ -64,25 +64,25 @@ func parsePlace(_ data: Data) -> Place? {
 /// A WMO weather code (Open-Meteo's) in words, and its symbol, by day or by night.
 func weatherConditions(_ code: Int, day: Bool) -> (text: String, symbol: String) {
     switch code {
-    case 0: ("Clear", day ? "sun.max.fill" : "moon.stars.fill")
-    case 1: ("Mostly clear", day ? "sun.max.fill" : "moon.fill")
-    case 2: ("Partly cloudy", day ? "cloud.sun.fill" : "cloud.moon.fill")
-    case 3: ("Cloudy", "cloud.fill")
-    case 45, 48: ("Fog", "cloud.fog.fill")
-    case 51, 53, 55: ("Drizzle", "cloud.drizzle.fill")
-    case 56, 57, 66, 67: ("Freezing rain", "cloud.sleet.fill")
-    case 61: ("Light rain", "cloud.rain.fill")
-    case 63: ("Rain", "cloud.rain.fill")
-    case 65: ("Heavy rain", "cloud.heavyrain.fill")
-    case 71: ("Light snow", "cloud.snow.fill")
-    case 73, 77: ("Snow", "cloud.snow.fill")
-    case 75: ("Heavy snow", "cloud.snow.fill")
-    case 80, 81: ("Showers", day ? "cloud.sun.rain.fill" : "cloud.moon.rain.fill")
-    case 82: ("Heavy showers", "cloud.heavyrain.fill")
-    case 85, 86: ("Snow showers", "cloud.snow.fill")
-    case 95: ("Thunderstorm", "cloud.bolt.rain.fill")
-    case 96, 99: ("Thunderstorm with hail", "cloud.bolt.rain.fill")
-    default: ("Weather", "cloud.fill")
+    case 0: (String(localized: "Clear", comment: "Weather conditions"), day ? "sun.max.fill" : "moon.stars.fill")
+    case 1: (String(localized: "Mostly clear"), day ? "sun.max.fill" : "moon.fill")
+    case 2: (String(localized: "Partly cloudy"), day ? "cloud.sun.fill" : "cloud.moon.fill")
+    case 3: (String(localized: "Cloudy", comment: "Weather conditions"), "cloud.fill")
+    case 45, 48: (String(localized: "Fog", comment: "Weather conditions"), "cloud.fog.fill")
+    case 51, 53, 55: (String(localized: "Drizzle", comment: "Weather conditions"), "cloud.drizzle.fill")
+    case 56, 57, 66, 67: (String(localized: "Freezing rain"), "cloud.sleet.fill")
+    case 61: (String(localized: "Light rain"), "cloud.rain.fill")
+    case 63: (String(localized: "Rain", comment: "Weather conditions"), "cloud.rain.fill")
+    case 65: (String(localized: "Heavy rain"), "cloud.heavyrain.fill")
+    case 71: (String(localized: "Light snow"), "cloud.snow.fill")
+    case 73, 77: (String(localized: "Snow", comment: "Weather conditions"), "cloud.snow.fill")
+    case 75: (String(localized: "Heavy snow"), "cloud.snow.fill")
+    case 80, 81: (String(localized: "Showers", comment: "Weather conditions"), day ? "cloud.sun.rain.fill" : "cloud.moon.rain.fill")
+    case 82: (String(localized: "Heavy showers"), "cloud.heavyrain.fill")
+    case 85, 86: (String(localized: "Snow showers"), "cloud.snow.fill")
+    case 95: (String(localized: "Thunderstorm"), "cloud.bolt.rain.fill")
+    case 96, 99: (String(localized: "Thunderstorm with hail"), "cloud.bolt.rain.fill")
+    default: (String(localized: "Weather", comment: "Weather conditions it has no words for"), "cloud.fill")
     }
 }
 
@@ -101,22 +101,26 @@ func weatherCard(_ forecast: Forecast, place: String, updated: Date, fahrenheit:
     let degrees = { (celsius: Double) in fahrenheit ? celsius * 9 / 5 + 32 : celsius }
     let shown = { (celsius: Double) in "\(Int(degrees(celsius).rounded()))°" }
     let now = forecast.now, (conditions, symbol) = weatherConditions(now.code, day: now.isDay)
-    let wind = fahrenheit ? "\(Int((now.wind / 1.609344).rounded())) mph" : "\(Int(now.wind.rounded())) km/h"
-    let details = [forecast.days.first.map { "H \(shown($0.high)) · L \(shown($0.low))" }, "Feels like \(shown(now.feelsLike))", "Wind \(wind)"]
+    let wind = fahrenheit ? String(localized: "\(Int((now.wind / 1.609344).rounded())) mph")
+        : String(localized: "\(Int(now.wind.rounded())) km/h")
+    let details = [forecast.days.first.map { String(localized: "H \(shown($0.high)) · L \(shown($0.low))", comment: "Today's high and low") },
+                   String(localized: "Feels like \(shown(now.feelsLike))"), String(localized: "Wind \(wind)")]
         .compactMap(\.self).joined(separator: " · ")
     let clock = Date.FormatStyle(timeZone: .gmt).hour().minute(), weekday = Date.FormatStyle(timeZone: .gmt).weekday(.abbreviated)
     let start = forecast.hours.firstIndex { $0.time == now.time.prefix(13) + ":00" } ?? forecast.hours.firstIndex { $0.time > now.time } ?? 0
-    let hours = [WeatherCard.Hour(label: "Now", symbol: symbol, temperature: shown(now.temperature))]
+    let hours = [WeatherCard.Hour(label: String(localized: "Now", comment: "The weather's first hour"), symbol: symbol,
+                                  temperature: shown(now.temperature))]
         + forecast.hours.dropFirst(start + 1).prefix(7).map { hour in
             WeatherCard.Hour(label: placeTime(hour.time)?.formatted(clock) ?? hour.time,
                              symbol: weatherConditions(hour.code, day: hour.isDay).symbol, temperature: shown(hour.temperature))
         }
     let days = forecast.days.prefix(5).enumerated().map { index, day in
-        WeatherCard.Day(label: index == 0 ? "Today" : placeTime(day.date)?.formatted(weekday) ?? day.date,
+        WeatherCard.Day(label: index == 0 ? String(localized: "Today", comment: "A day: today") : placeTime(day.date)?.formatted(weekday) ?? day.date,
                         symbol: weatherConditions(day.code, day: true).symbol, low: degrees(day.low), high: degrees(day.high))
     }
+    let time = updated.formatted(date: .omitted, time: .shortened)
     return WeatherCard(place: place, temperature: shown(now.temperature), symbol: symbol, conditions: conditions, details: details,
-                       hours: hours, days: days, updated: "Open-Meteo · updated \(updated.formatted(date: .omitted, time: .shortened))")
+                       hours: hours, days: days, updated: String(localized: "Open-Meteo · updated \(time)"))
 }
 
 /// Whether Location Services lets Copperlight know where this Mac is.
@@ -169,7 +173,8 @@ enum LocationStatus: Sendable { case unasked, allowed, refused }
         guard let coordinate = await shared.coordinate() else { return nil }
         let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
         let name = try? await CLGeocoder().reverseGeocodeLocation(location).first?.locality
-        return Place(name: name ?? "Where you are", latitude: coordinate.latitude, longitude: coordinate.longitude)
+        return Place(name: name ?? String(localized: "Where you are", comment: "The weather's place when its town has no name"),
+                     latitude: coordinate.latitude, longitude: coordinate.longitude)
     }
 }
 
@@ -206,7 +211,10 @@ final class WeatherProvider: ResultProvider {
     private let locate: @Sendable () async -> Place?
     private let fetch: @Sendable (URL) async -> Data?
     private let fahrenheit: Mutex<Bool> // [weather] units, or what the Mac uses
-    var modes: [Mode] { [Mode(prefix: "weather ", title: "Weather", icon: .symbol(Self.icon), hint: "A city, or nothing for where you are")] }
+    var modes: [Mode] {
+        [Mode(prefix: "weather ", title: String(localized: "Weather", comment: "Chip: the weather"), icon: .symbol(Self.icon),
+              hint: String(localized: "A city, or nothing for where you are"))]
+    }
 
     init(pause: Duration = .milliseconds(350), city: String = "", status: @escaping @Sendable () -> LocationStatus = { Locator.status },
          locate: @escaping @Sendable () async -> Place? = { await Locator.here() },
@@ -228,15 +236,18 @@ final class WeatherProvider: ResultProvider {
     }
 
     func results(for query: String) async -> [LauncherResult] {
-        startRow(query, keyword: "weather", title: "Weather", hint: "Where you are, or a city: weather lisbon", symbol: Self.icon).map { [$0] } ?? []
+        startRow(query, keyword: "weather", title: "Weather", hint: String(localized: "Where you are, or a city: weather lisbon"), symbol: Self.icon)
+            .map { [$0] } ?? []
     }
 
     func modeResults(for query: String) async -> [LauncherResult] {
         let typed = query.dropFirst(8).trimmingCharacters(in: .whitespaces), city = self.city.withLock { $0 }
         let here = typed.isEmpty ? status() : .refused
         if typed.isEmpty, city.isEmpty, here == .unasked {
-            return [LauncherResult(id: "weather", title: "Weather Where You Are", subtitle: "Asks for your location, once · or type a city",
-                                   icon: .symbol(Self.icon), score: 50, actionTitle: "Allow", action: { Locator.shared.ask() })]
+            return [LauncherResult(id: "weather", title: String(localized: "Weather Where You Are"),
+                                   subtitle: String(localized: "Asks for your location, once · or type a city"), icon: .symbol(Self.icon), score: 50,
+                                   actionTitle: String(localized: "Allow", comment: "Enter asks macOS for the permission"),
+                                   action: { Locator.shared.ask() })]
         }
         if typed.isEmpty, city.isEmpty, here == .refused {
             return [note("Type a city, or set yours in Settings", "Location Services is off for Copperlight")]
@@ -246,9 +257,10 @@ final class WeatherProvider: ResultProvider {
             return [row(cached.forecast, place: cached.place, updated: cached.fetched)]
         }
         // The card's shape at once, with the place; the forecast fills it in.
-        let place = key.isEmpty ? "Here" : (typed.isEmpty ? city : typed).capitalized
-        return [LauncherResult(id: "weather", title: "Weather in \(place)", subtitle: "Asking Open-Meteo…", icon: .symbol(Self.icon),
-                               score: 50, actionTitle: "", action: {}, answer: .weather(.loading(place)),
+        let place = key.isEmpty ? String(localized: "Here", comment: "The weather's place: where this Mac is")
+            : (typed.isEmpty ? city : typed).capitalized
+        return [LauncherResult(id: "weather", title: String(localized: "Weather in \(place)"), subtitle: String(localized: "Asking Open-Meteo…"),
+                               icon: .symbol(Self.icon), score: 50, actionTitle: "", action: {}, answer: .weather(.loading(place)),
                                later: { await self.forecast(key: key, typed: typed, city: city) })]
     }
 
@@ -272,15 +284,17 @@ final class WeatherProvider: ResultProvider {
         return [row(forecast, place: place.name, updated: .now)]
     }
 
-    private func note(_ title: String, _ subtitle: String) -> LauncherResult {
-        LauncherResult(id: "weather", title: title, subtitle: subtitle, icon: .symbol(Self.icon), score: 50, actionTitle: "", action: {})
+    private func note(_ title: LocalizedStringResource, _ subtitle: LocalizedStringResource) -> LauncherResult {
+        LauncherResult(id: "weather", title: String(localized: title), subtitle: String(localized: subtitle), icon: .symbol(Self.icon), score: 50,
+                       actionTitle: "", action: {})
     }
 
     private func row(_ forecast: Forecast, place: String, updated: Date) -> LauncherResult {
         let card = weatherCard(forecast, place: place, updated: updated, fahrenheit: fahrenheit.withLock { $0 })
-        let today = card.days.first.map { " · H \(Int($0.high.rounded()))° L \(Int($0.low.rounded()))°" } ?? ""
+        let today = card.days.first.map { " · " + String(localized: "H \(Int($0.high.rounded()))° L \(Int($0.low.rounded()))°") } ?? ""
         return LauncherResult(id: "weather:\(place)", title: "\(card.temperature) · \(card.conditions)", subtitle: place + today,
-                              icon: .symbol(Self.icon), score: 50, actionTitle: "Open", action: {
+                              icon: .symbol(Self.icon), score: 50,
+                              actionTitle: String(localized: "Open", comment: "Enter on the weather: opens the Weather app"), action: {
             NSWorkspace.shared.openApplication(at: URL(filePath: "/System/Applications/Weather.app"), configuration: .init())
         }, answer: .weather(card))
     }

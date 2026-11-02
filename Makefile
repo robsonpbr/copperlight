@@ -20,7 +20,7 @@ RELEASE_IDENTITY ?= Copperlight
 # Always this name: copperlight.app links to releases/latest/download/Copperlight.zip. The version lives in the tag.
 ZIP = build/Copperlight.zip
 
-.PHONY: project build run install release test clean
+.PHONY: project build run install release test clean strings language translations
 
 # XcodeGen lists source files explicitly, so regenerate every time to pick up added/removed files.
 project:
@@ -59,8 +59,25 @@ release: build
 	ditto -c -k --keepParent $(APP) $(ZIP)
 	@shasum -a 256 $(ZIP)
 
+# In English, whatever this Mac's language: the tests check English text.
 test: project
-	$(XCODEBUILD) test
+	$(XCODEBUILD) test -testLanguage en
+
+# The English list of every piece of text (Resources/en.lproj/Localizable.strings), from the compiler: a build of its
+# own, so text from deleted files doesn't linger. CI fails when the committed list is out of date.
+strings: project
+	rm -rf build/strings
+	xcodebuild -quiet -project Copperlight.xcodeproj -scheme Copperlight -configuration Debug -derivedDataPath build/strings \
+		-destination "$(DESTINATION)" ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY="-" SWIFT_EMIT_LOC_STRINGS=YES build
+	xcrun swift Tools/Strings.swift english build/strings Resources/en.lproj/Localizable.strings
+
+# A new language's folder, ready to translate: make language CODE=pt-BR
+language:
+	xcrun swift Tools/Strings.swift new $(CODE)
+
+# How much of each language is translated, and what's missing or no longer in English.
+translations:
+	xcrun swift Tools/Strings.swift report
 
 clean:
 	rm -rf build Copperlight.xcodeproj

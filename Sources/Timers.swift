@@ -99,7 +99,8 @@ func timerLength(_ seconds: Int) -> String {
 
     private func show() {
         if item == nil, let running {
-            item = countdownItem(symbol: "hourglass", name: "Timer", stop: running.label.isEmpty ? "Stop Timer" : "Stop Timer: \(running.label)",
+            item = countdownItem(symbol: "hourglass", name: String(localized: "Timer"),
+                                 stop: running.label.isEmpty ? String(localized: "Stop Timer") : String(localized: "Stop Timer: \(running.label)"),
                                  target: self, action: #selector(stopFromMenu))
         }
         if ticker == nil { ticker = everySecond { [weak self] in self?.tick() } }
@@ -114,7 +115,8 @@ func timerLength(_ seconds: Int) -> String {
             return
         }
         stop()
-        notify("Timer done", ([running.label] + [timerLength(running.seconds)]).filter { !$0.isEmpty }.joined(separator: " · "), sound: true)
+        notify(String(localized: "Timer done"), ([running.label] + [timerLength(running.seconds)]).filter { !$0.isEmpty }.joined(separator: " · "),
+               sound: true)
     }
 
     @objc private func stopFromMenu() { stop() }
@@ -123,19 +125,26 @@ func timerLength(_ seconds: Int) -> String {
 /// `timer 10 min tea`, `timer stop` in the launcher. `tim` offers the Timer chip (Tab), and stopping the one running.
 struct TimerProvider: ResultProvider {
     let clock: Countdown
-    var modes: [Mode] { [Mode(prefix: "timer ", title: "Timer", icon: .symbol("hourglass"), hint: "10 min tea, 90s, 1h 30m")] }
+    /// What follows `timer `, the chip's hint.
+    private static let example = String(localized: "10 min tea, 90s, 1h 30m",
+                                        comment: "What to type after timer: a length (h, m, s as they are), then what it's for")
+    var modes: [Mode] { [Mode(prefix: "timer ", title: String(localized: "Timer"), icon: .symbol("hourglass"), hint: Self.example)] }
 
     func results(for query: String) async -> [LauncherResult] {
         let clock = clock // before the first closure that uses it: Xcode 26 rejects a capture of a later declaration
         let running = await MainActor.run { clock.running }
         let left = running.map { countdown(remaining(until: $0.deadline)) }
+        let (startTitle, stopTitle) = (String(localized: "Start", comment: "Enter on a timer, pomodoro or stopwatch row: starts it"),
+                                       String(localized: "Stop", comment: "Enter on a running timer, pomodoro or stopwatch: stops it"))
         // Scores above apps (they top out at 1.8), like the pomodoro's: typing "timer" means this.
         let stop = running.map { running in
-            LauncherResult(id: "timer:stop", title: "Stop Timer", subtitle: [running.label, "ends \(running.deadline.formatted(date: .omitted, time: .shortened))"]
-                .filter { !$0.isEmpty }.joined(separator: " · "), icon: .symbol("stop.fill"), score: 51, actionTitle: "Stop", action: { clock.stop() },
+            LauncherResult(id: "timer:stop", title: String(localized: "Stop Timer"),
+                           subtitle: [running.label, String(localized: "ends \(running.deadline.formatted(date: .omitted, time: .shortened))")]
+                .filter { !$0.isEmpty }.joined(separator: " · "), icon: .symbol("stop.fill"), score: 51, actionTitle: stopTitle, action: { clock.stop() },
                 ticking: .down(to: running.deadline))
         }
-        if let start = startRow(query, keyword: "timer", title: "Timer", hint: "Type a length: timer 10 min tea", symbol: "hourglass") {
+        let hint = String(localized: "Type a length: timer 10 min tea", comment: "What to type: timer and lengths (h, m, s) as they are")
+        if let start = startRow(query, keyword: "timer", title: "Timer", hint: hint, symbol: "hourglass") {
             return [start] + (stop.map { [$0] } ?? [])
         }
         guard query.lowercased().hasPrefix("timer ") else { return [] }
@@ -145,22 +154,23 @@ struct TimerProvider: ResultProvider {
         case .start(let seconds, let label):
             let length = timerLength(seconds)
             return [LauncherResult(
-                id: "timer:start", title: "Start Timer", subtitle: ([length] + (label.isEmpty ? [] : [label])).joined(separator: " · "),
-                icon: .symbol("hourglass"), score: 50, actionTitle: "Start", action: { clock.start(seconds: seconds, label: label) },
-                confirm: left.map { "Replace the running timer (\($0) left) with \(length)?" })]
+                id: "timer:start", title: String(localized: "Start Timer"), subtitle: ([length] + (label.isEmpty ? [] : [label])).joined(separator: " · "),
+                icon: .symbol("hourglass"), score: 50, actionTitle: startTitle, action: { clock.start(seconds: seconds, label: label) },
+                confirm: left.map { String(localized: "Replace the running timer (\($0) left) with \(length)?") })]
         case .until(let hour, let minute, let label):
             let end = nextTime(hour: hour, minute: minute)
             let seconds = Int((end.timeIntervalSinceNow / 60).rounded(.up)) * 60
             let at = end.formatted(date: .omitted, time: .shortened)
             return [LauncherResult(
-                id: "timer:start", title: "Start Timer", subtitle: (["Until \(at)", timerLength(seconds)] + (label.isEmpty ? [] : [label])).joined(separator: " · "),
-                icon: .symbol("hourglass"), score: 50, actionTitle: "Start", action: { clock.start(seconds: seconds, label: label, deadline: end) },
-                confirm: left.map { "Replace the running timer (\($0) left) with one until \(at)?" })]
+                id: "timer:start", title: String(localized: "Start Timer"),
+                subtitle: ([String(localized: "Until \(at)"), timerLength(seconds)] + (label.isEmpty ? [] : [label])).joined(separator: " · "),
+                icon: .symbol("hourglass"), score: 50, actionTitle: startTitle, action: { clock.start(seconds: seconds, label: label, deadline: end) },
+                confirm: left.map { String(localized: "Replace the running timer (\($0) left) with one until \(at)?") })]
         case .stop:
-            return [stop ?? LauncherResult(id: "timer:stop", title: "No timer running", icon: .symbol("hourglass"), score: 51,
+            return [stop ?? LauncherResult(id: "timer:stop", title: String(localized: "No timer running"), icon: .symbol("hourglass"), score: 51,
                                            actionTitle: "", action: {})]
         case nil:
-            return [LauncherResult(id: "timer:start", title: "Type a length, like 10 min", subtitle: "timer 10 min tea, 90s, 1h 30m",
+            return [LauncherResult(id: "timer:start", title: String(localized: "Type a length, like 10 min"), subtitle: "timer " + Self.example,
                                    icon: .symbol("hourglass"), score: 50, actionTitle: "", action: {})]
         }
     }
@@ -203,11 +213,14 @@ struct TimerProvider: ResultProvider {
 
     /// Stops it and says the time.
     func stopAndSay() {
-        if let time = stop() { notify("Stopwatch", elapsedTime(time)) }
+        if let time = stop() { notify(String(localized: "Stopwatch"), elapsedTime(time)) }
     }
 
     private func show() {
-        if item == nil { item = countdownItem(symbol: "stopwatch", name: "Stopwatch", stop: "Stop Stopwatch", target: self, action: #selector(stopFromMenu)) }
+        if item == nil {
+            item = countdownItem(symbol: "stopwatch", name: String(localized: "Stopwatch"), stop: String(localized: "Stop Stopwatch"), target: self,
+                                 action: #selector(stopFromMenu))
+        }
         if ticker == nil { ticker = everySecond { [weak self] in self?.tick() } }
         tick()
     }
@@ -228,11 +241,14 @@ struct StopwatchProvider: ResultProvider {
         guard lower.count >= 5, "stopwatch".hasPrefix(lower) else { return [] }
         let watch = watch
         guard let started = await MainActor.run(body: { watch.started }) else {
-            return [LauncherResult(id: "stopwatch:start", title: "Start Stopwatch", subtitle: "Counts up in the menu bar",
-                                   icon: .symbol("stopwatch"), score: 50, actionTitle: "Start", action: { watch.start() })]
+            let start = String(localized: "Start", comment: "Enter on a timer, pomodoro or stopwatch row: starts it")
+            return [LauncherResult(id: "stopwatch:start", title: String(localized: "Start Stopwatch"), subtitle: String(localized: "Counts up in the menu bar"),
+                                   icon: .symbol("stopwatch"), score: 50, actionTitle: start, action: { watch.start() })]
         }
-        return [LauncherResult(id: "stopwatch:stop", title: "Stop Stopwatch", subtitle: "Started \(started.formatted(date: .omitted, time: .shortened))",
-                               icon: .symbol("stop.fill"), score: 51, actionTitle: "Stop", action: { watch.stopAndSay() }, ticking: .up(from: started))]
+        let stop = String(localized: "Stop", comment: "Enter on a running timer, pomodoro or stopwatch: stops it")
+        return [LauncherResult(id: "stopwatch:stop", title: String(localized: "Stop Stopwatch"),
+                               subtitle: String(localized: "Started \(started.formatted(date: .omitted, time: .shortened))"),
+                               icon: .symbol("stop.fill"), score: 51, actionTitle: stop, action: { watch.stopAndSay() }, ticking: .up(from: started))]
     }
 }
 
@@ -242,29 +258,33 @@ struct StopwatchProvider: ResultProvider {
 @MainActor func runningClocks(pomodoro: Pomodoro, timer: Countdown, stopwatch: Stopwatch,
                               isOn: (Feature) -> Bool = { $0.isOn }) -> [LauncherResult] {
     let at = { (date: Date) in date.formatted(date: .omitted, time: .shortened) }
+    let stop = String(localized: "Stop", comment: "Enter on a running timer, pomodoro or stopwatch: stops it")
     var rows: [LauncherResult] = []
     if isOn(.pomodoro), let running = pomodoro.running {
         rows.append(LauncherResult(
-            id: "clock:pomodoro", title: running.title, subtitle: "\(running.minutes) minutes · ends \(at(running.deadline))",
-            icon: .symbol(running.isBreak == true ? "cup.and.saucer" : "timer"), score: 99.997, actionTitle: "Stop",
-            action: { pomodoro.stop() }, confirm: "Stop the \(running.title.lowercased())?", ticking: .down(to: running.deadline)))
+            id: "clock:pomodoro", title: running.title, subtitle: String(localized: "\(running.minutes) minutes · ends \(at(running.deadline))"),
+            icon: .symbol(running.isBreak == true ? "cup.and.saucer" : "timer"), score: 99.997, actionTitle: stop, action: { pomodoro.stop() },
+            confirm: running.isBreak == true ? String(localized: "Stop the break?") : String(localized: "Stop the pomodoro?"),
+            ticking: .down(to: running.deadline)))
     }
     if isOn(.timers), let running = timer.running {
         rows.append(LauncherResult(
-            id: "clock:timer", title: running.label.isEmpty ? "Timer" : running.label,
-            subtitle: "\(timerLength(running.seconds)) · ends \(at(running.deadline))", icon: .symbol("hourglass"), score: 99.996,
-            actionTitle: "Stop", action: { timer.stop() }, confirm: "Stop the timer?", ticking: .down(to: running.deadline)))
+            id: "clock:timer", title: running.label.isEmpty ? String(localized: "Timer") : running.label,
+            subtitle: String(localized: "\(timerLength(running.seconds)) · ends \(at(running.deadline))"), icon: .symbol("hourglass"), score: 99.996,
+            actionTitle: stop, action: { timer.stop() }, confirm: String(localized: "Stop the timer?"), ticking: .down(to: running.deadline)))
     }
     if isOn(.stopwatch), let started = stopwatch.started {
         rows.append(LauncherResult(
-            id: "clock:stopwatch", title: "Stopwatch", subtitle: "Started \(at(started))", icon: .symbol("stopwatch"), score: 99.995,
-            actionTitle: "Stop", action: { stopwatch.stopAndSay() }, confirm: "Stop the stopwatch?", ticking: .up(from: started)))
+            id: "clock:stopwatch", title: String(localized: "Stopwatch"), subtitle: String(localized: "Started \(at(started))"),
+            icon: .symbol("stopwatch"), score: 99.995, actionTitle: stop, action: { stopwatch.stopAndSay() },
+            confirm: String(localized: "Stop the stopwatch?"), ticking: .up(from: started)))
     }
     if isOn(.keepAwake), KeepAwake.isOn { // `:awake`: counting down when it's for a while
         let until = KeepAwake.shared.until
         rows.append(LauncherResult(
-            id: "clock:awake", title: "Keeping Awake", subtitle: until.map { "Until \(at($0))" } ?? "Until you stop it", icon: .symbol("sun.max"),
-            score: 99.994, actionTitle: "Stop", action: { KeepAwake.shared.stop() }, confirm: "Stop keeping the Mac awake?",
+            id: "clock:awake", title: String(localized: "Keeping Awake"),
+            subtitle: until.map { String(localized: "Until \(at($0))") } ?? String(localized: "Until you stop it"), icon: .symbol("sun.max"),
+            score: 99.994, actionTitle: stop, action: { KeepAwake.shared.stop() }, confirm: String(localized: "Stop keeping the Mac awake?"),
             ticking: until.map { .down(to: $0) }))
     }
     return rows

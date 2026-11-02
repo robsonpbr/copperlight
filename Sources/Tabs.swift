@@ -119,7 +119,8 @@ actor BrowserTabsProvider: ResultProvider {
     }
 
     nonisolated var modes: [Mode] {
-        [Mode(prefix: Self.prefix, title: "Tabs", icon: .symbol("square.on.square"), hint: "A word in its title or address, or nothing for all")]
+        [Mode(prefix: Self.prefix, title: String(localized: "Tabs", comment: "Chip: the browsers' open tabs"), icon: .symbol("square.on.square"),
+              hint: String(localized: "A word in its title or address, or nothing for all"))]
     }
 
     /// Reads the tabs again: each time the launcher opens, a moment's work in the background that the first search waits for.
@@ -149,12 +150,13 @@ actor BrowserTabsProvider: ResultProvider {
 
     private func row(_ tab: BrowserTab, found: OpenTabs, score: Double) -> LauncherResult {
         let browsers = Set(found.tabs.map(\.browser)).count
-        let script = switchScript(tab)
+        let script = switchScript(tab), switchTitle = String(localized: "Switch to Tab")
+        let kind = String(localized: "Tab", comment: "A browser tab's row: what it is")
         return LauncherResult(id: "tab:\(tab.browser):\(tab.url)", title: tab.title.isEmpty ? tab.url : tab.title,
-                              subtitle: ([URL(string: tab.url)?.host() ?? tab.url, "Tab"] + (browsers > 1 ? [name(tab.browser, in: found)] : []))
+                              subtitle: ([URL(string: tab.url)?.host() ?? tab.url, kind] + (browsers > 1 ? [name(tab.browser, in: found)] : []))
                                 .joined(separator: " · "),
                               icon: found.apps[tab.browser].map { .file($0.path) } ?? .symbol("square.on.square"), score: score,
-                              actionTitle: "Switch to Tab", action: { if let script { osascript(script, label: "Switch to Tab") } })
+                              actionTitle: switchTitle, action: { if let script { osascript(script, label: switchTitle) } })
     }
 
     private func matching(_ query: String, in found: OpenTabs) -> [BrowserTab] {
@@ -168,8 +170,10 @@ actor BrowserTabsProvider: ResultProvider {
         let lower = query.lowercased()
         var rows: [LauncherResult] = []
         if lower.count >= 4, "tabs".hasPrefix(lower) || "browser tabs".hasPrefix(lower) || "open tabs".hasPrefix(lower) {
-            rows.append(LauncherResult(id: "builtin:tabs", title: "Browser Tabs", subtitle: "Every tab open in your browsers",
-                                       icon: .symbol("square.on.square"), score: 50, actionTitle: "List", action: {}, completion: Self.prefix))
+            rows.append(LauncherResult(id: "builtin:tabs", title: String(localized: "Browser Tabs"),
+                                       subtitle: String(localized: "Every tab open in your browsers"), icon: .symbol("square.on.square"), score: 50,
+                                       actionTitle: String(localized: "List", comment: "Enter on a row that opens a chip listing them"), action: {},
+                                       completion: Self.prefix))
         }
         guard query.count >= 2 else { return rows }
         return rows + matching(query, in: found).prefix(4).enumerated().map { row($1, found: found, score: 0.4 - Double($0) / 100) }
@@ -180,18 +184,21 @@ actor BrowserTabsProvider: ResultProvider {
         let found = await open.value
         let text = query.dropFirst(Self.prefix.count - 1).trimmingCharacters(in: .whitespaces)
         let asks = found.unasked.map { id in
-            LauncherResult(id: "tabs:ask:\(id)", title: "See \(name(id, in: found))’s Tabs", subtitle: "Asks to control it, once",
-                           icon: found.apps[id].map { .file($0.path) } ?? .symbol("square.on.square"), score: 51, actionTitle: "Allow", action: {
+            LauncherResult(id: "tabs:ask:\(id)", title: String(localized: "See \(name(id, in: found))’s Tabs"),
+                           subtitle: String(localized: "Asks to control it, once"),
+                           icon: found.apps[id].map { .file($0.path) } ?? .symbol("square.on.square"), score: 51,
+                           actionTitle: String(localized: "Allow", comment: "Enter asks macOS for the permission"), action: {
                 Task.detached {
                     guard automationPermission(id, ask: true) == noErr else { return }
-                    await MainActor.run { notify("Type “tabs” again to see them") }
+                    await MainActor.run { notify(String(localized: "Type “tabs” again to see them")) }
                 }
             })
         }
         let tabs = text.isEmpty ? found.tabs : matching(text, in: found)
         guard !tabs.isEmpty || !asks.isEmpty else {
-            return [LauncherResult(id: "tabs:none", title: text.isEmpty ? "No tabs open" : "No tab says “\(text)”",
-                                   subtitle: "Chrome, Brave, Edge, Vivaldi, Arc and Safari", icon: .symbol("square.on.square"),
+            return [LauncherResult(id: "tabs:none",
+                                   title: text.isEmpty ? String(localized: "No tabs open") : String(localized: "No tab says “\(text)”"),
+                                   subtitle: String(localized: "Chrome, Brave, Edge, Vivaldi, Arc and Safari"), icon: .symbol("square.on.square"),
                                    score: 50, actionTitle: "", action: {})]
         }
         return asks + tabs.enumerated().map { row($1, found: found, score: 50 - Double($0) / 10_000) }

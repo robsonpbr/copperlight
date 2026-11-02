@@ -31,7 +31,8 @@ func suggestedApps(_ opens: [AppOpen], now: Date, calendar: Calendar = .current,
     suggestedApps(opens.filter { $0.app != front }, now: now, calendar: calendar).filter { FileManager.default.fileExists(atPath: $0) }
         .enumerated().map { index, path in
             LauncherResult(id: path, title: FileManager.default.displayName(atPath: path).replacing(#/\.app$/#, with: ""),
-                           subtitle: "Often around this time", icon: .file(path), score: 50 - Double(index) / 100,
+                           subtitle: String(localized: "Often around this time", comment: "An app you often open at this time of day"),
+                           icon: .file(path), score: 50 - Double(index) / 100,
                            action: { NSWorkspace.shared.openApplication(at: URL(filePath: path), configuration: .init()) })
         }
 }

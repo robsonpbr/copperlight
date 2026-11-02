@@ -3,7 +3,7 @@ import AppKit
 /// The to-do app `[reminders] app` picks, by name.
 func todoAppName(_ app: Config.Reminders.App) -> String {
     switch app {
-    case .reminders: "Reminders"
+    case .reminders: String(localized: "Reminders", comment: "Apple's Reminders app, by the name macOS gives it")
     case .things: "Things"
     case .ticktick: "TickTick"
     case .todoist: "Todoist"
@@ -49,14 +49,14 @@ func tickTickAddLink(_ title: String) -> URL { link("ticktick://x-callback-url/v
 @MainActor func addTodo(_ title: String, due: CaptureDate?, todos: Config.Reminders) {
     let name = todoAppName(todos.app)
     let added = { (url: URL, note: String?) in
-        guard NSWorkspace.shared.urlForApplication(toOpen: url) != nil else { return notify("\(name) isn't installed") }
+        guard NSWorkspace.shared.urlForApplication(toOpen: url) != nil else { return notify(String(localized: "\(name) isn't installed")) }
         NSWorkspace.shared.open(url)
-        notify("To-do added in \(name)", [title, note].compactMap(\.self).joined(separator: " · "))
+        notify(String(localized: "To-do added in \(name)"), [title, note].compactMap(\.self).joined(separator: " · "))
     }
     switch todos.app {
     case .reminders: addReminder(title, due: due, list: todos.addTo)
     case .things: added(thingsAddLink(title, due: due), due.map { whenText($0, end: false) })
-    case .ticktick: added(tickTickAddLink(title), due == nil ? nil : "without its date")
+    case .ticktick: added(tickTickAddLink(title), due == nil ? nil : String(localized: "without its date", comment: "TickTick's link takes no date"))
     case .todoist: addToTodoist(title, due: due)
     }
 }
@@ -64,13 +64,14 @@ func tickTickAddLink(_ title: String) -> URL { link("ticktick://x-callback-url/v
 /// The "Open Things" row at the end of `due`, for any app but Reminders.
 func openTodoAppRow(_ app: Config.Reminders.App, title: String? = nil, score: Double) -> LauncherResult {
     let name = todoAppName(app)
-    return LauncherResult(id: "builtin:due:open", title: title ?? "Open \(name)", icon: .symbol("checklist"), score: score, actionTitle: "Open", action: {
+    return LauncherResult(id: "builtin:due:open", title: title ?? String(localized: "Open \(name)"), icon: .symbol("checklist"), score: score,
+                          actionTitle: String(localized: "Open", comment: "Enter on the row that opens the to-do app"), action: {
         if let found = NSWorkspace.shared.urlForApplication(withBundleIdentifier: todoAppBundleID(app)) {
             NSWorkspace.shared.openApplication(at: found, configuration: .init())
         } else if app == .todoist {
             NSWorkspace.shared.open(URL(string: "https://app.todoist.com/app/today")!)
         } else {
-            notify("\(name) isn't installed")
+            notify(String(localized: "\(name) isn't installed"))
         }
     })
 }
@@ -146,6 +147,6 @@ func readThingsToday() async -> ThingsLook {
 @MainActor func completeInThings(_ id: String) {
     let quoted = String(decoding: try! JSONEncoder().encode(id), as: UTF8.self) // a JavaScript string, whatever's in it
     runDetached("/usr/bin/osascript", ["-l", "JavaScript", "-e", #"Application("com.culturedcode.ThingsMac").toDos.byId(\#(quoted)).status = "completed""#],
-                label: "Complete in Things")
+                label: String(localized: "Complete in Things"))
     Task { await ThingsToday.shared.drop(id) }
 }

@@ -34,7 +34,8 @@ func menuRows(_ items: [MenuCommand], matching text: String, app: String, icon: 
               score >= 0.6 else { return nil }
         return LauncherResult(id: "menu:\(app):\(item.path.joined(separator: "/"))", title: title,
                               subtitle: ([app] + item.path.dropLast()).joined(separator: " › "), accessory: item.shortcut,
-                              icon: icon, score: score - 1, actionTitle: "Choose", action: item.choose)
+                              icon: icon, score: score - 1, actionTitle: String(localized: "Choose", comment: "Enter on a menu item of the app in front"),
+                              action: item.choose)
     }
 }
 
@@ -80,9 +81,10 @@ private let lastMenus = Mutex<(pid: pid_t, read: ContinuousClock.Instant, items:
 func frontMenuRows(_ text: String) -> [LauncherResult] {
     guard text.count >= 3 else { return [] }
     guard AXIsProcessTrusted() else {
-        return [LauncherResult(id: "menu:access", title: "Allow Copperlight in Accessibility to search menus",
-                               subtitle: "Privacy & Security → Accessibility", icon: .symbol("lock.shield"), score: -2,
-                               actionTitle: "Open System Settings", action: { requestAccessibility() })]
+        return [LauncherResult(id: "menu:access", title: String(localized: "Allow Copperlight in Accessibility to search menus"),
+                               subtitle: String(localized: "Privacy & Security → Accessibility", comment: "Where it is in System Settings"),
+                               icon: .symbol("lock.shield"), score: -2,
+                               actionTitle: String(localized: "Open System Settings"), action: { requestAccessibility() })]
     }
     guard let app = NSWorkspace.shared.frontmostApplication, app.processIdentifier != getpid() else { return [] }
     let pid = app.processIdentifier
@@ -92,6 +94,6 @@ func frontMenuRows(_ text: String) -> [LauncherResult] {
         last = (pid, .now, items)
         return items
     }
-    return menuRows(items, matching: text, app: app.localizedName ?? "App",
+    return menuRows(items, matching: text, app: app.localizedName ?? String(localized: "App", comment: "Stands for an app's name when it has none"),
                     icon: app.bundleURL.map { .file($0.path) } ?? .symbol("filemenu.and.selection"))
 }

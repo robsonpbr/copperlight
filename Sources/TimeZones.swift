@@ -86,10 +86,16 @@ struct TimeZoneProvider: ResultProvider {
         var day = Date.FormatStyle().weekday(.abbreviated).day().month(.abbreviated)
         day.timeZone = parsed.to
         let hours = Double(parsed.to.secondsFromGMT(for: parsed.date) - parsed.from.secondsFromGMT(for: parsed.date)) / 3600
-        let gap = hours == 0 ? "same time" : "\(formatNumber(abs(hours), decimals: 0...2)) h \(hours > 0 ? "ahead" : "behind")"
+        let apart = formatNumber(abs(hours), decimals: 0...2)
+        let gap = hours == 0 ? String(localized: "same time", comment: "Two places' clocks agree")
+            : hours > 0 ? String(localized: "\(apart) h ahead") : String(localized: "\(apart) h behind")
         let target = time(parsed.to)
-        return LauncherResult(id: id, title: "\(target) in \(displayName(parsed.toName))",
-                              subtitle: "\(parsed.date.formatted(day)) · \(time(parsed.from)) \(parsed.fromName.map(displayName) ?? "here") · \(gap)",
-                              icon: .symbol("globe.europe.africa"), score: score, actionTitle: "Copy", action: { copyToClipboard(target) })
+        let from = parsed.fromName.map { "\(time(parsed.from)) \(displayName($0))" }
+            ?? String(localized: "\(time(parsed.from)) here", comment: "The time where you are")
+        return LauncherResult(id: id,
+                              title: String(localized: "\(target) in \(displayName(parsed.toName))", comment: "A time in a place: 9:00 in Tokyo"),
+                              subtitle: "\(parsed.date.formatted(day)) · \(from) · \(gap)", icon: .symbol("globe.europe.africa"), score: score,
+                              actionTitle: String(localized: "Copy", comment: "Enter on a time in another place: copies the time"),
+                              action: { copyToClipboard(target) })
     }
 }

@@ -1,0 +1,12 @@
+/* The reasons macOS shows when Copperlight asks for a permission. Translate the right side. */
+
+"NSAppleEventsUsageDescription" = "Copperlight lists your browser's open tabs, so Enter switches to one instead of opening it again, runs the Mac commands you type (:empty trash, :dark mode), and reads and completes your to-dos in Things when you pick it.";
+"NSBluetoothAlwaysUsageDescription" = "Copperlight lists the Bluetooth devices paired with this Mac when you type “:connect”, to connect or disconnect one.";
+"NSCalendarsFullAccessUsageDescription" = "Copperlight shows today's meetings when you type “meetings”, with Join for video calls, and your week when you type “week”.";
+"NSCalendarsWriteOnlyAccessUsageDescription" = "Copperlight adds the events you type (add event …).";
+"NSCameraUsageDescription" = "Copperlight shows your camera when you type “camera”, so you can see yourself before a call. Nothing is recorded.";
+"NSContactsUsageDescription" = "Copperlight finds people in your contacts as you type their name, to message, call or email them. They stay on this Mac.";
+"NSLocationUsageDescription" = "Copperlight shows the weather where you are when you type “weather”. Only a rounded location, about a kilometer, goes to the weather service.";
+"NSLocationWhenInUseUsageDescription" = "Copperlight shows the weather where you are when you type “weather”. Only a rounded location, about a kilometer, goes to the weather service.";
+"NSPhotoLibraryUsageDescription" = "Copperlight reads the text in your photos, on this Mac, so typing “29.99” finds the photo of a price tag.";
+"NSRemindersFullAccessUsageDescription" = "Copperlight adds the reminders you type (add todo …).";

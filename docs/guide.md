@@ -47,6 +47,16 @@ works. A word of symbols works stuck to what follows: with `;` for `:`, `;left` 
 what it would find: with `t`, typing `t` alone no longer finds apps. It's saved as `translate = "t"` under
 `[keywords]`.
 
+**Your language:** Copperlight's text follows your Mac's language, or the one chosen for Copperlight in System Settings
+› General › Language & Region › Applications: English, Portuguese (Brazil) or Portuguese (Portugal). What isn't
+translated yet shows in English. Each keyword has words in that language too, beside the English ones: on a Mac in
+Portuguese, `clima lisboa` is `weather lisboa`. The `:` commands, System Settings pages and rows like Pick Color are found by their title in either
+language: `:desligar` and `:shut down` both find Shut Down. Apps are found by both names too: `notes` and `notas`. Settings › Keywords lists each keyword's words in your language, and Words in your
+language turns them off (`[keywords] language = false`), when one gets in the way of a file whose name starts with it.
+Your own words win over your language's. Dates in `add todo` and `add event` are read as macOS reads them in your
+language: on a Mac in Portuguese, `add todo pagar a renda amanhã 17h` is due tomorrow at 17:00. The words after a
+keyword (`pomo break`, `25 usd to eur`) are English for now. To add a language, see [TRANSLATING.md](../TRANSLATING.md).
+
 Things to type: `saf`, `vsc`, `2^10 / 3`, `sqrt(2) * pi`, `20% of 150`, `255 in hex`, `25 usd to eur`, `12,50 gbp in brl`, `100jpy usd`,
 `25 usd` (converts to `default_target`), `25 eur` (the default itself converts to USD), `39*8 usd`, `20% off 80`,
 `30 is what % of 150`, `10k * 3`, `days until dec 25`, `in 3 weeks`, `#c87533`, `pick color`, `qr`, `copy text`,

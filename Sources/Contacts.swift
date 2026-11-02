@@ -33,8 +33,8 @@ func enterAction(_ person: Person, _ enter: Config.Contacts.Enter) -> (title: St
     case .facetime: (phone ?? email).map { ("FaceTime", URL(string: "facetime:" + $0)) }
     case .email: email.map { ("Email", URL(string: "mailto:" + $0)) }
     }
-    if let (title, url) = chosen, let url { return (title, url) }
-    return messageURL(person).map { ("Message", $0) }
+    if let (title, url) = chosen, let url { return (actionName(title), url) }
+    return messageURL(person).map { (actionName("Message"), $0) }
 }
 
 /// Messages with them: their first mobile number (else their first number), else their first email. nil: neither.
@@ -46,6 +46,17 @@ func messageURL(_ person: Person) -> URL? {
 
 private let actionIcons = ["Message": "message", "Call": "phone", "FaceTime": "video", "WhatsApp": "bubble.left", "Email": "envelope",
                            "Open in Contacts": "person.crop.circle"]
+
+/// A way to reach someone, as its row says it. `action` stays English: it keys the icon and the row's id.
+private func actionName(_ action: String) -> String {
+    switch action {
+    case "Message": String(localized: "Message", comment: "Enter on a person: messages them")
+    case "Call": String(localized: "contact.call", defaultValue: "Call", comment: "Enter on a person: phones them (the verb; a meeting's “Call” is a noun)")
+    case "Email": String(localized: "Email", comment: "Enter on a person: emails them")
+    case "Open in Contacts": String(localized: "Open in Contacts")
+    default: action // FaceTime, WhatsApp
+    }
+}
 
 /// Their card in the Contacts app.
 func contactCardURL(_ id: String) -> URL? { URL(string: "addressbook://" + id) }
@@ -62,8 +73,9 @@ func personCard(_ person: Person) -> PersonCard {
     let birthday = person.birthday.flatMap { day in
         Calendar.current.date(from: DateComponents(year: 2000, month: day.month, day: day.day))?.formatted(.dateTime.month(.wide).day())
     }
-    let details = (person.phones + person.emails).map { ($0.label.isEmpty ? "other" : $0.label, $0.value) }
-        + (birthday.map { [("birthday", $0)] } ?? [])
+    let other = String(localized: "other", comment: "A number's or email's label, lowercase like Contacts' own")
+    let details = (person.phones + person.emails).map { ($0.label.isEmpty ? other : $0.label, $0.value) }
+        + (birthday.map { [(String(localized: "birthday", comment: "A label on a person's card, lowercase like Contacts' own"), $0)] } ?? [])
     let company = person.organization == person.name ? "" : person.organization // a company's own card
     let photo = person.photo.flatMap { NSImage(data: $0)?.cgImage(forProposedRect: nil, context: nil, hints: nil) }
     return PersonCard(initials: initials(person.name), name: person.name, job: person.jobTitle, company: company, details: details, photo: photo)
@@ -120,7 +132,8 @@ actor ContactsProvider: ResultProvider {
     }
 
     nonisolated var modes: [Mode] {
-        [Mode(prefix: Self.prefix, title: "Contact", icon: .symbol("person"), hint: "A name, or nothing for everyone")]
+        [Mode(prefix: Self.prefix, title: String(localized: "Contact", comment: "The chip for finding a person"), icon: .symbol("person"),
+              hint: String(localized: "A name, or nothing for everyone"))]
     }
 
     func refresh(force: Bool = false) {
@@ -144,8 +157,10 @@ actor ContactsProvider: ResultProvider {
         var rows: [LauncherResult] = []
         if lower.count >= 4, "contacts".hasPrefix(lower) || "people".hasPrefix(lower) {
             rows.append(access() == .authorized
-                ? LauncherResult(id: "builtin:contacts", title: "Search Contacts", subtitle: "Message, call or email someone",
-                                 icon: .symbol("person"), score: 0.95, actionTitle: "Search", action: {}, completion: Self.prefix)
+                ? LauncherResult(id: "builtin:contacts", title: String(localized: "Search Contacts"),
+                                 subtitle: String(localized: "Message, call or email someone"), icon: .symbol("person"), score: 0.95,
+                                 actionTitle: String(localized: "Search", comment: "Enter on Search Contacts: opens the chip"), action: {},
+                                 completion: Self.prefix)
                 : accessRow())
         }
         guard query.count >= 2 else { return rows }
@@ -163,16 +178,21 @@ actor ContactsProvider: ResultProvider {
 
     private func accessRow() -> LauncherResult {
         if access() == .notDetermined {
-            return LauncherResult(id: "builtin:contacts", title: "Search Your Contacts", subtitle: "Asks to read your contacts, once",
-                                  icon: .symbol("person"), score: 0.95, actionTitle: "Allow", action: {
+            return LauncherResult(id: "builtin:contacts", title: String(localized: "Search Your Contacts"),
+                                  subtitle: String(localized: "Asks to read your contacts, once"), icon: .symbol("person"), score: 0.95,
+                                  actionTitle: String(localized: "Allow", comment: "Enter asks macOS for Contacts access"), action: {
                 Task {
-                    guard (try? await CNContactStore().requestAccess(for: .contacts)) == true else { return notify("Copperlight can't see your contacts") }
-                    notify("Type a name to find them")
+                    guard (try? await CNContactStore().requestAccess(for: .contacts)) == true else {
+                        return notify(String(localized: "Copperlight can't see your contacts"))
+                    }
+                    notify(String(localized: "Type a name to find them"))
                 }
             })
         }
-        return LauncherResult(id: "builtin:contacts", title: "Allow Copperlight to see your contacts", subtitle: "Privacy & Security → Contacts",
-                              icon: .symbol("person"), score: 0.95, actionTitle: "Open System Settings", action: {
+        return LauncherResult(id: "builtin:contacts", title: String(localized: "Allow Copperlight to see your contacts"),
+                              subtitle: String(localized: "Privacy & Security → Contacts",
+                                               comment: "System Settings' pages, by the names macOS gives them"),
+                              icon: .symbol("person"), score: 0.95, actionTitle: String(localized: "Open System Settings"), action: {
             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Contacts")!)
         })
     }
@@ -185,8 +205,9 @@ actor ContactsProvider: ResultProvider {
         let open = enter?.url ?? contactCardURL(person.id)
         return LauncherResult(id: "contact:\(person.id)", title: person.name,
                               subtitle: [person.phones.first?.value, person.emails.first?.value].compactMap(\.self).joined(separator: " · "),
-                              icon: .symbol("person"), score: score, actionTitle: enter?.title ?? "Open in Contacts",
-                              action: { if let open { NSWorkspace.shared.open(open) } }, more: ("Actions", Self.prefix + person.name))
+                              icon: .symbol("person"), score: score, actionTitle: enter?.title ?? String(localized: "Open in Contacts"),
+                              action: { if let open { NSWorkspace.shared.open(open) } },
+                              more: (String(localized: "Actions", comment: "Tab on a person: every way to reach them"), Self.prefix + person.name))
     }
 
     /// In the chip: each way to reach them, by number, then by email, then copying them, then their card.
@@ -209,10 +230,14 @@ actor ContactsProvider: ResultProvider {
         }
         rows += (person.phones + person.emails).map { ("Copy \($0.value)", $0.label, nil, $0.value) }
         rows.append(("Open in Contacts", "", contactCardURL(person.id), nil))
+        let copyTitle = String(localized: "Copy", comment: "Enter on a person's number or email: copies it")
+        let openTitle = String(localized: "Open", comment: "Enter on Open in Contacts")
         return rows.enumerated().map { index, row in
-            LauncherResult(id: "contact:\(person.id):\(row.title):\(row.subtitle)", title: row.title, subtitle: row.subtitle,
+            // The row's English title keys its icon and id; what it shows is in this Mac's language.
+            let title = row.copy.map { String(localized: "Copy \($0)") } ?? actionName(row.title)
+            return LauncherResult(id: "contact:\(person.id):\(row.title):\(row.subtitle)", title: title, subtitle: row.subtitle,
                            icon: .symbol(actionIcons[row.title] ?? (row.copy != nil ? "doc.on.doc" : "person")), score: 50 - Double(index) / 100,
-                           actionTitle: row.copy != nil ? "Copy" : row.title == "Open in Contacts" ? "Open" : row.title, action: {
+                           actionTitle: row.copy != nil ? copyTitle : row.title == "Open in Contacts" ? openTitle : actionName(row.title), action: {
                 if let copy = row.copy { return copyToClipboard(copy) }
                 if let url = row.url { NSWorkspace.shared.open(url) }
             }, answer: .person(card))

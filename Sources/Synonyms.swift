@@ -57,10 +57,14 @@ struct SynonymsProvider: ResultProvider {
     private static let icon = "text.book.closed"
     var lookUp: @Sendable (String) -> String? = { thesaurusEntry($0) }
     var hasThesaurus = thesaurus != nil
-    var modes: [Mode] { [Mode(prefix: "synonyms ", title: "Synonyms", icon: .symbol(Self.icon), hint: "A word")] }
+    var modes: [Mode] {
+        [Mode(prefix: "synonyms ", title: String(localized: "Synonyms", comment: "Chip: a word's synonyms"), icon: .symbol(Self.icon),
+              hint: String(localized: "A word", comment: "Placeholder in the Synonyms chip"))]
+    }
 
     func results(for query: String) async -> [LauncherResult] {
-        if let start = startRow(query, keyword: "synonyms", title: "Synonyms", hint: "Type a word: synonyms happy", symbol: Self.icon) {
+        if let start = startRow(query, keyword: "synonyms", title: "Synonyms", hint: String(localized: "Type a word: synonyms happy"),
+                                symbol: Self.icon) {
             return [start]
         }
         return query.lowercased().hasPrefix("synonyms ") ? await modeResults(for: query) : []
@@ -69,13 +73,16 @@ struct SynonymsProvider: ResultProvider {
     func modeResults(for query: String) async -> [LauncherResult] {
         let word = query.dropFirst(9).trimmingCharacters(in: .whitespaces)
         guard !word.isEmpty else { return [] }
-        guard hasThesaurus else { return [note("This Mac has no thesaurus turned on", "Dictionary › Settings: tick a thesaurus")] }
+        guard hasThesaurus else {
+            return [note(String(localized: "This Mac has no thesaurus turned on"), String(localized: "Dictionary › Settings: tick a thesaurus"))]
+        }
         let senses = lookUp(word).map(parseThesaurus) ?? []
-        guard !senses.isEmpty else { return [note("No synonyms for “\(word)”", "From the Mac's thesaurus")] }
+        guard !senses.isEmpty else { return [note(String(localized: "No synonyms for “\(word)”"), String(localized: "From the Mac's thesaurus"))] }
         return senses.prefix(5).enumerated().flatMap { index, sense in
             sense.words.prefix(8).enumerated().map { position, synonym in
                 LauncherResult(id: "synonym:\(index):\(synonym)", title: synonym, icon: .symbol(Self.icon),
-                               score: 50 - Double(index) / 10 - Double(position) / 1000, actionTitle: "Copy",
+                               score: 50 - Double(index) / 10 - Double(position) / 1000,
+                               actionTitle: String(localized: "Copy", comment: "Enter on a synonym"),
                                action: { copyToClipboard(synonym) }, section: "“\(sense.example)”")
             }
         }

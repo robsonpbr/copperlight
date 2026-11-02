@@ -76,13 +76,13 @@ func scriptRows(_ output: String) -> [(title: String, subtitle: String, value: S
 private func scriptRowAction(_ value: String) -> (title: String, run: @MainActor @Sendable () -> Void) {
     let path = (value as NSString).expandingTildeInPath
     if value.hasPrefix("/") || value.hasPrefix("~/"), FileManager.default.fileExists(atPath: path) {
-        return ("Open", { NSWorkspace.shared.open(URL(filePath: path)) })
+        return (String(localized: "Open", comment: "Enter on a script filter's row: opens it"), { NSWorkspace.shared.open(URL(filePath: path)) })
     }
     if value.wholeMatch(of: #/[a-zA-Z][a-zA-Z0-9+.-]*:\S+/#) != nil, let url = URL(string: value),
        NSWorkspace.shared.urlForApplication(toOpen: url) != nil {
-        return ("Open", { NSWorkspace.shared.open(url) })
+        return (String(localized: "Open", comment: "Enter on a script filter's row: opens it"), { NSWorkspace.shared.open(url) })
     }
-    return ("Copy", { copyToClipboard(value) })
+    return (String(localized: "Copy", comment: "Enter on a script filter's row: copies it"), { copyToClipboard(value) })
 }
 
 /// Scripts as launcher rows. Typed by name, with text after it as arguments (`deploy staging`), one ranks first;
@@ -95,7 +95,8 @@ struct ScriptProvider: ResultProvider {
 
     var modes: [Mode] {
         scripts(in: folder).filter { $0.output == .rows }.map { script in
-            Mode(prefix: script.name.lowercased() + " ", title: script.title, icon: .symbol(script.icon), hint: script.subtitle ?? "Type to filter")
+            Mode(prefix: script.name.lowercased() + " ", title: script.title, icon: .symbol(script.icon),
+                 hint: script.subtitle ?? String(localized: "Type to filter"))
         }
     }
 
@@ -117,10 +118,11 @@ struct ScriptProvider: ResultProvider {
                             actionTitle: "", action: {})]
         }
         guard run.status == 0, !run.timedOut else {
-            return note("\(script.title) failed", run.timedOut ? "Stopped after \(Int(shellTimeout)) s" : "Exit \(run.status)")
+            return note(String(localized: "\(script.title) failed"),
+                        run.timedOut ? String(localized: "Stopped after \(Int(shellTimeout)) s") : String(localized: "Exit \(run.status)"))
         }
         let rows = scriptRows(run.output)
-        guard !rows.isEmpty else { return note("Nothing for “\(text)”", script.title) }
+        guard !rows.isEmpty else { return note(String(localized: "Nothing for “\(text)”"), script.title) }
         return rows.enumerated().map { index, row in
             let action = scriptRowAction(row.value)
             return LauncherResult(id: "script:\(script.name):\(row.value)", title: row.title, subtitle: row.subtitle, icon: .symbol(script.icon),
@@ -154,7 +156,7 @@ struct ScriptProvider: ResultProvider {
         let id = "script:\(script.name)", title = ([script.title] + arguments).joined(separator: " ")
         let shown = script.subtitle ?? (script.path as NSString).abbreviatingWithTildeInPath
         var result = outputRow(script, line: line, id: id, title: title, subtitle: shown, score: score)
-        if script.needsConfirmation { result.confirm = "Run \(script.title)?" }
+        if script.needsConfirmation { result.confirm = String(localized: "Run \(script.title)?") }
         return result
     }
 
@@ -162,22 +164,28 @@ struct ScriptProvider: ResultProvider {
     private func outputRow(_ script: Script, line: String, id: String, title: String, subtitle shown: String, score: Double) -> LauncherResult {
         switch script.output {
         case .rows: // its chip, where it lists what it prints
-            return LauncherResult(id: id, title: title, subtitle: shown, icon: .symbol(script.icon), score: score, actionTitle: "List",
-                                  action: {}, completion: script.name + " ")
+            return LauncherResult(id: id, title: title, subtitle: shown, icon: .symbol(script.icon), score: score,
+                                  actionTitle: String(localized: "List", comment: "Enter on a script filter: lists what it prints"), action: {},
+                                  completion: script.name + " ")
         case .silent:
-            return LauncherResult(id: id, title: title, subtitle: shown, icon: .symbol(script.icon), score: score, actionTitle: "Run",
+            return LauncherResult(id: id, title: title, subtitle: shown, icon: .symbol(script.icon), score: score,
+                                  actionTitle: String(localized: "Run", comment: "Enter on a script"),
                                   action: { runDetached("/bin/zsh", ["-lc", line], label: script.title) })
         case .show:
-            return LauncherResult(id: id, title: title, subtitle: shown, icon: .symbol(script.icon), score: score, actionTitle: "Run",
-                                  action: {}, output: { await shellOutputRow(line, id: id, title: title, progress: $0) })
+            return LauncherResult(id: id, title: title, subtitle: shown, icon: .symbol(script.icon), score: score,
+                                  actionTitle: String(localized: "Run", comment: "Enter on a script"), action: {},
+                                  output: { await shellOutputRow(line, id: id, title: title, progress: $0) })
         case .copy:
             return LauncherResult(id: id, title: title, subtitle: shown, icon: .symbol(script.icon), score: score,
-                                  actionTitle: "Run and Copy", action: {
+                                  actionTitle: String(localized: "Run and Copy"), action: {
                 Task {
                     let run = await runShell(line, errors: false)
-                    guard run.status == 0, !run.timedOut else { return notify("\(script.title) failed", run.timedOut ? "stopped after \(Int(shellTimeout)) s" : "exit \(run.status)") }
+                    guard run.status == 0, !run.timedOut else {
+                        let why = run.timedOut ? String(localized: "stopped after \(Int(shellTimeout)) s") : String(localized: "exit \(run.status)")
+                        return notify(String(localized: "\(script.title) failed"), why)
+                    }
                     copyToClipboard(run.output)
-                    notify("Copied", "\(script.title): \(run.output.prefix(80))")
+                    notify(String(localized: "Copied", comment: "Notification: output copied"), "\(script.title): \(run.output.prefix(80))")
                 }
             })
         }

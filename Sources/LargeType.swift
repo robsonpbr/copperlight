@@ -6,14 +6,17 @@ import SwiftUI
 struct LargeTypeProvider: ResultProvider {
     private static let icon = LauncherResult.Icon.symbol("textformat.size")
     private let clipboard: @Sendable () async -> String?
-    var modes: [Mode] { [Mode(prefix: "large ", title: "Large Type", icon: Self.icon, hint: "Text, or nothing for what you copied")] }
+    var modes: [Mode] {
+        [Mode(prefix: "large ", title: String(localized: "Large Type"), icon: Self.icon,
+              hint: String(localized: "Text, or nothing for what you copied"))]
+    }
 
     init(clipboard: @escaping @Sendable () async -> String? = { @MainActor in Clip.current(withHTML: false).text }) {
         self.clipboard = clipboard
     }
 
     func results(for query: String) async -> [LauncherResult] {
-        if let start = startRow(query, keyword: "large", title: "Large Type", hint: "Type text to show it big: large 555-0100",
+        if let start = startRow(query, keyword: "large", title: "Large Type", hint: String(localized: "Type text to show it big: large 555-0100"),
                                 symbol: "textformat.size") {
             return [start]
         }
@@ -24,11 +27,13 @@ struct LargeTypeProvider: ResultProvider {
         let typed = query.dropFirst(5).trimmingCharacters(in: .whitespaces)
         let text = typed.isEmpty ? await clipboard()?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "" : typed
         guard !text.isEmpty else {
-            return [LauncherResult(id: "large", title: "Type the text to show", subtitle: "Or copy some first", icon: Self.icon, score: 50,
-                                   actionTitle: "", action: {})]
+            return [LauncherResult(id: "large", title: String(localized: "Type the text to show"), subtitle: String(localized: "Or copy some first"),
+                                   icon: Self.icon, score: 50, actionTitle: "", action: {})]
         }
-        return [LauncherResult(id: "large", title: oneLine(text), subtitle: "Large Type" + (typed.isEmpty ? " · from the clipboard" : ""),
-                               icon: Self.icon, score: 50, actionTitle: "Show", action: { showLargeType(text) })]
+        return [LauncherResult(id: "large", title: oneLine(text),
+                               subtitle: typed.isEmpty ? String(localized: "Large Type · from the clipboard") : String(localized: "Large Type"),
+                               icon: Self.icon, score: 50, actionTitle: String(localized: "Show", comment: "Enter on Large Type: shows the text big"),
+                               action: { showLargeType(text) })]
     }
 }
 

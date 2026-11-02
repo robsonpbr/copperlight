@@ -7,7 +7,7 @@ code is laid out, the rules a change has to fit) first. This file only adds what
 
 - `make test` runs the whole suite. It regenerates the Xcode project first, so new files are picked up.
 - One test: `make project`, then
-  `xcodebuild -quiet -project Copperlight.xcodeproj -scheme Copperlight -derivedDataPath build -destination "platform=macOS,arch=$(uname -m)" test -only-testing:"CopperlightTests/timerUntil()"`.
+  `xcodebuild -quiet -project Copperlight.xcodeproj -scheme Copperlight -derivedDataPath build -destination "platform=macOS,arch=$(uname -m)" test -testLanguage en -only-testing:"CopperlightTests/timerUntil()"`.
 - `make run` builds and launches it. Never edit `Copperlight.xcodeproj`: it's generated from `project.yml`.
 
 ## Making a change
@@ -29,3 +29,10 @@ code is laid out, the rules a change has to fit) first. This file only adds what
 - The README and docs describe Copperlight on its own and don't name other launchers. The apps it works with
   (Google Calendar, Things, Todoist) are named where you pick them.
 - No personal data in fixtures, screenshots or examples: made-up names, events and paths.
+- Text a person reads is translatable (TRANSLATING.md): SwiftUI's own `Text`, `Button` and `Toggle` text as is,
+  `String(localized: "…")` everywhere else. Values go in with `\(…)`, never glued on, and only text and whole numbers
+  (format a `Double` into text first: `%lf` prints 3.140000). Never localize ids, keywords, config keys or anything
+  matched against what's typed; a title typing matches goes through `titleScore`. Then run `make strings`: CI fails
+  when `Resources/en.lproj/Localizable.strings` is out of date. A new keyword or permission prompt also goes in
+  `Resources/en.lproj/Keywords.strings` or `InfoPlist.strings`, by hand (a test says when they're behind).
+- The tests run in English (`make test` passes `-testLanguage en`).

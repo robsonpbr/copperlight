@@ -47,6 +47,9 @@ tools built on them (git, gh, Claude Code, Jira) were taken out on 2026-10-27: t
   text comes first for that text next time, so there are no aliases or numbers to set up (decided 2026-10-29).
 - **Any browser.** Nothing assumes Chrome. Links open in the default browser; `browser` and `profile` on a
   command pick another one (decided 2026-10-13).
+- **In your language.** Text follows the Mac's language, from plain `.strings` files a translator adds without code
+  (TRANSLATING.md); English words always work beside a language's, and anything not translated shows in English
+  (decided 2026-11-02).
 - **Its own look, from the icon.** Two floating glass pieces: the search field as a plain pill,
   and the results in a card under it. The icon's copper is the only color (the field's edge,
   the selection, the chip a name that takes text becomes in the field, decided 2026-10-27). Glyphs sit in plain rings, with no colored tiles, no kind labels and no footer; the selected

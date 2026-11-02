@@ -18,23 +18,24 @@ enum Permission: CaseIterable {
 
     enum Access { case granted, notAsked, denied }
 
+    /// As System Settings › Privacy & Security names it.
     var title: String {
         switch self {
-        case .accessibility: "Accessibility"
-        case .calendars: "Calendars"
-        case .reminders: "Reminders"
-        case .notifications: "Notifications"
-        case .photos: "Photos"
+        case .accessibility: String(localized: "Accessibility", comment: "A permission, as System Settings names it")
+        case .calendars: String(localized: "Calendars", comment: "A permission, as System Settings names it")
+        case .reminders: String(localized: "Reminders", comment: "A permission, as System Settings names it")
+        case .notifications: String(localized: "Notifications", comment: "A permission, as System Settings names it")
+        case .photos: String(localized: "Photos", comment: "A permission, as System Settings names it")
         }
     }
 
     var why: String {
         switch self {
-        case .accessibility: "Paste into your apps, move and switch windows"
-        case .calendars: "Today’s meetings, and the events you add"
-        case .reminders: "The todos you add"
-        case .notifications: "Timers, and how shell lines ended"
-        case .photos: "Find the text in your photos, read on this Mac"
+        case .accessibility: String(localized: "Paste into your apps, move and switch windows")
+        case .calendars: String(localized: "Today’s meetings, and the events you add")
+        case .reminders: String(localized: "The todos you add")
+        case .notifications: String(localized: "Timers, and how shell lines ended")
+        case .photos: String(localized: "Find the text in your photos, read on this Mac")
         }
     }
 
@@ -81,7 +82,7 @@ enum Permission: CaseIterable {
     @MainActor func request(_ access: Access) async {
         guard access == .notAsked else {
             let page = self == .notifications ? "com.apple.Notifications-Settings.extension?id=\(Bundle.main.bundleIdentifier ?? "")"
-                : "com.apple.preference.security?Privacy_\(title)"
+                : "com.apple.preference.security?Privacy_\(String(describing: self).capitalized)" // Privacy_Calendars: English, not the title
             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:\(page)")!)
             return
         }
@@ -162,7 +163,7 @@ final class WelcomeWindow: AppWindow {
     init(start: @escaping @MainActor () -> Void) {
         let model = Welcome()
         self.model = model
-        super.init(title: "Welcome to Copperlight", content: WelcomeView(model: model, start: start))
+        super.init(title: String(localized: "Welcome to Copperlight"), content: WelcomeView(model: model, start: start))
         titleVisibility = .hidden // the title is for the window list and VoiceOver
         isMovableByWindowBackground = true
         for button in [NSWindow.ButtonType.miniaturizeButton, .zoomButton] { standardWindowButton(button)?.isHidden = true }
@@ -183,7 +184,7 @@ private struct WelcomeView: View {
                 .shadow(color: .accent.opacity(0.3), radius: 22, y: 10)
                 .rise(shown, 0)
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("Welcome to")
+                Text("Welcome to", comment: "Before the app's name, which shows in the accent's gradient")
                 Text("Copperlight").foregroundStyle(LinearGradient.brand)
             }
             .font(.system(size: 28, weight: .semibold)).tracking(-0.4)
@@ -215,7 +216,7 @@ private struct WelcomeView: View {
             }
             .padding(.top, 24).rise(shown, 0.22)
 
-            Row(symbol: "power", title: "Open at Login", detail: "Ready the moment your Mac starts") {
+            Row(symbol: "power", title: String(localized: "Open at Login"), detail: String(localized: "Ready the moment your Mac starts")) {
                 Toggle("Open at Login", isOn: Binding(get: { model.launchAtLogin },
                                                       set: { model.launchAtLogin = setLaunchAtLogin($0) }))
                     .toggleStyle(.switch).labelsHidden().tint(.accent)
@@ -273,9 +274,9 @@ private struct HotkeyPill: View {
                 Image(systemName: "checkmark.circle.fill").font(.system(size: 18)).foregroundStyle(LinearGradient.brand)
                     .transition(.scale.combined(with: .opacity))
             } else {
-                Text("Press")
+                Text("Press", comment: "Then the hotkey's keys, then “from any app to open it”")
                 HStack(spacing: 5) { ForEach(keycaps, id: \.self) { BigKeycap(label: $0) } }
-                Text("from any app to open it")
+                Text("from any app to open it", comment: "After “Press” and the hotkey's keys")
                 Spacer(minLength: 0)
             }
         }
@@ -314,7 +315,7 @@ private struct PermissionRow: View {
 
     var body: some View {
         Row(symbol: permission.symbol, title: permission.title, detail: permission.why,
-            note: permission == .accessibility ? nil : "Optional") {
+            note: permission == .accessibility ? nil : String(localized: "Optional", comment: "Beside a permission Copperlight works without")) {
             switch access {
             case .granted:
                 HStack(spacing: 6) {

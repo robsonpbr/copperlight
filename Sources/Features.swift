@@ -1,3 +1,4 @@
+import Foundation
 import Synchronization
 
 /// What can be turned off, in Settings › Features or config.toml's `[features]` (`currency = false`). Off means off:
@@ -26,7 +27,18 @@ enum Feature: String, CaseIterable, Sendable {
     static func use(_ features: Config.Features) { config.withLock { $0 = features } }
     var isOn: Bool { Self.config.withLock { $0.isOn(self) } }
 
-    enum Group: String, CaseIterable { case answers = "Answers", yours = "Yours", mac = "Windows and the Mac" }
+    enum Group: CaseIterable {
+        case answers, yours, mac
+
+        /// Its heading in Settings › Features and Keywords.
+        var title: String {
+            switch self {
+            case .answers: String(localized: "Answers", comment: "Settings › Features: the group of features that answer what you type")
+            case .yours: String(localized: "Yours", comment: "Settings › Features: the group of features for your own things (notes, files)")
+            case .mac: String(localized: "Windows and the Mac")
+            }
+        }
+    }
 
     var group: Group {
         switch self {
@@ -76,60 +88,62 @@ enum Feature: String, CaseIterable, Sendable {
         }
     }
 
+    /// An about line that's only what you type stays English, as the words after a keyword do (TRANSLATING.md).
     private var info: (name: String, about: String) {
         switch self {
-        case .calculator: ("Calculator", "150 + 20%, 30 is what % of 150, 255 in hex")
-        case .currency: ("Currency", "25 usd to eur, 0.1 btc in eur. Rates from Coinbase")
-        case .units: ("Units", "5 km in miles, 72 f in c")
-        case .timeZones: ("Time zones", "time in tokyo")
-        case .dates: ("Date math", "days until dec 25, in 3 weeks")
-        case .colors: ("Colors", "#c87533, pick color, colors")
-        case .qr: ("QR codes", "qr and a link or any text")
-        case .stocks: ("Stocks", "stock aapl. Prices from Yahoo Finance")
-        case .weather: ("Weather", "weather lisbon. Forecasts from Open-Meteo")
-        case .wikipedia: ("Wikipedia", "wiki lisbon. Summaries from Wikipedia")
-        case .define: ("Dictionary", "define serendipity, synonyms happy")
-        case .spelling: ("Spelling", "spell recieve")
-        case .translate: ("Translate", "translate bom dia, on this Mac")
-        case .emoji: ("Emoji", "emoji heart")
-        case .textTools: ("Text tools", "uuid, password, fake name, lowercase, paste plain")
-        case .largeType: ("Large Type", "large and any text, across the screen")
-        case .macInfo: ("Your Mac", "ip, battery, disk")
-        case .speedTest: ("Speed test", "speed, against Apple's servers")
-        case .processes: ("Processes", "cpu, memory, port 3000")
-        case .clipboard: ("Clipboard history", "clip: what you copied, kept on this Mac")
-        case .cleanLinks: ("Links without tracking", "utm_, fbclid and the like taken off the links you copy")
-        case .notes: ("Notes", "note, add note")
-        case .snippets: ("Snippets", "Text you paste by name")
-        case .scripts: ("Scripts", "The scripts folder, as rows")
-        case .commands: ("Your commands", "The links, apps, files and shell lines in config.toml")
-        case .contacts: ("Contacts", "contact ana")
-        case .messageCodes: ("Codes from Messages", "codes: the latest verification codes, to copy")
-        case .calendar: ("Calendar", "The next meeting, meetings, week, month, free time, add event")
-        case .reminders: ("Reminders", "Reminders that are due, add todo")
-        case .files: ("Files", "f invoice, ~/code, :reveal, :trash")
-        case .latestFiles: ("Latest screenshots and downloads", "screenshots, downloads: newest first, Enter pastes one")
-        case .browserTabs: ("Browser tabs", "Your open tabs, by title")
-        case .bookmarks: ("Bookmarks and history", "Pages from your browser, by title")
-        case .systemSettings: ("System Settings", "Its pages, as rows: wi-fi, displays")
-        case .menus: ("Menu search", "The menus of the app in front, after :")
-        case .timers: ("Timers", "timer 10m, timer until 15:00")
-        case .pomodoro: ("Pomodoro", "pomo, pomo break")
-        case .stopwatch: ("Stopwatch", "stopwatch")
-        case .screenText: ("Copy text from the screen", "copy text")
-        case .windows: ("Windows", ":left, :maximize, :window, saved layouts")
-        case .runningApps: ("Running apps", ":quit, :hide, :relaunch")
-        case .mac: ("Mac commands", ":lock, :sleep, :dark, :wifi, screenshot")
-        case .sound: ("Sound", ":play, :volume 30, :mute, :output")
-        case .keepAwake: ("Keep awake", ":awake 2h")
+        case .calculator: (String(localized: "Calculator"), "150 + 20%, 30 is what % of 150, 255 in hex")
+        case .currency: (String(localized: "Currency"), String(localized: "25 usd to eur, 0.1 btc in eur. Rates from Coinbase"))
+        case .units: (String(localized: "Units"), "5 km in miles, 72 f in c")
+        case .timeZones: (String(localized: "Time zones"), "time in tokyo")
+        case .dates: (String(localized: "Date math"), "days until dec 25, in 3 weeks")
+        case .colors: (String(localized: "Colors"), "#c87533, pick color, colors")
+        case .qr: (String(localized: "QR codes"), String(localized: "qr and a link or any text"))
+        case .stocks: (String(localized: "Stocks"), String(localized: "stock aapl. Prices from Yahoo Finance"))
+        case .weather: (String(localized: "Weather"), String(localized: "weather lisbon. Forecasts from Open-Meteo"))
+        case .wikipedia: ("Wikipedia", String(localized: "wiki lisbon. Summaries from Wikipedia"))
+        case .define: (String(localized: "Dictionary"), "define serendipity, synonyms happy")
+        case .spelling: (String(localized: "Spelling"), "spell recieve")
+        case .translate: (String(localized: "Translate"), String(localized: "translate bom dia, on this Mac"))
+        case .emoji: (String(localized: "Emoji"), "emoji heart")
+        case .textTools: (String(localized: "Text tools"), "uuid, password, fake name, lowercase, paste plain")
+        case .largeType: (String(localized: "Large Type"), String(localized: "large and any text, across the screen"))
+        case .macInfo: (String(localized: "Your Mac"), "ip, battery, disk")
+        case .speedTest: (String(localized: "Speed test"), String(localized: "speed, against Apple's servers"))
+        case .processes: (String(localized: "Processes"), "cpu, memory, port 3000")
+        case .clipboard: (String(localized: "Clipboard history"), String(localized: "clip: what you copied, kept on this Mac"))
+        case .cleanLinks: (String(localized: "Links without tracking"), String(localized: "utm_, fbclid and the like taken off the links you copy"))
+        case .notes: (String(localized: "Notes"), "note, add note")
+        case .snippets: (String(localized: "Snippets"), String(localized: "Text you paste by name"))
+        case .scripts: (String(localized: "Scripts"), String(localized: "The scripts folder, as rows"))
+        case .commands: (String(localized: "Your commands"), String(localized: "The links, apps, files and shell lines in config.toml"))
+        case .contacts: (String(localized: "Contacts"), "contact ana")
+        case .messageCodes: (String(localized: "Codes from Messages"), String(localized: "codes: the latest verification codes, to copy"))
+        case .calendar: (String(localized: "Calendar"), String(localized: "The next meeting, meetings, week, month, free time, add event"))
+        case .reminders: (String(localized: "Reminders"), String(localized: "Reminders that are due, add todo"))
+        case .files: (String(localized: "Files"), "f invoice, ~/code, :reveal, :trash")
+        case .latestFiles: (String(localized: "Latest screenshots and downloads"),
+                            String(localized: "screenshots, downloads: newest first, Enter pastes one"))
+        case .browserTabs: (String(localized: "Browser tabs"), String(localized: "Your open tabs, by title"))
+        case .bookmarks: (String(localized: "Bookmarks and history"), String(localized: "Pages from your browser, by title"))
+        case .systemSettings: (String(localized: "System Settings"), String(localized: "Its pages, as rows: wi-fi, displays"))
+        case .menus: (String(localized: "Menu search"), String(localized: "The menus of the app in front, after :"))
+        case .timers: (String(localized: "Timers"), "timer 10m, timer until 15:00")
+        case .pomodoro: (String(localized: "Pomodoro"), "pomo, pomo break")
+        case .stopwatch: (String(localized: "Stopwatch"), "stopwatch")
+        case .screenText: (String(localized: "Copy text from the screen"), "copy text")
+        case .windows: (String(localized: "Windows"), String(localized: ":left, :maximize, :window, saved layouts"))
+        case .runningApps: (String(localized: "Running apps"), ":quit, :hide, :relaunch")
+        case .mac: (String(localized: "Mac commands"), ":lock, :sleep, :dark, :wifi, screenshot")
+        case .sound: (String(localized: "Sound"), ":play, :volume 30, :mute, :output")
+        case .keepAwake: (String(localized: "Keep awake"), ":awake 2h")
         case .bluetooth: ("Bluetooth", ":connect airpods")
-        case .wifiPassword: ("Wi-Fi password", "wifi password, with a QR code to join")
-        case .camera: ("Camera", "camera: see yourself before a call")
-        case .shortcuts: ("Shortcuts", ":shortcut and a shortcut's name")
-        case .shell: ("Shell", ":! and a command")
-        case .homebrew: ("Install with Homebrew", "Apps you don't have, installed from their row")
-        case .fileContent: ("Text inside files", "")
-        case .photoText: ("Text in photos", "")
+        case .wifiPassword: (String(localized: "Wi-Fi password"), String(localized: "wifi password, with a QR code to join"))
+        case .camera: (String(localized: "Camera"), String(localized: "camera: see yourself before a call"))
+        case .shortcuts: (String(localized: "Shortcuts"), String(localized: ":shortcut and a shortcut's name"))
+        case .shell: (String(localized: "Shell"), String(localized: ":! and a command"))
+        case .homebrew: (String(localized: "Install with Homebrew"), String(localized: "Apps you don't have, installed from their row"))
+        case .fileContent: (String(localized: "Text inside files"), "")
+        case .photoText: (String(localized: "Text in photos"), "")
         }
     }
 }

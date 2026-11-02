@@ -31,14 +31,16 @@ func outlookCalendarLink(_ span: CalendarSpan, _ date: Date, calendar: Calendar 
 /// The calendar `[meetings] open_in` picks, by name.
 func calendarAppName(_ app: Config.Meetings.OpenIn) -> String {
     switch app {
-    case .calendar: "Calendar"
+    case .calendar: String(localized: "Calendar", comment: "Apple's Calendar app, by the name macOS gives it")
     case .google: "Google Calendar"
     case .outlook: "Outlook"
     }
 }
 
 /// What Enter on an "Open Calendar" row says.
-func calendarActionTitle(_ app: Config.Meetings.OpenIn) -> String { "Open " + calendarAppName(app) }
+func calendarActionTitle(_ app: Config.Meetings.OpenIn) -> String {
+    String(localized: "Open \(calendarAppName(app))", comment: "Enter on a calendar row: the calendar app's name")
+}
 
 /// Opens the calendar `[meetings] open_in` picks: Calendar as it is, Google Calendar on that day in the browser links
 /// open in, the Outlook app (it can't be sent to a day), or Outlook on the web without it.

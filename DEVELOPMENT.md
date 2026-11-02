@@ -20,6 +20,9 @@ lists everything it does, [docs/guide.md](docs/guide.md) explains it in detail a
 - **No AI service and no plugin store.** What runs on the Mac is fine: Apple's on-device model writes app search
   words when Apple Intelligence is on, and Vision reads the text in photos.
 - **Use decides the order.** Rows people pick rise on their own (frecency). No aliases or numbers to set up.
+- **In your language.** Text a person reads goes through localization, so a translator adds a language with three
+  text files and no code ([TRANSLATING.md](TRANSLATING.md)). `make strings` writes the English list from the
+  compiler; `make translations` says what each language is missing.
 - **Its own look.** Two floating glass pieces: the search field as a pill, the results in a card under it. The
   icon's copper is the only color, outside a diff's red and green. No colored tiles, kind labels or footer.
 

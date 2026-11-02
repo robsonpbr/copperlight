@@ -211,20 +211,20 @@ func oneLine(_ text: String) -> String {
 func shortAge(_ date: Date, now: Date = .now) -> String {
     let seconds = max(0, now.timeIntervalSince(date))
     return switch seconds {
-    case ..<60: "now"
-    case ..<3600: "\(Int(seconds / 60))m"
-    case ..<86_400: "\(Int(seconds / 3600))h"
-    default: "\(Int(seconds / 86_400))d"
+    case ..<60: String(localized: "now", comment: "An age, short: under a minute")
+    case ..<3600: String(localized: "\(Int(seconds / 60))m", comment: "An age, short: 5 minutes")
+    case ..<86_400: String(localized: "\(Int(seconds / 3600))h", comment: "An age, short: 3 hours")
+    default: String(localized: "\(Int(seconds / 86_400))d", comment: "An age, short: 2 days")
     }
 }
 
 /// The clipboard list's section for an item copied at `date`.
 func clipboardSection(_ date: Date, now: Date = .now, calendar: Calendar = .current) -> String {
-    if calendar.isDate(date, inSameDayAs: now) { return "Today" }
+    if calendar.isDate(date, inSameDayAs: now) { return String(localized: "Today", comment: "A day: today") }
     if let yesterday = calendar.date(byAdding: .day, value: -1, to: now), calendar.isDate(date, inSameDayAs: yesterday) {
-        return "Yesterday"
+        return String(localized: "Yesterday", comment: "A day: yesterday")
     }
-    return "Earlier"
+    return String(localized: "Earlier", comment: "Clipboard history's section: before yesterday")
 }
 
 /// Polls the pasteboard and records text and image copies.
@@ -293,7 +293,7 @@ func clipboardSection(_ date: Date, now: Date = .now, calendar: Calendar = .curr
             }
             prune()
         } catch {
-            notify("Couldn't save to clipboard history", error.localizedDescription)
+            notify(String(localized: "Couldn't save to clipboard history"), error.localizedDescription)
         }
     }
 
@@ -338,8 +338,8 @@ actor ClipboardProvider: ResultProvider {
             Verb(keyword: "delete", title: "Delete from History", icon: .symbol("trash"),
                  targets: { [self] in await rows(for: $0, mode: .delete) }),
             Verb(keyword: "clear", title: "Clear History", icon: .symbol("trash.fill"),
-                 confirm: "Delete all clipboard history but the pinned items? This can't be undone.", run: { [store] in
-                do { try store.clear() } catch { notify("Couldn't clear clipboard history", error.localizedDescription) }
+                 confirm: String(localized: "Delete all clipboard history but the pinned items? This can't be undone."), run: { [store] in
+                do { try store.clear() } catch { notify(String(localized: "Couldn't clear clipboard history"), error.localizedDescription) }
             }),
         ]
     }
@@ -355,26 +355,30 @@ actor ClipboardProvider: ResultProvider {
         let target = NSWorkspace.shared.frontmostApplication?.localizedName
         let trusted = AXIsProcessTrusted()
         let actionTitle = switch mode {
-        case .paste: !trusted ? "Copy" : target.map { "Paste to \($0)" } ?? "Paste"
-        case .copy: "Copy"
-        case .delete: "Delete"
+        case .paste: !trusted ? String(localized: "Copy", comment: "Enter on a clipboard item")
+            : target.map { String(localized: "Paste to \($0)") } ?? String(localized: "Paste", comment: "Enter on a clipboard item")
+        case .copy: String(localized: "Copy", comment: "Enter on a clipboard item")
+        case .delete: String(localized: "Delete", comment: "Enter on a clipboard item: deletes it from the history")
         }
+        let pinnedSection = String(localized: "Pinned", comment: "Clipboard history's section: the pinned items")
         return items.enumerated().map { index, item -> LauncherResult in
             let source = item.app.flatMap(app)
             let more = item.length - ClipboardStore.previewLength
             let lines = item.text.count { $0 == "\n" } + 1
             var image: (@MainActor @Sendable () -> NSImage?)? // loaded only when the row is selected
-            var details = [("Application", source?.name ?? item.app ?? "Unknown")]
+            var details = [(String(localized: "Application"), source?.name ?? item.app ?? String(localized: "Unknown", comment: "An app not known"))]
             var icon: LauncherResult.Icon = source.map { .file($0.path) } ?? .symbol("doc.on.clipboard")
             if let size = item.imageSize {
                 image = { (try? store.image(item.id)).flatMap(NSImage.init(data:)) }
                 icon = .image("clipboard:\(item.id)") { (try? store.image(item.id)).flatMap { thumbnail($0, maxPixels: 64) } }
-                details += [("Dimensions", "\(size.width) × \(size.height)"), ("Size", item.length.formatted(.byteCount(style: .file)))]
+                details += [(String(localized: "Dimensions"), "\(size.width) × \(size.height)"),
+                            (String(localized: "Size", comment: "Label: a file's size"), item.length.formatted(.byteCount(style: .file)))]
             } else {
-                details += [("Characters", "\(item.length)"), ("Lines", more > 0 ? "\(lines)+" : "\(lines)")]
+                details += [(String(localized: "Characters"), "\(item.length)"), (String(localized: "Lines"), more > 0 ? "\(lines)+" : "\(lines)")]
             }
-            details.append(("Copied", item.copiedAt.formatted(.relative(presentation: .named))))
-            let shown = image != nil ? "" : more > 0 ? item.text + "\n\n… \(more) more characters" : item.text
+            let copied = item.copiedAt.formatted(.relative(presentation: .named))
+            details.append((String(localized: "Copied", comment: "Label: when a clipboard item was copied"), copied))
+            let shown = image != nil ? "" : more > 0 ? item.text + "\n\n" + String(localized: "… \(more) more characters") : item.text
             var actions: (@Sendable () async -> [LauncherResult])?
             if mode == .paste {
                 let (id, pinned, picture, itemDetails) = (item.id, item.pinned, image, details)
@@ -383,7 +387,8 @@ actor ClipboardProvider: ResultProvider {
                 }
             }
             return LauncherResult(
-                id: "clipboard:\(item.id)", title: String(oneLine(item.text).prefix(200)),
+                id: "clipboard:\(item.id)",
+                title: item.imageSize.map { String(localized: "Image \(String($0.width))×\(String($0.height))") } ?? String(oneLine(item.text).prefix(200)),
                 accessory: shortAge(item.copiedAt, now: now),
                 icon: icon,
                 score: Double(items.count - index), // keep the store's order
@@ -391,7 +396,7 @@ actor ClipboardProvider: ResultProvider {
                 action: action(mode, item.id),
                 actions: actions,
                 staysOpen: mode == .delete,
-                section: query.isEmpty ? item.pinned ? "Pinned" : clipboardSection(item.copiedAt, now: now) : nil, // filtered: not in date order
+                section: query.isEmpty ? item.pinned ? pinnedSection : clipboardSection(item.copiedAt, now: now) : nil, // filtered: not in date order
                 preview: shown,
                 previewImage: image,
                 details: details)
@@ -404,40 +409,51 @@ actor ClipboardProvider: ResultProvider {
                             image: (@MainActor @Sendable () -> NSImage?)?, details: [(String, String)]) -> [LauncherResult] {
         guard let content = try? store.content(id) else { return [] }
         let (paste, copy, store) = (paste, copy, store)
+        // What Enter does on each.
+        let (copyVerb, pasteVerb) = (String(localized: "Copy", comment: "Enter on a clipboard item's action"),
+                                     String(localized: "Paste", comment: "Enter on a clipboard item's action"))
+        let (openVerb, showVerb) = (String(localized: "Open", comment: "Enter on a clipboard item's action"),
+                                    String(localized: "Show", comment: "Enter on a clipboard item's action: Large Type"))
+        let (saveVerb, deleteVerb) = (String(localized: "Save", comment: "Enter on a clipboard item's action"),
+                                      String(localized: "Delete", comment: "Enter on a clipboard item's action"))
         var rows: [(title: String, symbol: String, actionTitle: String, picture: CGImage?, action: @MainActor @Sendable () -> Void)] = [
             (pasteTitle, "doc.on.clipboard", pasteTitle, nil, { paste(content) }),
         ]
-        if trusted { rows.append(("Copy Without Pasting", "doc.on.doc", "Copy", nil, { copy(content) })) } // else Enter copies already
+        if trusted { // else Enter copies already
+            rows.append((String(localized: "Copy Without Pasting"), "doc.on.doc", copyVerb, nil, { copy(content) }))
+        }
         if let after = try? store.copied(after: id), !after.isEmpty {
-            rows.append(("Paste in Order from Here", "list.number", "Paste", nil, {
+            rows.append((String(localized: "Paste in Order from Here"), "list.number", pasteVerb, nil, {
                 PasteQueue.shared.ids = after // the next ones wait in the empty launcher
                 paste(content)
             }))
         }
-        rows.append((pinned ? "Unpin" : "Pin", pinned ? "pin.slash" : "pin", pinned ? "Unpin" : "Pin", nil, { try? store.pin(id, !pinned) }))
+        let pin = pinned ? String(localized: "Unpin", comment: "A clipboard item's action: no longer kept first")
+            : String(localized: "Pin", comment: "A clipboard item's action: kept first, never cleared")
+        rows.append((pin, pinned ? "pin.slash" : "pin", pin, nil, { try? store.pin(id, !pinned) }))
         switch content {
         case .text(let text):
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             if let url = URL(string: trimmed), ["http", "https"].contains(url.scheme?.lowercased() ?? ""), !trimmed.contains(" ") {
-                rows.append(("Open Link", "safari", "Open", nil, { NSWorkspace.shared.open(url) }))
+                rows.append((String(localized: "Open Link"), "safari", openVerb, nil, { NSWorkspace.shared.open(url) }))
             }
-            rows.append(("Large Type", "textformat.size", "Show", nil, { showLargeType(text) }))
-            if let code = qrCode(trimmed) { rows.append(("QR Code", "qrcode", "Copy", code, { copyPicture(code) })) }
+            rows.append((String(localized: "Large Type"), "textformat.size", showVerb, nil, { showLargeType(text) }))
+            if let code = qrCode(trimmed) { rows.append((String(localized: "QR Code"), "qrcode", copyVerb, code, { copyPicture(code) })) }
         case .image(let png):
             let save: @MainActor @Sendable (URL) -> URL? = { folder in
                 let stamp = Date.now.formatted(.iso8601.year().month().day().time(includingFractionalSeconds: false)).replacing(":", with: ".")
                 let file = folder.appending(path: "Clipboard \(stamp).png")
-                do { try png.write(to: file) } catch { notify("Couldn't save the picture", error.localizedDescription); return nil }
+                do { try png.write(to: file) } catch { notify(String(localized: "Couldn't save the picture"), error.localizedDescription); return nil }
                 return file
             }
-            rows.append(("Open in Preview", "eye", "Open", nil, {
+            rows.append((String(localized: "Open in Preview"), "eye", openVerb, nil, {
                 if let file = save(FileManager.default.temporaryDirectory) { NSWorkspace.shared.open(file) }
             }))
-            rows.append(("Save to Downloads", "square.and.arrow.down", "Save", nil, {
+            rows.append((String(localized: "Save to Downloads"), "square.and.arrow.down", saveVerb, nil, {
                 if let file = save(.downloadsDirectory) { NSWorkspace.shared.activateFileViewerSelecting([file]) }
             }))
         }
-        rows.append(("Delete from History", "trash", "Delete", nil, { try? store.delete(id) }))
+        rows.append((String(localized: "Delete from History"), "trash", deleteVerb, nil, { try? store.delete(id) }))
         return rows.enumerated().map { index, row in
             var shown = image
             if let code = row.picture { shown = { roundedPicture(code) } } // the QR code beside the list
@@ -479,17 +495,19 @@ actor ClipboardProvider: ResultProvider {
     guard let id = queue.ids.first, let content = try? store.content(id) else { return [] }
     let shown = switch content {
     case .text(let text): String(oneLine(text).prefix(80))
-    case .image: "a picture"
+    case .image: String(localized: "a picture", comment: "Goes in “Paste Next: …”")
     }
     let left = queue.ids.count - 1
-    return [LauncherResult(id: "paste-queue:\(id)", title: "Paste Next: \(shown)",
-                           subtitle: left == 0 ? "The last one" : "\(left) more after it, in the order you copied them",
-                           icon: .symbol("list.number"), score: 210, actionTitle: "Paste", action: {
+    return [LauncherResult(id: "paste-queue:\(id)", title: String(localized: "Paste Next: \(shown)"),
+                           subtitle: left == 0 ? String(localized: "The last one")
+                               : String(localized: "\(left) more after it, in the order you copied them"),
+                           icon: .symbol("list.number"), score: 210,
+                           actionTitle: String(localized: "Paste", comment: "Enter on the next clipboard item to paste in order"), action: {
         queue.ids.removeFirst()
         paste(content)
     }, actions: {
-        [LauncherResult(id: "paste-queue:stop", title: "Stop Pasting in Order", icon: .symbol("stop"), score: 50, actionTitle: "Stop",
-                        action: { queue.ids = [] })]
+        [LauncherResult(id: "paste-queue:stop", title: String(localized: "Stop Pasting in Order"), icon: .symbol("stop"), score: 50,
+                        actionTitle: String(localized: "Stop", comment: "Enter on Stop Pasting in Order"), action: { queue.ids = [] })]
     })]
 }
 

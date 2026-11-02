@@ -49,15 +49,16 @@ struct CaptureProvider: ResultProvider {
 
     private struct Target { let name, title, icon: String; let feature: Feature }
     private static let all = [
-        Target(name: "note", title: "Add to Note", icon: "note.text", feature: .notes),
-        Target(name: "todo", title: "Add Reminder", icon: "checklist", feature: .reminders),
-        Target(name: "event", title: "Add Calendar Event", icon: "calendar", feature: .calendar),
+        Target(name: "note", title: String(localized: "Add to Note"), icon: "note.text", feature: .notes),
+        Target(name: "todo", title: String(localized: "Add Reminder"), icon: "checklist", feature: .reminders),
+        Target(name: "event", title: String(localized: "Add Calendar Event"), icon: "calendar", feature: .calendar),
     ]
     /// The to-do target says the app it adds to: "Add Reminder", or "Add to Things".
     private var targets: [Target] {
         let app = todos().app
         return Self.all.filter { isOn($0.feature) }.map { target in
-            target.name == "todo" && app != .reminders ? Target(name: "todo", title: "Add to \(todoAppName(app))", icon: target.icon, feature: target.feature) : target
+            target.name == "todo" && app != .reminders
+                ? Target(name: "todo", title: String(localized: "Add to \(todoAppName(app))"), icon: target.icon, feature: target.feature) : target
         }
     }
 
@@ -68,8 +69,9 @@ struct CaptureProvider: ResultProvider {
     func results(for query: String) -> [LauncherResult] {
         if let rest = words(after: "add", in: query) { return addRows(rest) }
         guard isOn(.mac) else { return [] }
-        let tools = [("screenshot", "Screenshot", "Screenshot toolbar (⌘⇧5)", "camera.viewfinder", false),
-                     ("record", "Record Screen", "Screenshot toolbar, ready to record", "record.circle", true)]
+        let tools = [("screenshot", String(localized: "Screenshot", comment: "The row that opens the screenshot toolbar"),
+                      String(localized: "Screenshot toolbar (⌘⇧5)"), "camera.viewfinder", false),
+                     ("record", String(localized: "Record Screen"), String(localized: "Screenshot toolbar, ready to record"), "record.circle", true)]
         return tools.compactMap { name, title, subtitle, icon, video in
             let score: Double? = query.caseInsensitiveCompare(name) == .orderedSame ? 50
                 : query.count >= 3 && name.hasPrefix(query.lowercased()) ? 0.5 : nil
@@ -89,7 +91,7 @@ struct CaptureProvider: ResultProvider {
         // "add", "add t", "add todo": the targets, and Enter types the name ("add todo ").
         return targets.filter { $0.name.hasPrefix(rest.lowercased()) }.map { target in
             LauncherResult(id: "builtin:add \(target.name)", title: target.title, subtitle: "add \(target.name) " + example(target.name),
-                           icon: .symbol(target.icon), score: 50, actionTitle: "Choose",
+                           icon: .symbol(target.icon), score: 50, actionTitle: String(localized: "Choose", comment: "Enter on an add row: types its name"),
                            action: {}, completion: "add \(target.name) ")
         }
     }
@@ -100,29 +102,34 @@ struct CaptureProvider: ResultProvider {
 
     private func row(_ target: Target, text: String) -> LauncherResult {
         let id = "builtin:add \(target.name)", icon = LauncherResult.Icon.symbol(target.icon)
+        let add = String(localized: "Add", comment: "Enter on add note, todo or event")
         switch target.name {
         case "note":
-            return LauncherResult(id: id, title: text, subtitle: "Add to Note", icon: icon, score: 50,
-                                  actionTitle: "Add", action: { [addToNote] in addToNote(text) })
+            return LauncherResult(id: id, title: text, subtitle: String(localized: "Add to Note"), icon: icon, score: 50,
+                                  actionTitle: add, action: { [addToNote] in addToNote(text) })
         case "todo":
             let when = captureDate(text), todos = todos()
             if todos.app == .todoist, !hasTodoistKey() {
-                return LauncherResult(id: id, title: text, subtitle: "Connect Todoist in Settings › Options › To-dos", icon: icon, score: 50,
-                                      actionTitle: "Open Settings", action: showSettings)
+                return LauncherResult(id: id, title: text, subtitle: String(localized: "Connect Todoist in Settings › Options › To-dos"),
+                                      icon: icon, score: 50, actionTitle: String(localized: "Open Settings"), action: showSettings)
             }
-            let kind = todos.app == .reminders ? "Reminder" : todoAppName(todos.app)
-            let title = when.map { $0.title.isEmpty ? (todos.app == .reminders ? "New Reminder" : "New To-do") : $0.title } ?? text
-            let date = todos.app == .ticktick && when != nil ? "without its date" : when.map { whenText($0, end: false) } ?? "no date"
+            let kind = todos.app == .reminders ? String(localized: "Reminder", comment: "What add todo makes: a reminder") : todoAppName(todos.app)
+            let new = todos.app == .reminders ? String(localized: "New Reminder") : String(localized: "New To-do")
+            let title = when.map { $0.title.isEmpty ? new : $0.title } ?? text
+            let date = todos.app == .ticktick && when != nil ? String(localized: "without its date", comment: "TickTick's link takes no date")
+                : when.map { whenText($0, end: false) } ?? String(localized: "no date", comment: "A to-do typed without a day")
             return LauncherResult(id: id, title: title, subtitle: kind + " · " + date,
-                                  icon: icon, score: 50, actionTitle: "Add", action: { addTodo(title, due: when, todos: todos) })
+                                  icon: icon, score: 50, actionTitle: add, action: { addTodo(title, due: when, todos: todos) })
         default: // event
             guard let when = captureDate(text) else {
-                return LauncherResult(id: id, title: target.title, subtitle: "Needs a day or time: add event fri 10am dentist",
-                                      icon: icon, score: 50, actionTitle: "", action: {})
+                let typed = "add event " + example("event")
+                let needs = String(localized: "Needs a day or time: \(typed)", comment: "A typed example, in English")
+                return LauncherResult(id: id, title: target.title, subtitle: needs, icon: icon, score: 50, actionTitle: "", action: {})
             }
-            let title = when.title.isEmpty ? "New Event" : when.title
-            return LauncherResult(id: id, title: title, subtitle: "Calendar · " + whenText(when, end: true),
-                                  icon: icon, score: 50, actionTitle: "Add", action: { addEvent(title, when) })
+            let title = when.title.isEmpty ? String(localized: "New Event") : when.title
+            let calendar = String(localized: "Calendar", comment: "Apple's Calendar app, by the name macOS gives it")
+            return LauncherResult(id: id, title: title, subtitle: calendar + " · " + whenText(when, end: true),
+                                  icon: icon, score: 50, actionTitle: add, action: { addEvent(title, when) })
         }
     }
 }
@@ -150,10 +157,11 @@ private func words(after name: String, in query: String) -> String? {
         let store = EKEventStore()
         do {
             guard try await store.requestFullAccessToReminders() else {
-                return notify("Allow Copperlight in Reminders to add reminders", "Privacy & Security → Reminders")
+                return notify(String(localized: "Allow Copperlight in Reminders to add reminders"),
+                              String(localized: "Privacy & Security → Reminders", comment: "System Settings' pages, by the names macOS gives them"))
             }
             guard let list = chosenCalendar(store.calendars(for: .reminder), named: name, title: \.title) ?? store.defaultCalendarForNewReminders() else {
-                return notify("Couldn't add the reminder", "There's no Reminders list")
+                return notify(String(localized: "Couldn't add the reminder"), String(localized: "There's no Reminders list"))
             }
             let reminder = EKReminder(eventStore: store)
             reminder.title = title
@@ -164,9 +172,9 @@ private func words(after name: String, in query: String) -> String? {
                 if !due.allDay { reminder.addAlarm(EKAlarm(absoluteDate: due.date)) }
             }
             try store.save(reminder, commit: true)
-            notify("Reminder added", [title, due.map { whenText($0, end: false) }].compactMap(\.self).joined(separator: " · "))
+            notify(String(localized: "Reminder added"), [title, due.map { whenText($0, end: false) }].compactMap(\.self).joined(separator: " · "))
         } catch {
-            notify("Couldn't add the reminder", error.localizedDescription)
+            notify(String(localized: "Couldn't add the reminder"), error.localizedDescription)
         }
     }
 }
@@ -178,7 +186,8 @@ private func words(after name: String, in query: String) -> String? {
         let store = EKEventStore()
         do {
             guard try await store.requestWriteOnlyAccessToEvents() else {
-                return notify("Allow Copperlight in Calendars to add events", "Privacy & Security → Calendars")
+                return notify(String(localized: "Allow Copperlight in Calendars to add events"),
+                              String(localized: "Privacy & Security → Calendars", comment: "System Settings' pages, by the names macOS gives them"))
             }
             let event = EKEvent(eventStore: store)
             event.title = title
@@ -189,9 +198,9 @@ private func words(after name: String, in query: String) -> String? {
             let writable = full ? store.calendars(for: .event).filter(\.allowsContentModifications) : [] // not a holidays calendar of the same name
             event.calendar = chosenCalendar(writable, named: name, title: \.title) ?? store.defaultCalendarForNewEvents
             try store.save(event, span: .thisEvent, commit: true)
-            notify("Event added", "\(title) · \(whenText(when, end: true))")
+            notify(String(localized: "Event added"), "\(title) · \(whenText(when, end: true))")
         } catch {
-            notify("Couldn't add the event", error.localizedDescription)
+            notify(String(localized: "Couldn't add the event"), error.localizedDescription)
         }
     }
 }

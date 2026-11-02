@@ -6,7 +6,10 @@ struct ShellProvider: ResultProvider {
     static let prefix = ":!"
     /// The lines run before are the launcher's frecency entries ("shell:<line>"): no history file of their own.
     let state: StateStore
-    var modes: [Mode] { [Mode(prefix: Self.prefix, title: "Shell", icon: .symbol("terminal"), hint: "A shell line: git status")] }
+    var modes: [Mode] {
+        [Mode(prefix: Self.prefix, title: String(localized: "Shell", comment: "The :! chip: runs a shell line"), icon: .symbol("terminal"),
+              hint: String(localized: "A shell line: git status", comment: "The :! chip's placeholder; “git status” is typed as is"))]
+    }
 
     func results(for query: String) async -> [LauncherResult] {
         let line = query.dropFirst(Self.prefix.count).trimmingCharacters(in: .whitespaces)
@@ -17,7 +20,8 @@ struct ShellProvider: ResultProvider {
             .map { String($0.key.dropFirst(6)) }
         guard !line.isEmpty else {
             if recent.isEmpty {
-                return [LauncherResult(id: "shell:hint", title: "Type a shell line", subtitle: ":!git status · runs on Enter",
+                return [LauncherResult(id: "shell:hint", title: String(localized: "Type a shell line"),
+                                       subtitle: String(localized: ":!git status · runs on Enter", comment: "“:!git status” is typed as is"),
                                        icon: .symbol("terminal"), score: 0, actionTitle: "", action: {})]
             }
             return recent.prefix(20).enumerated().map { row($1, score: -0.01 * Double($0)) }
@@ -28,7 +32,8 @@ struct ShellProvider: ResultProvider {
 
     private func row(_ line: String, score: Double) -> LauncherResult {
         LauncherResult(id: "shell:\(line)", title: line, subtitle: "zsh", icon: .symbol("terminal"),
-                       score: score, actionTitle: "Run", action: {}, output: { await shellOutputRow(line, progress: $0) })
+                       score: score, actionTitle: String(localized: "Run", comment: "Enter on a shell line"), action: {},
+                       output: { await shellOutputRow(line, progress: $0) })
     }
 }
 
@@ -40,14 +45,19 @@ func shellOutputRow(_ line: String, id: String? = nil, title: String? = nil,
         // ponytail: the preview shows the first 20k characters (SwiftUI Text crawls on more); Enter copies it all.
         // While it runs, Enter hides the panel and lets it finish.
         LauncherResult(id: id ?? "shell:\(line)", title: title ?? line, subtitle: subtitle, icon: .symbol("terminal"), score: .infinity,
-                       actionTitle: !done ? "Hide" : output.isEmpty ? "" : "Copy", action: { if done, !output.isEmpty { copyToClipboard(output) } },
-                       preview: output.isEmpty ? "No output" : output.count > 20_000 ? String(output.prefix(20_000)) + "\n…" : output)
+                       actionTitle: !done ? String(localized: "Hide", comment: "Enter on a shell line that's running: hides the panel")
+                           : output.isEmpty ? "" : String(localized: "Copy", comment: "Enter on a shell line's output"),
+                       action: { if done, !output.isEmpty { copyToClipboard(output) } },
+                       preview: output.isEmpty ? String(localized: "No output") : output.count > 20_000 ? String(output.prefix(20_000)) + "\n…" : output)
     }
     let run = await runShell(line, progress: progress.map { progress in
-        { @Sendable soFar in await progress(row(soFar, "Running… Esc stops it", false)) }
+        { @Sendable soFar in await progress(row(soFar, String(localized: "Running… Esc stops it"), false)) }
     })
-    let status = run.timedOut ? "stopped after \(Int(shellTimeout)) s" : run.status == 0 ? "done" : "exit \(run.status)"
-    return row(run.output, "\(status) · \(formatNumber(run.seconds, decimals: 1...1)) s", true)
+    let status = run.timedOut ? String(localized: "stopped after \(Int(shellTimeout)) s")
+        : run.status == 0 ? String(localized: "done", comment: "A shell line ended without an error")
+        : String(localized: "exit \(Int(run.status))", comment: "A shell line's exit status")
+    return row(run.output, String(localized: "\(status) · \(formatNumber(run.seconds, decimals: 1...1)) s",
+                                  comment: "How a shell line ended (“done”, “exit 1”), then how long it took in seconds"), true)
 }
 
 let shellTimeout: TimeInterval = 30

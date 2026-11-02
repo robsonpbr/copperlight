@@ -103,6 +103,7 @@ struct UnitProvider: ResultProvider {
         let number = formatNumber(value, decimals: 0...4)
         return [LauncherResult(id: "units", title: "\(number) \(parsed.to.symbol)",
                                subtitle: "\(formatNumber(parsed.value)) \(parsed.from.symbol)", icon: .symbol("ruler"), score: 10,
-                               actionTitle: "Copy", action: { copyToClipboard(number) })]
+                               actionTitle: String(localized: "Copy", comment: "Enter on a unit conversion: copies the number"),
+                               action: { copyToClipboard(number) })]
     }
 }

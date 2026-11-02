@@ -1,0 +1,3 @@
+"weather" = "tempo, define";
+"week" = "semana, tempo";
+"nonsense" = "disparate";

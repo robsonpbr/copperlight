@@ -26,7 +26,8 @@ import SwiftUI
             config = try Config.parse(read())
             (broken, problem) = (false, nil)
         } catch {
-            (broken, problem) = (true, "config.toml has a mistake (\(Config.describe(error))). Fix it there and these settings come back.")
+            let mistake = Config.describe(error)
+            (broken, problem) = (true, String(localized: "config.toml has a mistake (\(mistake)). Fix it there and these settings come back."))
         }
     }
 
@@ -39,14 +40,14 @@ import SwiftUI
         var file = ConfigFile(text)
         edit(&file)
         guard (try? Config.parse(file.text)) == expected else {
-            problem = "This change can't be saved without rewriting your config.toml, so it wasn't. Edit the file instead."
+            problem = String(localized: "This change can't be saved without rewriting your config.toml, so it wasn't. Edit the file instead.")
             return
         }
         do {
             try file.text.write(to: self.file, atomically: true, encoding: .utf8)
             (config, problem) = (expected, nil)
         } catch {
-            problem = "Couldn't save config.toml: \(error.localizedDescription)"
+            problem = String(localized: "Couldn't save config.toml: \(error.localizedDescription)")
         }
     }
 
@@ -77,7 +78,7 @@ import SwiftUI
             guard words != self.config.keywords.words[key] ?? [] else { return }
             var all = self.config.keywords.words
             all[key] = words.isEmpty ? nil : words
-            if let problem = Config.Keywords.problem(all) { self.problem = "Not saved: \(problem)."; return }
+            if let problem = Config.Keywords.problem(all) { self.problem = String(localized: "Not saved: \(problem)."); return }
             self.save({ $0.keywords.words = all },
                       { $0.set(key, in: "keywords", to: words.isEmpty ? nil : words.count == 1 ? .string(words[0]) : .strings(words)) })
         })
@@ -127,7 +128,7 @@ import SwiftUI
             guard let shortcut else { self.hotkeyResets += 1; return } // the launcher always has a hotkey
             let hotkey = Hotkey(keyCode: shortcut.carbonKeyCode, modifiers: shortcut.modifiers.intersection([.command, .option, .control, .shift]))
             guard let text = hotkey.text else {
-                self.problem = "That key can't be the hotkey. Use a letter, a number, Space or an F-key, with modifiers."
+                self.problem = String(localized: "That key can't be the hotkey. Use a letter, a number, Space or an F-key, with modifiers.")
                 return
             }
             self.save({ $0.hotkeys.launcher = hotkey }, { $0.set("launcher", in: "hotkeys", to: .string(text)) })
@@ -158,7 +159,7 @@ final class SettingsWindow: AppWindow {
     init(showWelcome: @escaping @MainActor () -> Void, forget: @escaping @MainActor (SearchModel.Learned) -> Void, file: URL = Config.file) {
         let model = SettingsModel(file: file)
         self.model = model
-        super.init(title: "Copperlight Settings", style: .miniaturizable,
+        super.init(title: String(localized: "Copperlight Settings"), style: .miniaturizable,
                    content: SettingsView(model: model, showWelcome: showWelcome, forget: forget))
         // A real toolbar holds the pane's title, and content scrolling under it fades out instead of running behind it.
         toolbar = NSToolbar()
@@ -167,11 +168,27 @@ final class SettingsWindow: AppWindow {
     }
 }
 
-enum Pane: String, CaseIterable, Identifiable {
-    case general = "General", launcher = "Launcher", features = "Features", options = "Options", keywords = "Keywords", clipboard = "Clipboard", search = "Files", browser = "Browser",
-         commands = "Commands", snippets = "Snippets", about = "About"
+enum Pane: CaseIterable, Identifiable {
+    case general, launcher, features, options, keywords, clipboard, search, browser, commands, snippets, about
 
     var id: Self { self }
+
+    /// Its name in the sidebar and over the pane.
+    var title: String {
+        switch self {
+        case .general: String(localized: "General", comment: "A Settings pane")
+        case .launcher: String(localized: "Launcher", comment: "A Settings pane")
+        case .features: String(localized: "Features", comment: "A Settings pane")
+        case .options: String(localized: "Options", comment: "A Settings pane")
+        case .keywords: String(localized: "Keywords", comment: "A Settings pane")
+        case .clipboard: String(localized: "Clipboard", comment: "A Settings pane")
+        case .search: String(localized: "Files", comment: "A Settings pane")
+        case .browser: String(localized: "Browser", comment: "A Settings pane")
+        case .commands: String(localized: "Commands", comment: "A Settings pane")
+        case .snippets: String(localized: "Snippets", comment: "A Settings pane")
+        case .about: String(localized: "About", comment: "A Settings pane")
+        }
+    }
 
     /// The panes of the features that are on.
     static func shown(_ features: Config.Features) -> [Pane] {
@@ -204,7 +221,7 @@ private struct SettingsView: View {
     var body: some View {
         NavigationSplitView {
             List(Pane.shown(model.config.features), selection: Binding(get: { model.pane }, set: { model.pane = $0 })) { pane in
-                Label { Text(pane.rawValue) } icon: { Tile(symbol: pane.symbol) }.tag(pane)
+                Label { Text(pane.title) } icon: { Tile(symbol: pane.symbol) }.tag(pane)
             }
             .navigationSplitViewColumnWidth(200)
             .toolbar(removing: .sidebarToggle)
@@ -229,7 +246,7 @@ private struct SettingsView: View {
                 .formStyle(.grouped)
                 .disabled(model.broken)
             }
-            .navigationTitle(pane.rawValue)
+            .navigationTitle(pane.title)
         }
         .frame(width: 800, height: 580)
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in model.reload() }
@@ -503,7 +520,8 @@ private struct OptionsPane: View {
         Section {
             Toggle("Style Markdown as you type", isOn: model.binding(\.notes.markdown, "notes", "markdown") { .bool($0) })
         } header: { Text("Notes") } footer: {
-            Note("# headings, **bold**, *italic*, `code`, lists, - [ ] checkboxes you can click, and links. The notes stay plain text files.")
+            Note(verbatim: String(localized: "# headings, **bold**, *italic*, `code`, lists, - [ ] checkboxes you can click, and links. The notes stay plain text files.",
+                                  comment: "The Markdown the notes style, as you type it: keep its symbols"))
         }
     }
 
@@ -657,7 +675,7 @@ private struct FeaturesPane: View {
                         Text(feature.about)
                     }
                 }
-            } header: { Text(group.rawValue) } footer: {
+            } header: { Text(group.title) } footer: {
                 if group == Feature.Group.allCases.last {
                     Note("Off means off: no rows, no commands, nothing in the background, nothing sent, no permission asked for. Saved in config.toml under [features].")
                 }
@@ -671,15 +689,27 @@ private struct KeywordsPane: View {
     let model: SettingsModel
 
     var body: some View {
+        let language = languageName().map { (name: $0, words: languageKeywordTable()) } // nil on an English Mac
+        let shownWords = model.config.keywords.language ? language?.words : nil // off: they don't work, so they don't show
+        if let language {
+            Section {
+                Toggle("Words in \(language.name)", isOn: model.binding(\.keywords.language, "keywords", "language") { $0 ? nil : .bool(false) })
+            } footer: {
+                Note("Each keyword's words in your Mac's language work beside the English ones. Off, only English's and yours do.")
+            }
+        }
         Section {
-            KeywordRow(model: model, keyword: ":", what: "Commands: :left, :quit, :lock")
+            KeywordRow(model: model, keyword: ":", what: String(localized: "Commands: :left, :quit, :lock"))
         } header: { Text("Commands") }
         ForEach(Feature.Group.allCases, id: \.self) { group in
             let features = Feature.listed.filter { $0.group == group && !$0.keywords.isEmpty && model.config.features.isOn($0) }
             if !features.isEmpty {
-                Section(group.rawValue) {
+                Section(group.title) {
                     ForEach(features, id: \.self) { feature in
-                        ForEach(feature.keywords, id: \.self) { KeywordRow(model: model, keyword: $0, what: feature.name) }
+                        ForEach(feature.keywords, id: \.self) { keyword in
+                            KeywordRow(model: model, keyword: keyword, what: feature.name,
+                                       theirs: shownWords?[keyword].flatMap { $0 == keyword ? nil : $0 })
+                        }
                     }
                 }
             }
@@ -695,6 +725,7 @@ private struct KeywordRow: View {
     let model: SettingsModel
     let keyword: String
     let what: String
+    var theirs: String? // the words in this Mac's language ("tempo, clima")
     @State private var text = ""
     @FocusState private var focused: Bool
 
@@ -707,13 +738,14 @@ private struct KeywordRow: View {
         } label: {
             Text(keyword).monospaced()
             Text(what)
+            if let theirs { Text(theirs).monospaced() }
         }
         .onAppear { text = model.keyword(keyword).wrappedValue }
     }
 }
 
 private struct Minutes: View {
-    let title: String
+    let title: LocalizedStringKey
     let value: Binding<Int>
 
     var body: some View {
@@ -880,10 +912,20 @@ private struct CommandsPane: View {
 
 /// A command being edited, with a field for each kind so switching kinds keeps what was typed.
 private struct CommandDraft: Identifiable {
-    enum Kind: String, CaseIterable { case url = "Link", app = "App", file = "File", shell = "Shell"
+    enum Kind: CaseIterable { case url, app, file, shell
         var symbol: String { switch self { case .url: "link"; case .app: "app"; case .file: "doc"; case .shell: "terminal" } }
 
-        var hint: String {
+        /// Its name in the editor's picker.
+        var title: String {
+            switch self {
+            case .url: String(localized: "Link", comment: "What a command opens, in its editor")
+            case .app: String(localized: "App", comment: "What a command opens, in its editor")
+            case .file: String(localized: "File", comment: "What a command opens, in its editor")
+            case .shell: String(localized: "Shell", comment: "What a command opens, in its editor")
+            }
+        }
+
+        var hint: LocalizedStringKey {
             switch self {
             case .url: "{query} in the address takes the text typed after the name: “gh copperlight” searches for copperlight."
             case .app: "Launches the app, or brings it forward."
@@ -943,7 +985,7 @@ private struct CommandEditor: View {
             Section {
                 TextField("Name", text: $draft.alias, prompt: Text("what you type, like github"))
                 Picker("Opens", selection: $draft.kind) {
-                    ForEach(CommandDraft.Kind.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    ForEach(CommandDraft.Kind.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
             }
@@ -957,11 +999,12 @@ private struct CommandEditor: View {
                     }
                     TextField("Profile", text: $draft.profile, prompt: Text("optional, like Work"))
                 case .app:
-                    AppChooser(title: "App", none: "Choose an app", app: Binding(get: { draft.app.isEmpty ? nil : draft.app },
-                                                                                set: { draft.app = $0 ?? "" }))
+                    AppChooser(title: "App", none: String(localized: "Choose an app"),
+                               app: Binding(get: { draft.app.isEmpty ? nil : draft.app }, set: { draft.app = $0 ?? "" }))
                 case .file:
                     LabeledContent("File") {
-                        Text(draft.path.isEmpty ? "None" : draft.path).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                        Text(draft.path.isEmpty ? String(localized: "None", comment: "No file chosen yet, in the command editor") : draft.path)
+                            .foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                         Button("Choose…") { Task { if let path = await chooseFile() { draft.path = path } } }
                     }
                 case .shell:
@@ -1032,7 +1075,7 @@ private struct SnippetEditor: View {
 
 /// A sheet with a form, and Delete, Cancel and Save under it.
 private struct Editor<Fields: View>: View {
-    let title: String
+    let title: LocalizedStringKey
     let canSave: Bool
     let save: () -> Void
     let delete: (() -> Void)?
@@ -1092,14 +1135,16 @@ private struct AboutPane: View {
 }
 
 private struct Note: View {
-    let text: String
-    init(_ text: String) { self.text = text }
-    var body: some View { Text(text).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+    let text: Text
+    init(_ text: LocalizedStringKey) { self.text = Text(text) }
+    /// Shown as it is: never read as Markdown.
+    init(verbatim text: String) { self.text = Text(verbatim: text) }
+    var body: some View { text.font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
 }
 
 private struct NumberRow: View {
-    let title: String
-    let unit: String
+    let title: LocalizedStringKey
+    let unit: LocalizedStringKey
     let value: Binding<Int>
     let range: ClosedRange<Int>
 
@@ -1180,7 +1225,7 @@ private struct FolderName: View {
 
 /// An optional app setting: its name and icon, Choose…, and a way back to the default.
 private struct AppChooser: View {
-    let title: String
+    let title: LocalizedStringKey
     let none: String
     let app: Binding<String?>
 

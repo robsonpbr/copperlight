@@ -369,6 +369,12 @@ Drop an executable into `~/.config/copperlight/scripts/` and it becomes a comman
 included. Every setting is in
 [docs/configuration.md](docs/configuration.md).
 
+## Languages
+
+Copperlight follows your Mac's language: English, and Portuguese from Brazil and from Portugal. The words you type
+work in your language too (`clima lisboa`), beside the English ones. Adding yours takes three text files:
+[TRANSLATING.md](TRANSLATING.md).
+
 ## Documentation
 
 | | |
@@ -379,6 +385,7 @@ included. Every setting is in
 | [Privacy](PRIVACY.md) | Every server, permission and file |
 | [Why it works this way](SPEC.md) | The principles behind it |
 | [Developing](DEVELOPMENT.md) | Building, testing, releasing, and the rules a change has to fit |
+| [Translating](TRANSLATING.md) | Adding your language |
 | [Roadmap](ROADMAP.md) | What's next, what's later, and what's maybe someday |
 
 ## Support Copperlight

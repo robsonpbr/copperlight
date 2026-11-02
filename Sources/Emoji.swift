@@ -21,10 +21,14 @@ func emojiMatches(_ words: String, limit: Int = 30) -> [(emoji: String, name: St
 /// `emoji party`: emoji by name. Enter pastes it into the app you were in (copies it without Accessibility).
 /// `emo` alone (from 3 letters) offers to start a search.
 struct EmojiProvider: ResultProvider {
-    var modes: [Mode] { [Mode(prefix: "emoji ", title: "Emoji", icon: .symbol("face.smiling"), hint: "A word for one: party")] }
+    var modes: [Mode] {
+        [Mode(prefix: "emoji ", title: String(localized: "Emoji", comment: "Chip: emoji by name"), icon: .symbol("face.smiling"),
+              hint: String(localized: "A word for one: party"))]
+    }
 
     func results(for query: String) -> [LauncherResult] {
-        if let start = startRow(query, keyword: "emoji", title: "Emoji", hint: "Type a word for one: emoji party", symbol: "face.smiling") {
+        if let start = startRow(query, keyword: "emoji", title: "Emoji", hint: String(localized: "Type a word for one: emoji party"),
+                                symbol: "face.smiling") {
             return [start]
         }
         guard query.lowercased().hasPrefix("emoji ") else { return [] }
@@ -32,9 +36,9 @@ struct EmojiProvider: ResultProvider {
             let emoji = match.emoji
             return LauncherResult(id: "emoji:\(emoji)", title: match.name.prefix(1).uppercased() + match.name.dropFirst(),
                                   icon: .image("emoji:\(emoji)", { emojiImage(emoji) }), score: 50 - Double(index) / 100,
-                                  actionTitle: "Paste", action: {
+                                  actionTitle: String(localized: "Paste", comment: "Enter on an emoji: pastes it into the app you were in"), action: {
                 copyToClipboard(emoji)
-                if hasAccessibility("paste emoji") { sendPaste() }
+                if hasAccessibility(String(localized: "paste emoji", comment: "Ends “Allow Copperlight in Accessibility to …”")) { sendPaste() }
             })
         }
     }

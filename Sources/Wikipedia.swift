@@ -62,24 +62,29 @@ struct WikipediaProvider: ResultProvider {
     var language = Locale.preferredLanguages.first.flatMap { Locale(identifier: $0).language.languageCode?.identifier } ?? "en"
     var fetch: @Sendable (String, String) async -> Data? = { await fetchWikipedia($0, language: $1) }
     var image: @Sendable (URL) async -> CGImage? = { url in await fetchNamed(url).flatMap { thumbnail($0, maxPixels: 600) } }
-    var modes: [Mode] { [Mode(prefix: "wiki ", title: "Wikipedia", icon: .symbol(Self.icon), hint: "Anything: serendipity, Lisbon")] }
+    var modes: [Mode] {
+        [Mode(prefix: "wiki ", title: "Wikipedia", icon: .symbol(Self.icon), hint: String(localized: "Anything: serendipity, Lisbon"))]
+    }
 
     func results(for query: String) async -> [LauncherResult] {
-        if let start = startRow(query, keyword: "wiki", title: "Wikipedia", hint: "Type a subject: wiki Lisbon", symbol: Self.icon) {
+        if let start = startRow(query, keyword: "wiki", title: "Wikipedia", hint: String(localized: "Type a subject: wiki Lisbon"),
+                                symbol: Self.icon) {
             return [start]
         }
         let typed = query.dropFirst(5).trimmingCharacters(in: .whitespaces)
         guard query.lowercased().hasPrefix("wiki "), !typed.isEmpty else { return [] }
         // Under what else it may be, over the search row; Tab (or Enter) makes it the chip, which asks.
-        return [LauncherResult(id: "wiki:offer", title: "Wikipedia: \(typed)", subtitle: "Its summary, from Wikipedia", icon: .symbol(Self.icon),
-                               score: -5, actionTitle: "Look Up", action: {}, completion: "wiki " + typed)]
+        return [LauncherResult(id: "wiki:offer", title: String(localized: "Wikipedia: \(typed)"),
+                               subtitle: String(localized: "Its summary, from Wikipedia"), icon: .symbol(Self.icon), score: -5,
+                               actionTitle: String(localized: "Look Up", comment: "Enter on a row that opens a chip"), action: {},
+                               completion: "wiki " + typed)]
     }
 
     func modeResults(for query: String) async -> [LauncherResult] {
         let typed = query.dropFirst(5).trimmingCharacters(in: .whitespaces)
         guard !typed.isEmpty else { return [] }
-        return [LauncherResult(id: "wiki", title: typed, subtitle: "Asking Wikipedia…", icon: .symbol(Self.icon), score: 50, actionTitle: "",
-                               action: {}, answer: .wiki(.loading(typed)), later: { await summary(typed) })]
+        return [LauncherResult(id: "wiki", title: typed, subtitle: String(localized: "Asking Wikipedia…"), icon: .symbol(Self.icon), score: 50,
+                               actionTitle: "", action: {}, answer: .wiki(.loading(typed)), later: { await summary(typed) })]
     }
 
     private func summary(_ typed: String) async -> [LauncherResult] {
@@ -90,10 +95,12 @@ struct WikipediaProvider: ResultProvider {
         if let url = card.imageURL { card.image = await image(url) }
         let url = card.url
         return [LauncherResult(id: "wiki:\(card.title)", title: card.title, subtitle: card.description, icon: .symbol(Self.icon), score: 50,
-                               actionTitle: "Open", action: { NSWorkspace.shared.open(url) }, answer: .wiki(card))]
+                               actionTitle: String(localized: "Open", comment: "Enter on a Wikipedia article: opens it"),
+                               action: { NSWorkspace.shared.open(url) }, answer: .wiki(card))]
     }
 
-    private func note(_ title: String, _ subtitle: String) -> LauncherResult {
-        LauncherResult(id: "wiki", title: title, subtitle: subtitle, icon: .symbol(Self.icon), score: 50, actionTitle: "", action: {})
+    private func note(_ title: LocalizedStringResource, _ subtitle: LocalizedStringResource) -> LauncherResult {
+        LauncherResult(id: "wiki", title: String(localized: title), subtitle: String(localized: subtitle), icon: .symbol(Self.icon), score: 50,
+                       actionTitle: "", action: {})
     }
 }

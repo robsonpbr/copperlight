@@ -7,9 +7,12 @@ private func filePreview(_ path: String) -> (load: (@Sendable () async -> String
     let url = URL(filePath: path)
     let values = try? url.resourceValues(forKeys: [.contentTypeKey, .fileSizeKey, .contentModificationDateKey, .localizedTypeDescriptionKey])
     let type = values?.contentType
-    let details = [("Where", shortParentPath(path)), ("Kind", values?.localizedTypeDescription ?? "File"),
-                   ("Size", Int64(values?.fileSize ?? 0).formatted(.byteCount(style: .file))),
-                   ("Modified", values?.contentModificationDate?.formatted(date: .abbreviated, time: .shortened) ?? "–")]
+    let details = [(String(localized: "Where", comment: "A file's detail: its folder"), shortParentPath(path)),
+                   (String(localized: "Kind", comment: "A file's detail: its kind (“PDF document”)"),
+                    values?.localizedTypeDescription ?? String(localized: "File", comment: "A file's kind, when macOS doesn't say")),
+                   (String(localized: "Size", comment: "A file's detail"), Int64(values?.fileSize ?? 0).formatted(.byteCount(style: .file))),
+                   (String(localized: "Modified", comment: "A file's detail: when it last changed"),
+                    values?.contentModificationDate?.formatted(date: .abbreviated, time: .shortened) ?? "–")]
     if type?.conforms(to: .image) == true {
         return (nil, { (try? Data(contentsOf: url, options: .mappedIfSafe)).flatMap { thumbnail($0, maxPixels: 1600) }.map { NSImage(cgImage: $0, size: .zero) } },
                 details)
@@ -32,27 +35,33 @@ func fileActionRows(_ path: String, terminal: String?) -> [LauncherResult] {
     let url = URL(filePath: path), name = url.lastPathComponent
     let preview = filePreview(path)
     let opener = NSWorkspace.shared.urlForApplication(toOpen: url).map { FileManager.default.displayName(atPath: $0.path).replacing(#/\.app$/#, with: "") }
-    let rows: [(title: String, subtitle: String, symbol: String, action: @MainActor @Sendable () -> Void)] = [
-        ("Open", opener.map { "In \($0)" } ?? "", "arrow.up.forward.app", { NSWorkspace.shared.open(url) }),
-        ("Open With…", "Another app", "square.grid.2x2", {}),
-        ("Quick Look", "Full size, as Space shows it in Finder", "eye", { quickLook(path) }),
+    // A title's English (`key`) is its row's id, and what the code checks for; the row shows it in this Mac's language.
+    let rows: [(title: LocalizedStringResource, subtitle: String, symbol: String, action: @MainActor @Sendable () -> Void)] = [
+        (LocalizedStringResource("Open", comment: "A file's action: opens it in its app"),
+         opener.map { String(localized: "In \($0)", comment: "The app a file opens in: “In Preview”") } ?? "", "arrow.up.forward.app",
+         { NSWorkspace.shared.open(url) }),
+        ("Open With…", String(localized: "Another app"), "square.grid.2x2", {}),
+        ("Quick Look", String(localized: "Full size, as Space shows it in Finder"), "eye", { quickLook(path) }),
         ("Reveal in Finder", shortParentPath(path), "folder", { NSWorkspace.shared.activateFileViewerSelecting([url]) }),
         ("Copy Path", (path as NSString).abbreviatingWithTildeInPath, "doc.on.doc", { copyToClipboard(path) }),
-        ("Copy File", "To paste in Finder or an email", "doc.on.clipboard", {
+        ("Copy File", String(localized: "To paste in Finder or an email"), "doc.on.clipboard", {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.writeObjects([url as NSURL])
         }),
-        ("AirDrop", "To a device nearby", "dot.radiowaves.left.and.right", { share(url, with: .sendViaAirDrop) }),
+        ("AirDrop", String(localized: "To a device nearby"), "dot.radiowaves.left.and.right", { share(url, with: .sendViaAirDrop) }),
         ("Send in Messages", "", "message", { share(url, with: .composeMessage) }),
-        ("Send in Mail", "As an attachment", "envelope", { share(url, with: .composeEmail) }),
+        ("Send in Mail", String(localized: "As an attachment"), "envelope", { share(url, with: .composeEmail) }),
         ("Open in Terminal", terminal ?? "Terminal", "terminal", { openInTerminal(path, app: terminal) }),
         ("Move to Trash", "", "trash", { moveToTrash(path) }),
     ]
     return rows.enumerated().map { index, row in
-        LauncherResult(id: "actions:\(path):\(row.title)", title: row.title, subtitle: row.subtitle, icon: .symbol(row.symbol),
-                       score: 50 - Double(index) / 100, actionTitle: row.title == "Open With…" ? "Choose" : row.title.replacing("…", with: ""),
-                       action: row.action, completion: row.title == "Open With…" ? ":open with \(path) " : nil,
-                       confirm: row.title == "Move to Trash" ? "Move “\(name)” to the Trash?" : nil,
+        LauncherResult(id: "actions:\(path):\(row.title.key)", title: String(localized: row.title), subtitle: row.subtitle,
+                       icon: .symbol(row.symbol), score: 50 - Double(index) / 100,
+                       actionTitle: row.title.key == "Open With…"
+                           ? String(localized: "Choose", comment: "Enter on a file's Open With…: fills in :open with, to pick an app")
+                           : String(localized: row.title).replacing("…", with: ""),
+                       action: row.action, completion: row.title.key == "Open With…" ? ":open with \(path) " : nil,
+                       confirm: row.title.key == "Move to Trash" ? String(localized: "Move “\(name)” to the Trash?") : nil,
                        preview: preview.load == nil ? name : nil, // a text file's own text loads in its place
                        previewStyle: .prose, loadPreview: preview.load, previewImage: preview.image, details: preview.details)
     }
@@ -103,31 +112,39 @@ func recentDocumentsQuery(_ types: [String]) -> String {
     let running = NSWorkspace.shared.runningApplications.first { $0.bundleURL?.path == url.path } // a bundle URL ends in "/"
     let pid = running?.processIdentifier
     let app: @Sendable () -> NSRunningApplication? = { pid.flatMap { NSRunningApplication(processIdentifier: $0) } }
-    var rows: [(title: String, symbol: String, confirm: String?, action: @MainActor @Sendable () -> Void)] = []
-    rows.append(("Open", "arrow.up.forward.app", nil, { NSWorkspace.shared.openApplication(at: url, configuration: .init()) }))
+    // A title's English (`key`) is its row's id; the row shows it in this Mac's language.
+    var rows: [(title: LocalizedStringResource, symbol: String, confirm: String?, action: @MainActor @Sendable () -> Void)] = []
+    rows.append((LocalizedStringResource("Open", comment: "An app's action: opens it"), "arrow.up.forward.app", nil,
+                 { NSWorkspace.shared.openApplication(at: url, configuration: .init()) }))
     if running != nil {
-        rows.append(("Hide", "eye.slash", nil, { app()?.hide() }))
-        rows.append(("Quit", "xmark", nil, { app()?.terminate() }))
-        rows.append(("Force Quit", "xmark.octagon", "Force Quit \(name)? Unsaved changes are lost.", { app()?.forceTerminate() }))
-        rows.append(("Relaunch", "arrow.clockwise.circle", nil, { app().map(relaunch) }))
+        rows.append((LocalizedStringResource("Hide", comment: "A running app's action"), "eye.slash", nil, { app()?.hide() }))
+        rows.append((LocalizedStringResource("Quit", comment: "A running app's action"), "xmark", nil, { app()?.terminate() }))
+        rows.append((LocalizedStringResource("Force Quit", comment: "A running app's action"), "xmark.octagon",
+                     String(localized: "Force Quit \(name)? Unsaved changes are lost."), { app()?.forceTerminate() }))
+        rows.append((LocalizedStringResource("Relaunch", comment: "A running app's action"), "arrow.clockwise.circle", nil, { app().map(relaunch) }))
     }
     rows.append(("Reveal in Finder", "folder", nil, { NSWorkspace.shared.activateFileViewerSelecting([url]) }))
     rows.append(("Copy Path", "doc.on.doc", nil, { copyToClipboard(path) }))
     let version = bundle?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-    let details = [("Version", version), ("Where", shortParentPath(path)), ("Running", running.map { _ in "Yes" } ?? "No")]
+    let details = [(String(localized: "Version", comment: "An app's detail"), version),
+                   (String(localized: "Where", comment: "An app's detail: its folder"), shortParentPath(path)),
+                   (String(localized: "Running", comment: "An app's detail: whether it's open now"),
+                    running.map { _ in String(localized: "Yes", comment: "The app is running") }
+                        ?? String(localized: "No", comment: "The app isn't running"))]
         .compactMap { label, value in value.map { (label, $0) } }
     let documents = recent.enumerated().map { index, file in
         let preview = filePreview(file.path), document = URL(filePath: file.path)
         return LauncherResult(id: "recent:\(path):\(file.path)", title: file.name, subtitle: shortParentPath(file.path),
                               accessory: file.lastUsed.map { shortAge($0) } ?? "", icon: .file(file.path), score: 51 - Double(index) / 100,
-                              actionTitle: "Open in \(name)",
+                              actionTitle: String(localized: "Open in \(name)"),
                               action: { NSWorkspace.shared.open([document], withApplicationAt: url, configuration: .init()) },
-                              section: "Recent Documents", preview: preview.load == nil ? file.name : nil, previewStyle: .prose,
+                              section: String(localized: "Recent Documents"), preview: preview.load == nil ? file.name : nil, previewStyle: .prose,
                               loadPreview: preview.load, previewImage: preview.image, details: preview.details)
     }
     return documents + rows.enumerated().map { index, row in
-        LauncherResult(id: "actions:\(path):\(row.title)", title: row.title, subtitle: "", icon: .symbol(row.symbol), score: 50 - Double(index) / 100,
-                       actionTitle: row.title, action: row.action, confirm: row.confirm, preview: name, previewStyle: .prose,
+        LauncherResult(id: "actions:\(path):\(row.title.key)", title: String(localized: row.title), subtitle: "", icon: .symbol(row.symbol),
+                       score: 50 - Double(index) / 100,
+                       actionTitle: String(localized: row.title), action: row.action, confirm: row.confirm, preview: name, previewStyle: .prose,
                        previewImage: {
                            let icon = NSWorkspace.shared.icon(forFile: path)
                            icon.size = NSSize(width: 256, height: 256) // its largest picture, not the 32-point one

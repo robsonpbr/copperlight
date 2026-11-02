@@ -37,7 +37,7 @@ struct NoteFile: Sendable {
     var url: URL
     var text: String
     var edited: Date
-    var title: String { noteTitle(text) ?? "Empty Note" }
+    var title: String { noteTitle(text) ?? String(localized: "Empty Note") }
     /// The line after the title, for its row.
     var summary: String {
         text.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.dropFirst().first
@@ -70,9 +70,11 @@ extension Verb {
                 let match = filter.isEmpty ? -0.01 * Double(index) : fuzzyScore(filter, note.title) ?? matchingLine(note.text, filter).map { _ in 0.5 }
                 guard let score = match else { return nil }
                 let url = note.url
-                return LauncherResult(id: "delete note:\(url.path)", title: "Delete Note: \(note.title)", subtitle: note.summary,
-                                      icon: .symbol("trash"), score: score, actionTitle: "Delete",
-                                      action: { release(url); moveToTrash(url.path) }, confirm: "Move the note “\(note.title)” to the Trash?")
+                return LauncherResult(id: "delete note:\(url.path)", title: String(localized: "Delete Note: \(note.title)"), subtitle: note.summary,
+                                      icon: .symbol("trash"), score: score,
+                                      actionTitle: String(localized: "Delete", comment: "Enter on a note to delete"),
+                                      action: { release(url); moveToTrash(url.path) },
+                                      confirm: String(localized: "Move the note “\(note.title)” to the Trash?"))
             }
         })].belonging(to: .notes)
     }
@@ -183,7 +185,7 @@ final class NotePanel: NSPanel, NSTextViewDelegate, NSWindowDelegate {
     /// Draws the note's Markdown, or plain text (`stylesMarkdown`). Only how it looks: the text never changes.
     /// ponytail: the whole note, each keystroke; restyle only the edited paragraphs if long notes ever lag.
     func restyle() {
-        header.title = noteTitle(text) ?? "New Note"
+        header.title = noteTitle(text) ?? String(localized: "New Note")
         // The accent's, again each time: it may have changed (Settings › General › Look).
         textView.linkTextAttributes = [.foregroundColor: NSColor(Color.accent), .cursor: NSCursor.pointingHand] // underlined below, checkboxes not
         textView.insertionPointColor = NSColor(Color.accent)
@@ -256,7 +258,7 @@ final class NotePanel: NSPanel, NSTextViewDelegate, NSWindowDelegate {
             try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             try text.write(to: file, atomically: true, encoding: .utf8)
         } catch {
-            notify("Couldn't save the note", error.localizedDescription) // the text stays in the panel
+            notify(String(localized: "Couldn't save the note"), error.localizedDescription) // the text stays in the panel
         }
     }
 

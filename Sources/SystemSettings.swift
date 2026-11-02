@@ -3,7 +3,7 @@ import AppKit
 /// A System Settings page: its name in the sidebar, its extension id (`x-apple.systempreferences:<id>` opens it),
 /// a symbol, and other words people search it by.
 struct SettingsPage: Sendable {
-    let title: String, id: String, symbol: String
+    let title: LocalizedStringResource, id: String, symbol: String // the title in this Mac's language; its English is found too
     var keywords: [String] = []
 }
 
@@ -81,11 +81,11 @@ struct SettingsProvider: ResultProvider {
         guard query.count >= 3 else { return [] }
         let lower = query.lowercased()
         return settingsPages.compactMap { page in
-            guard let score = fuzzyScore(query, page.title).flatMap({ $0 >= 0.6 ? $0 : nil })
-                ?? (page.keywords.contains { $0.hasPrefix(lower) } ? 0.9 : nil)
-            else { return nil }
+            let names: [String] = [page.title.key, String(localized: page.title)] // its English, and this Mac's language
+            let byName = names.compactMap { fuzzyScore(query, $0) }.max().flatMap { $0 >= 0.6 ? $0 : nil }
+            guard let score = byName ?? (page.keywords.contains { $0.hasPrefix(lower) } ? 0.9 : nil) else { return nil }
             let url = URL(string: "x-apple.systempreferences:\(page.id)")!
-            return LauncherResult(id: "settings:\(page.id)", title: page.title, subtitle: "System Settings",
+            return LauncherResult(id: "settings:\(page.id)", title: String(localized: page.title), subtitle: String(localized: "System Settings"),
                                   icon: .symbol(page.symbol), score: score, action: { NSWorkspace.shared.open(url) })
         }
     }

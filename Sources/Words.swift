@@ -4,12 +4,14 @@ import NaturalLanguage
 import Synchronization
 import Translation
 
-/// A launcher row offering to start `keyword …`, for a query that's the start of it (from 3 letters).
-func startRow(_ query: String, keyword: String, title: String, hint: String, symbol: String) -> LauncherResult? {
+/// A launcher row offering to start `keyword …`, for a query that's the start of it (from 3 letters). `title` shows in
+/// this Mac's language; its English is otherNames' key.
+func startRow(_ query: String, keyword: String, title: LocalizedStringResource, hint: String, symbol: String) -> LauncherResult? {
     let lower = query.lowercased()
-    guard lower.count >= 3, let score = keyword.hasPrefix(lower) ? 50 : otherNameScore(query, title) else { return nil }
-    return LauncherResult(id: "builtin:\(keyword)", title: title, subtitle: hint, icon: .symbol(symbol), score: score,
-                          actionTitle: "Start", action: {}, completion: keyword + " ")
+    guard lower.count >= 3, let score = keyword.hasPrefix(lower) ? 50 : otherNameScore(query, title.key) else { return nil }
+    return LauncherResult(id: "builtin:\(keyword)", title: String(localized: title), subtitle: hint, icon: .symbol(symbol), score: score,
+                          actionTitle: String(localized: "Start", comment: "Enter on a keyword's row: puts it in the field"), action: {},
+                          completion: keyword + " ")
 }
 
 // MARK: Define
@@ -87,17 +89,21 @@ private func sense(_ text: String) -> DictionaryEntry.Sense? {
 
 /// `define serendipity`: its dictionary entry across the card. Enter opens it in Dictionary.
 struct DefineProvider: ResultProvider {
-    var modes: [Mode] { [Mode(prefix: "define ", title: "Define", icon: .symbol("character.book.closed"), hint: "A word")] }
+    var modes: [Mode] {
+        [Mode(prefix: "define ", title: String(localized: "Define", comment: "Chip: a word's dictionary entry"), icon: .symbol("character.book.closed"),
+              hint: String(localized: "A word", comment: "Placeholder in the Define chip"))]
+    }
 
     func results(for query: String) -> [LauncherResult] {
-        if let start = startRow(query, keyword: "define", title: "Define", hint: "Type a word: define serendipity", symbol: "character.book.closed") {
+        if let start = startRow(query, keyword: "define", title: "Define", hint: String(localized: "Type a word: define serendipity"),
+                                symbol: "character.book.closed") {
             return [start]
         }
         guard query.lowercased().hasPrefix("define ") else { return [] }
         let word = query.dropFirst(7).trimmingCharacters(in: .whitespaces)
         guard !word.isEmpty else { return [] }
         guard let entry = definition(of: word) else {
-            return [LauncherResult(id: "define", title: "No definition for “\(word)”", icon: .symbol("character.book.closed"),
+            return [LauncherResult(id: "define", title: String(localized: "No definition for “\(word)”"), icon: .symbol("character.book.closed"),
                                    score: 50, actionTitle: "", action: {})]
         }
         return [row(word: word, entry: entry)]
@@ -107,7 +113,8 @@ struct DefineProvider: ResultProvider {
         let parsed = parseDefinition(entry, word: word)
         let url = URL(string: "dict://" + (word.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? word))!
         return LauncherResult(id: "define", title: word, subtitle: parsed.pronunciation, icon: .symbol("character.book.closed"), score: 50,
-                              actionTitle: "Open", action: { NSWorkspace.shared.open(url) }, answer: .entry(parsed))
+                              actionTitle: String(localized: "Open", comment: "Enter on a definition: opens it in Dictionary"),
+                              action: { NSWorkspace.shared.open(url) }, answer: .entry(parsed))
     }
 }
 
@@ -141,10 +148,14 @@ struct DefineProvider: ResultProvider {
 /// copies it. The Mac's own spelling, its languages as System Settings has them.
 struct SpellProvider: ResultProvider {
     var language: String? = nil
-    var modes: [Mode] { [Mode(prefix: "spell ", title: "Spell", icon: .symbol("textformat.abc"), hint: "A word or a sentence")] }
+    var modes: [Mode] {
+        [Mode(prefix: "spell ", title: String(localized: "Spell", comment: "Chip: a word spelled right"), icon: .symbol("textformat.abc"),
+              hint: String(localized: "A word or a sentence"))]
+    }
 
     func results(for query: String) async -> [LauncherResult] {
-        if let start = startRow(query, keyword: "spell", title: "Spell", hint: "Type a word: spell definately", symbol: "textformat.abc") {
+        if let start = startRow(query, keyword: "spell", title: "Spell", hint: String(localized: "Type a word: spell definately"),
+                                symbol: "textformat.abc") {
             return [start]
         }
         guard query.lowercased().hasPrefix("spell ") else { return [] }
@@ -152,17 +163,18 @@ struct SpellProvider: ResultProvider {
         guard !text.isEmpty else { return [] }
         let row = { (index: Int, title: String, subtitle: String) in
             LauncherResult(id: "spell:\(index)", title: title, subtitle: subtitle, icon: .symbol("textformat.abc"), score: 50 - Double(index) / 100,
-                           actionTitle: "Copy", action: { copyToClipboard(title) })
+                           actionTitle: String(localized: "Copy", comment: "Enter on a spelling"), action: { copyToClipboard(title) })
         }
         let found = await MainActor.run { [language] in
             (fixes: spellings(of: text, language: language), right: NSSpellChecker.shared.checkSpelling(of: text, startingAt: 0, language: language,
                 wrap: false, inSpellDocumentWithTag: 0, wordCount: nil).location == NSNotFound)
         }
-        if found.right { return [row(0, text, "Spelled right")] }
+        if found.right { return [row(0, text, String(localized: "Spelled right"))] }
         guard !found.fixes.isEmpty else {
-            return [LauncherResult(id: "spell", title: "No spelling for “\(text)”", icon: .symbol("textformat.abc"), score: 50, actionTitle: "", action: {})]
+            return [LauncherResult(id: "spell", title: String(localized: "No spelling for “\(text)”"), icon: .symbol("textformat.abc"), score: 50,
+                                   actionTitle: "", action: {})]
         }
-        return found.fixes.enumerated().map { row($0, $1, "Spelling of “\(text)”") }
+        return found.fixes.enumerated().map { row($0, $1, String(localized: "Spelling of “\(text)”")) }
     }
 }
 
@@ -181,9 +193,10 @@ final class TranslateProvider: ResultProvider {
     private let defaultTarget = Mutex<String?>(nil) // [translate] default_target: a language's name or code
     var modes: [Mode] {
         let icon = LauncherResult.Icon.symbol("character.bubble")
-        return [Mode(prefix: "translate ", title: "Translate", icon: icon, hint: "Text, or nothing for what you copied")]
-            + Self.languageChoices.map { Mode(prefix: "translate to \($0.key) ", title: "Translate to \($0.name)", icon: icon,
-                                              hint: "Text, or nothing for what you copied") }
+        let hint = String(localized: "Text, or nothing for what you copied")
+        return [Mode(prefix: "translate ", title: String(localized: "Translate", comment: "Chip: translates text"), icon: icon, hint: hint)]
+            + Self.languageChoices.map { Mode(prefix: "translate to \($0.key) ", title: String(localized: "Translate to \($0.name)"), icon: icon,
+                                              hint: hint) }
     }
 
     init(clipboard: @escaping @Sendable () async -> String? = { @MainActor in Clip.current(withHTML: false).text }) {
@@ -192,10 +205,22 @@ final class TranslateProvider: ResultProvider {
 
     func setDefaultTarget(_ language: String?) { defaultTarget.withLock { $0 = language } }
 
-    /// The languages to choose from, A–Z, once `languages()` has run: what's typed after "to" ("german", one word) and
-    /// its name. English and Chinese come twice from the Mac, once here.
-    static var languageChoices: [(key: String, name: String)] {
-        Set((supported.withLock { $0 } ?? []).map(shortName)).sorted().map { ($0.lowercased(), $0) }
+    /// The languages to choose from, A–Z, once `languages()` has run: what's typed after "to" ("german", one English
+    /// word) and its name in the Mac's language ("alemão"). English and Chinese come twice from the Mac, once here.
+    static var languageChoices: [(key: String, name: String)] { choices(from: supported.withLock { $0 } ?? [], locale: .current) }
+
+    static func choices(from languages: [Locale.Language], locale: Locale) -> [(key: String, name: String)] {
+        var seen = Set<String>()
+        return languages.compactMap { language -> (key: String, name: String)? in
+            let english = shortName(language)
+            guard !english.isEmpty, seen.insert(english).inserted else { return nil }
+            return (english.lowercased(), String(shownName(language, locale: locale).split(separator: " ").first ?? ""))
+        }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    /// A language's name in the Mac's language, for showing: "alemão" on a Mac in Portuguese.
+    private static func shownName(_ language: Locale.Language, locale: Locale = .current) -> String {
+        language.languageCode.flatMap { locale.localizedString(forLanguageCode: $0.identifier) } ?? name(language)
     }
 
     /// The languages the Mac can translate, asked once (at launch, so their chips are ready). None before macOS 26.
@@ -208,7 +233,8 @@ final class TranslateProvider: ResultProvider {
     }
 
     func results(for query: String) async -> [LauncherResult] {
-        let start = startRow(query, keyword: "translate", title: "Translate", hint: "Type text, or copy it; add “to spanish” for another language",
+        let start = startRow(query, keyword: "translate", title: "Translate",
+                             hint: String(localized: "Type text, or copy it; add “to spanish” for another language"),
                              symbol: "character.bubble").map { [$0] } ?? []
         let lower = query.lowercased()
         guard lower == "translate" || lower.hasPrefix("translate "), #available(macOS 26, *) else { return start }
@@ -230,7 +256,7 @@ final class TranslateProvider: ResultProvider {
         guard let target = target ?? ([chosen].compactMap(\.self) + preferred + [Locale.Language(identifier: "en")])
             .first(where: { $0.languageCode != source.languageCode })
         else { return [] }
-        let pair = "\(Self.name(source)) → \(Self.name(target))"
+        let pair = "\(Self.shownName(source)) → \(Self.shownName(target))"
         let row = { (title: String, subtitle: String, actionTitle: String, preview: String?, action: @escaping @MainActor @Sendable () -> Void) in
             LauncherResult(id: "translate", title: title, subtitle: subtitle, icon: .symbol("character.bubble"), score: 50,
                            actionTitle: actionTitle, action: action, preview: preview, previewStyle: .prose)
@@ -239,15 +265,18 @@ final class TranslateProvider: ResultProvider {
         case .installed:
             let session = TranslationSession(installedSource: source, target: target)
             guard let translated = try? await session.translate(text).targetText else { return [] }
-            return [row(oneLine(translated), pair + (fromClipboard ? " · from the clipboard" : ""), "Copy", translated.count > 60 || translated.contains("\n") ? translated : nil, {
+            return [row(oneLine(translated), pair + (fromClipboard ? " · " + String(localized: "from the clipboard") : ""),
+                        String(localized: "Copy", comment: "Enter on a translation"),
+                        translated.count > 60 || translated.contains("\n") ? translated : nil, {
                 copyToClipboard(translated)
             })]
         case .supported:
-            return [row("Download \(pair) to translate here", "Language & Region → Translation Languages, once", "Open System Settings", nil, {
+            return [row(String(localized: "Download \(pair) to translate here"), String(localized: "Language & Region → Translation Languages, once"),
+                        String(localized: "Open System Settings"), nil, {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Localization-Settings.extension")!)
             })]
         case .unsupported:
-            return [row("Can't translate \(pair)", "Not a language pair Apple translates", "", nil, {})]
+            return [row(String(localized: "Can't translate \(pair)"), String(localized: "Not a language pair Apple translates"), "", nil, {})]
         @unknown default:
             return []
         }
