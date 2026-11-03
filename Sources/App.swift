@@ -268,6 +268,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     private var history: ClipboardHistory? // nil if clipboard.sqlite can't be opened
     private var historyError: String?
+    // Lazy, from `history`: touched only once launch has opened it (showClipboard), or the panel has no rows.
     private lazy var clipboardProvider = history.map {
         ClipboardProvider(store: $0.store, paste: { [unowned self] in paste($0) }, copy: { [unowned self] in history?.restore($0) })
     }
@@ -378,6 +379,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showClipboard() {
+        // Only here, once launch has opened clipboard.sqlite: `clipboardModel` is lazy and takes its provider from
+        // `history` when first touched, so touching it before (from `apply`, at launch) left the panel empty for good.
+        clipboardModel.keywords = model.keywords.filter { $0.value == VerbProvider.prefix } // its search is for what you copied
         clipboardModel.notice = historyError.map { error in
             LauncherResult(id: "clipboard-error", title: String(localized: "Clipboard history is off: can't open clipboard.sqlite"),
                            subtitle: error, icon: .symbol("exclamationmark.triangle"), score: .infinity,
@@ -470,7 +474,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.keywords = keywordExpansions(config.keywords, languageTable: languageKeywordTable(), taken: yours,
                                            language: config.keywords.language) // wth → weather, clima → weather
         (model.retired, model.renamed) = (config.keywords.retired, config.keywords.renamed)
-        clipboardModel.keywords = model.keywords.filter { $0.value == VerbProvider.prefix } // its search is for what you copied
         // Chained so back-to-back reloads reach the providers in order.
         weather.setCity(config.weather.city ?? "")
         weather.setUnits(config.weather.units)
