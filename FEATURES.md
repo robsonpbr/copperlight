@@ -474,7 +474,7 @@ The row shows the title and date Copperlight read before you press Enter; a noti
 - **Note** (`note`): a floating note on a glass card like the launcher's, always at hand, saved to `note.txt` as
   you type. Drag it by its title, resize it from its bottom-right corner; it remembers both. Esc hides it. Edits
   made in another editor are picked up.
-- **Notes, as many as you like, with no names:** a note's first line is its title (a heading's `#`s left out), on its
+- **Notes, as many as you like, with no names:** a note's first line is its title (without its Markdown), on its
   card and in the list. `note` offers your last note and Notes; Tab on it is the Notes chip, with only your notes,
   the last edited first, each with the line after the title, its age and, beside the list, its text, then New Note:
   Enter opens an empty one, written once you type. Typed in the chip, `milk` keeps the notes that say it (with the
@@ -485,6 +485,10 @@ The row shows the title and date Copperlight read before you press Enter; a noti
 - **Markdown in notes** (`[notes] markdown`, on by default): headings, bold, italic, code, lists, quotes and links are
   styled as you type, the syntax dimmed; `- [ ]` checkboxes tick with a click (⌘Z undoes it). The files stay plain
   text.
+- **Keys in a note:** ⌘B bold, ⌘I italic, ⌘E code, ⌘K link, ⌘1 to ⌘3 headings, ⌘⇧7 bullets, ⌘⇧9 numbers, ⌘⇧L
+  checkboxes, ⌘' quotes. Each writes the Markdown, and pressed again takes it off.
+- **Text size in notes:** ⌘+ and ⌘- for bigger and smaller text, ⌘0 for the normal size: one size for every note,
+  remembered.
 - **Clipboard history** (`clip`): text and images you copy, newest first under Today, Yesterday, Earlier,
   with a preview and details. Typing filters (`image` lists images). Enter pastes into the app you were in.
   Tab on an item: what you can do with it (above), Pin, and Paste in Order from Here. A pinned item stays on top,
@@ -585,7 +589,7 @@ first time per launch; after that, a notification says where it is.
 ## Where things live
 
 All in `~/.config/copperlight/`: `config.toml` (your settings, hot reloaded; a mistake shows as an error row),
-`note.txt`, `notes/` (the other notes), `state.json` (frecency, what you picked for what you typed, recent queries, saved layouts, the timer, the apps you opened and when, the colors you picked), `clipboard.sqlite` (history, readable only
+`note.txt`, `notes/` (the other notes), `state.json` (frecency, what you picked for what you typed, recent queries, saved layouts, the timer, the apps you opened and when, the colors you picked, the notes' text size), `clipboard.sqlite` (history, readable only
 by you), `rates.json` (currency rates), `apps.json` (what each app does) and `homebrew-apps.json` (Homebrew's list,
 trimmed: names, descriptions, homepages), `photos.sqlite` (the text in your photos), `scripts/` (on the shell's PATH).
 

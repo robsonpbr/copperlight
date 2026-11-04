@@ -37,7 +37,7 @@ private func eventLength(_ when: CaptureDate) -> TimeInterval { when.duration > 
 /// `add note|todo|event …`, `screenshot`, `record`. Each one's id is `builtin:<name>`, so a `[[command]]`
 /// with the same name replaces it (SearchModel drops the built-in row).
 struct CaptureProvider: ResultProvider {
-    /// Where `add event` and `add todo` put things: `[meetings] add_to` and `[reminders]`. App.swift sets it.
+    /// Where `add event` and `add todo` put things: `[meetings] add_to` and `[reminders]`. AppCore sets it.
     struct Chosen: Sendable { var calendar: String?; var todos = Config.Reminders() }
     static let chosen = Mutex(Chosen())
 

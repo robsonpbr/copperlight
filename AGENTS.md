@@ -14,6 +14,10 @@ code is laid out, the rules a change has to fit) first. This file only adds what
 
 - Write the failing test first, in `Tests/CopperlightTests.swift` (Swift Testing). No live network calls: data from
   elsewhere is a recording in `Tests/Fixtures/`.
+- A new feature's wiring goes in `Sources/AppCore.swift`, not the app delegate. Tests build a real `AppCore` on a
+  temporary folder (`startedCore`, under "The app, assembled"): use one for anything that depends on launch order,
+  config.toml or how the features fit together. A test of one provider alone can't see those. Under tests `configDir`
+  is a temporary folder, so no test can reach your real `~/.config/copperlight`.
 - `state.json` keeps dates as ISO 8601 in whole seconds, so a test date that goes through `StateStore` needs whole
   seconds too.
 - In an actor provider, write `modeResults` as `async`, like the protocol: a synchronous one loses to the protocol

@@ -616,6 +616,8 @@
 
 "Couldn't read Things" = "Couldn't read Things";
 
+"Couldn't read the clipboard history" = "Couldn't read the clipboard history";
+
 "Couldn't run %@" = "Couldn't run %@";
 
 "Couldn't save config.toml: %@" = "Couldn't save config.toml: %@";

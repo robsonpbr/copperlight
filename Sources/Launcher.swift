@@ -96,7 +96,11 @@ struct LauncherResult: Identifiable, Sendable {
     var later: (@Sendable () async -> [LauncherResult])? = nil
 }
 
-let configDir = URL.homeDirectory.appending(path: ".config/copperlight")
+/// `~/.config/copperlight`: settings, notes, scripts, clipboard, state. Under tests, a folder of their own, so nothing a
+/// test does can read or overwrite your real files.
+let configDir = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
+    ? URL.homeDirectory.appending(path: ".config/copperlight")
+    : FileManager.default.temporaryDirectory.appending(path: "copperlight-tests-\(ProcessInfo.processInfo.processIdentifier)")
 
 @MainActor func copyToClipboard(_ text: String) {
     NSPasteboard.general.clearContents()

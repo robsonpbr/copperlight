@@ -123,7 +123,7 @@ signed with the same one, or everyone grants Accessibility again after updating.
 ## How the code is laid out
 
 Each feature is a type conforming to `ResultProvider` (`Sources/Launcher.swift`): it gets every query and
-returns rows. Add it to the list in `Sources/App.swift`, with the `Feature` (`Sources/Features.swift`) that turns it
+returns rows. Add it to the list in `Sources/AppCore.swift`, with the `Feature` (`Sources/Features.swift`) that turns it
 off: a new feature gets a case there, a line in Settings › Features and in docs/configuration.md, and its keywords in
 `Feature.keywords` (Settings › Keywords and `[keywords]` add your own words for them). Providers run at the same time on every keystroke, and
 their rows show together once all have answered or 50 ms have passed; a slower one's rows merge in later, so
@@ -149,7 +149,8 @@ that provider alone. A `:` command is a `Verb` (`Sources/Actions.swift`), with i
 
 ```
 Sources/
-  App.swift                 entry point, menu bar item, hotkey, config loading, built-in rows (Note, Clipboard…)
+  App.swift                 entry point, menu bar item, hotkey, windows and panels, built-in rows (Note, Clipboard…)
+  AppCore.swift             the app but its windows: the features wired together, launch order, config loading
   Features.swift            what can be turned off (Settings › Features, `[features]`), the wrapper that does it, and
                             the keywords (`[keywords]`)
   Launcher.swift            ResultProvider protocol, SearchModel (concurrent query + merge, frecency, what was picked for what was typed, recent queries for ↑),

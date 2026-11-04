@@ -168,156 +168,57 @@ struct CopperlightApp: App {
     return service.status == .enabled
 }
 
+/// The windows, panels, notes, hotkey and menu bar's actions, around `AppCore`, which is everything else.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let apps = AppProvider()
-    private let currency = CurrencyProvider()
-    private let commands = CommandProvider()
-    private let web = WebProvider()
-    private let snippets = SnippetProvider()
-    private let pages = BrowserPagesProvider()
-    private let meetings = MeetingsProvider()
-    private let contacts = ContactsProvider()
-    private let tabs = BrowserTabsProvider()
-    private lazy var reminders = RemindersProvider(show: { [unowned self] in panel.show(typing: $0) },
-                                                   showSettings: { [unowned self] in showSettings(.options) })
-    private let translate = TranslateProvider()
-    private let weather = WeatherProvider()
-    private let files = FileSearchProvider()
-    private let photoText = Feature.photoText.isOn ? try? PhotoTextStore(path: PhotoTextStore.file.path) : nil
-    private lazy var photoIndexer = photoText.map(PhotoIndexer.init)
-    private let pomodoro = Pomodoro()
-    private let countdown = Countdown()
-    private let stopwatch = Stopwatch()
-    private lazy var builtins = BuiltinProvider(showNote: { [unowned self] in showNote($0) },
-                                                showClipboard: { [unowned self] in showClipboard() },
-                                                showWelcome: { [unowned self] in showWelcome() },
-                                                showSettings: { [unowned self] in showSettings() },
-                                                newNote: { [unowned self] in newNote($0) })
-    private lazy var capture = CaptureProvider(addToNote: { [unowned self] in addToNote($0) },
-                                               showSettings: { [unowned self] in showSettings(.options) })
-    private lazy var verbs = VerbProvider(
-        verbs: Verb.launcher(files: files) + Verb.notes(release: { [unowned self] in releaseNote($0) }),
-        more: { frontMenuRows($0) })
-    private lazy var model = SearchModel(
-        providers: providers(),
-        exclusive: [FileSearchProvider.prefix: Gated(.files, files), VerbProvider.prefix: verbs,
-                    ShellProvider.prefix: Gated(.shell, ShellProvider(state: .shared)),
-                    "~": Gated(.files, PathProvider(terminal: Self.terminal(files))), "/": Gated(.files, PathProvider(terminal: Self.terminal(files)))],
-        frecency: .shared, idle: Self.upNext(meetings, reminders, showsDue: { [unowned self] in showsDue }, clocks: { [unowned self] in idleRows() }))
-    // What the empty launcher shows besides the meeting (config.toml; the meeting is MeetingsProvider's).
-    private var (suggestsApps, showsDue, showsRunning) = (true, true, true)
-
-    /// Each provider with the feature it belongs to (none: always on, or it asks per row), gated by it. In two typed
-    /// halves: as one literal, it slows the compiler down.
-    private func providers() -> [any ResultProvider] {
-        let first: [(any ResultProvider, Feature?)] = [
-            (commands, .commands), (ScriptProvider(), .scripts), (snippets, .snippets), (builtins, nil),
-            (EmojiProvider(), .emoji), (DefineProvider(), .define), (SynonymsProvider(), .define), (SpellProvider(), .spelling),
-            (WikipediaProvider(), .wikipedia), (MessageCodeProvider(), .messageCodes), (LatestFilesProvider(), .latestFiles),
-            (translate, .translate), (StockProvider(), .stocks), (weather, .weather), (meetings, .calendar), (reminders, .reminders),
-            (contacts, .contacts), (TextToolProvider(), .textTools),
-            (CameraProvider(join: Self.joinable(meetings)), .camera), (WiFiProvider(show: { [unowned self] in panel.show(typing: $0) }), .wifiPassword),
-        ]
-        let second: [(any ResultProvider, Feature?)] = [
-            (ColorProvider(show: { [unowned self] in panel.show(typing: $0) }, store: .shared), .colors), (QRCodeProvider(), .qr),
-            (LargeTypeProvider(), .largeType), (ScreenTextProvider(show: { [unowned self] in panel.show(typing: $0) }), .screenText),
-            (capture, nil), (apps, nil), (SettingsProvider(), .systemSettings), (CalculatorProvider(), .calculator),
-            (currency, .currency), (UnitProvider(), .units), (TimeZoneProvider(), .timeZones), (DateMathProvider(), .dates),
-            (PomodoroProvider(pomodoro: pomodoro), .pomodoro), (TimerProvider(clock: countdown), .timers),
-            (StopwatchProvider(watch: stopwatch), .stopwatch), (LookupProvider(), nil), (files, .files),
-            (FileContentProvider(files: files), .fileContent), (tabs, .browserTabs), (pages, .bookmarks), (web, nil),
-        ]
-        let gated: [any ResultProvider] = (first + second).map { provider, feature in feature.map { Gated($0, provider) } ?? provider }
-        return gated + (photoText.map { [PhotoTextProvider(store: $0)] } ?? [])
-    }
-
-    /// The empty launcher's rows besides meetings and reminders: Finder's selection, the next item to paste in order,
-    /// what's running, and the apps you open around now. Its own function: inline, it slows the compiler down.
-    private func idleRows() -> [LauncherResult] {
-        var rows = finderIdle
-        if let history { rows += pasteNextRows(.shared, store: history.store, paste: { [unowned self] in pasteFromLauncher($0) }) }
-        if showsRunning { rows += runningClocks(pomodoro: pomodoro, timer: countdown, stopwatch: stopwatch) }
-        if suggestsApps { rows += suggestionRows(StateStore.shared.get(AppOpen.stateSection, as: [AppOpen].self) ?? []) }
-        return rows
-    }
-    /// The files selected in Finder when the hotkey was pressed over it (or the row asking to see them), on top.
-    private var finderIdle: [LauncherResult] = []
-    private lazy var panel: LauncherPanel = LauncherPanel(model: model,
+    private lazy var core: AppCore = AppCore(
+        configFile: Config.file, clipboardFile: ClipboardStore.file, state: .shared,
+        actions: .init(
+            showTyping: { [unowned self] in panel.show(typing: $0) },
+            showNote: { [unowned self] in showNote($0) },
+            newNote: { [unowned self] in newNote($0) },
+            addToNote: { [unowned self] in addToNote($0) },
+            releaseNote: { [unowned self] in releaseNote($0) },
+            showClipboard: { [unowned self] in showClipboard() },
+            showClipboardPanel: { [unowned self] in clipboardPanel.show() },
+            showWelcome: { [unowned self] in showWelcome() },
+            showSettings: { [unowned self] in showSettings($0) },
+            setHotkey: { KeyboardShortcuts.setShortcut($0.shortcut, for: .toggleLauncher) },
+            styleNotes: { [unowned self] markdown in
+                NotePanel.stylesMarkdown = markdown
+                notes.values.forEach { $0.restyle() }
+            },
+            configReloaded: { [unowned self] in settings?.model.reload() }))
+    private lazy var panel: LauncherPanel = LauncherPanel(model: core.model,
                                                           placeholder: String(localized: "Type anything", comment: "The launcher's empty field"))
-
-    /// The meeting to join now, for Enter after `camera`.
-    nonisolated private static func joinable(_ meetings: MeetingsProvider) -> @Sendable () async -> LauncherResult? {
-        { Feature.calendar.isOn ? await meetings.joinable() : nil }
-    }
-
-    /// `[files] terminal`, asked when a file's Open in Terminal row is made.
-    nonisolated private static func terminal(_ files: FileSearchProvider) -> @Sendable () async -> String? { { await files.terminalApp() } }
-
-    /// What the empty launcher shows: the meeting to join, a few minutes before it starts, what's counting, reminders
-    /// that are due, and the apps you open around now.
-    nonisolated private static func upNext(_ meetings: MeetingsProvider, _ reminders: RemindersProvider,
-                                           showsDue: @escaping @MainActor @Sendable () -> Bool,
-                                           clocks: @escaping @MainActor @Sendable () -> [LauncherResult]) -> @Sendable () async -> [LauncherResult] {
-        {
-            let events = Feature.calendar.isOn ? await meetings.upNext() : []
-            let wantsDue = Feature.reminders.isOn ? await showsDue() : false
-            let due = wantsDue ? await reminders.upNext() : []
-            return (events + due + (await MainActor.run { clocks() })).sorted { $0.score > $1.score }
-        }
-    }
-    private var history: ClipboardHistory? // nil if clipboard.sqlite can't be opened
-    private var historyError: String?
-    // Lazy, from `history`: touched only once launch has opened it (showClipboard), or the panel has no rows.
-    private lazy var clipboardProvider = history.map {
-        ClipboardProvider(store: $0.store, paste: { [unowned self] in paste($0) }, copy: { [unowned self] in history?.restore($0) })
-    }
-    private lazy var clipboardModel = SearchModel(
-        providers: clipboardProvider.map { [$0] } ?? [], searchesEmptyQuery: true,
-        exclusive: clipboardProvider.map { [VerbProvider.prefix: VerbProvider(verbs: $0.verbs)] } ?? [:])
-    private lazy var clipboardPanel = LauncherPanel(model: clipboardModel,
+    private lazy var clipboardPanel: LauncherPanel = LauncherPanel(model: core.clipboardModel,
                                                     placeholder: String(localized: "Search clipboard history, : for commands…"))
     private var notes: [String: NotePanel] = [:] // by the file's path
     private var welcome: WelcomeWindow?
     private var settings: SettingsWindow?
     private var watcher: DirectoryWatcher?
-    private var configText: String? // last config.toml contents seen; nil = no file
-    private var configUpdate: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Hosted unit tests launch the app too: don't grab hotkeys, touch files or hit the network there.
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
         try? FileManager.default.createDirectory(at: scriptsDir, withIntermediateDirectories: true) // and configDir
-        if !FileManager.default.fileExists(atPath: Config.file.path) {
-            try? Config.example.write(to: Config.file, atomically: true, encoding: .utf8)
-        }
-        apply(Config()) // the "last valid config" if the file is broken from the start
-        do {
-            // After the defaults above, so retention only prunes with a config that actually loaded. It records only
-            // while clipboard history is on (apply).
-            history = ClipboardHistory(store: try ClipboardStore(path: ClipboardStore.file.path))
-            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: ClipboardStore.file.path)
-            history?.recording = Feature.clipboard.isOn || Feature.cleanLinks.isOn
-        } catch {
-            historyError = error.localizedDescription
-        }
-        reloadConfig()
+        core.start()
         // Built now, so the first ⌥ Space is as quick as the rest: building it then took about 50 ms.
         panel.contentView?.layoutSubtreeIfNeeded()
         // ponytail: turned off later, a clock already running keeps going until it ends; it's what you started.
-        if Feature.pomodoro.isOn { pomodoro.restore() }
-        if Feature.timers.isOn { countdown.restore() }
-        if Feature.stopwatch.isOn { stopwatch.restore() }
+        if Feature.pomodoro.isOn { core.pomodoro.restore() }
+        if Feature.timers.isOn { core.countdown.restore() }
+        if Feature.stopwatch.isOn { core.stopwatch.restore() }
         if Feature.translate.isOn { Task { _ = await TranslateProvider.languages() } } // its language chips
         watcher = DirectoryWatcher(configDir) { [unowned self] in
-            reloadConfig()
+            core.reloadConfig()
             notes[mainNoteFile.path]?.reloadIfChanged()
         }
         KeyboardShortcuts.onKeyDown(for: .toggleLauncher) { [unowned self] in
             welcome?.model.triedHotkey = true
             toggleLauncher()
         }
-        refresh()
+        core.refresh()
         if StateStore.shared.get("welcomed", as: Bool.self) != true {
             StateStore.shared.set("welcomed", true)
             showWelcome()
@@ -333,20 +234,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if panel.isVisible { return panel.orderOut(nil) }
         let selection = frontSelection() // before the panel takes the keys, so it's still the app's
         panel.model.fileDialog = frontFileDialog()
-        finderIdle = []
+        core.finderIdle = []
         if Feature.files.isOn, NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.apple.finder" {
             if automationPermission("com.apple.finder", ask: false) == OSStatus(errAEEventWouldRequireUserConsent) {
-                finderIdle = [finderAskRow()]
+                core.finderIdle = [finderAskRow()]
             } else {
                 Task { [weak self] in
                     let paths = await finderSelection()
                     guard let self, !paths.isEmpty, panel.isVisible, panel.model.query.isEmpty else { return }
-                    finderIdle = finderRows(paths)
+                    core.finderIdle = finderRows(paths)
                     panel.model.query = "" // shows them
                 }
             }
         }
-        refresh()
+        core.refresh()
         panel.show(typing: selection)
         // A browser asked to share its text just now answers a moment later: in time, unless you've typed already.
         guard selection == nil else { return }
@@ -361,7 +262,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if welcome?.isVisible != true {
             welcome = WelcomeWindow { [unowned self] in
                 welcome?.close()
-                refresh()
+                core.refresh()
                 panel.show()
             }
         }
@@ -372,39 +273,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Opens Settings, on `pane` when given.
     func showSettings(_ pane: Pane? = nil) {
         if settings?.isVisible != true {
-            settings = SettingsWindow(showWelcome: { [unowned self] in showWelcome() }, forget: { [unowned self] in model.forget($0) })
+            settings = SettingsWindow(showWelcome: { [unowned self] in showWelcome() }, forget: { [unowned self] in core.model.forget($0) })
         }
         if let pane { settings?.model.pane = pane }
         settings?.show()
     }
 
     private func showClipboard() {
-        // Only here, once launch has opened clipboard.sqlite: `clipboardModel` is lazy and takes its provider from
-        // `history` when first touched, so touching it before (from `apply`, at launch) left the panel empty for good.
-        clipboardModel.keywords = model.keywords.filter { $0.value == VerbProvider.prefix } // its search is for what you copied
-        clipboardModel.notice = historyError.map { error in
-            LauncherResult(id: "clipboard-error", title: String(localized: "Clipboard history is off: can't open clipboard.sqlite"),
-                           subtitle: error, icon: .symbol("exclamationmark.triangle"), score: .infinity,
-                           actionTitle: "", action: {})
-        }
-        clipboardPanel.show()
-    }
-
-    /// Enter on Paste Next in the launcher: onto the clipboard, and into the app in front.
-    private func pasteFromLauncher(_ content: ClipboardContent) {
-        history?.restore(content)
-        if hasAccessibility(String(localized: "paste", comment: "Ends “Allow Copperlight in Accessibility to …”")) { sendPaste() }
-    }
-
-    /// Enter in the clipboard panel. Without Accessibility it can only copy, so it says how to fix that.
-    private func paste(_ content: ClipboardContent) {
-        history?.restore(content)
-        if AXIsProcessTrusted() { return sendPaste() }
-        clipboardModel.notice = LauncherResult(
-            id: "accessibility", title: String(localized: "Copied. To paste it too, allow Copperlight in Accessibility"),
-            subtitle: String(localized: "Privacy & Security → Accessibility", comment: "Where System Settings has it, in its own words"),
-            icon: .symbol("lock.shield"), score: .infinity,
-            actionTitle: String(localized: "Open System Settings"), action: { requestAccessibility() })
+        core.prepareClipboard()
         clipboardPanel.show()
     }
 
@@ -436,79 +312,4 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Through the panel, open or not, so text being typed in it isn't overwritten by the file.
     private func addToNote(_ line: String) { note(mainNoteFile).append(line) }
-
-    /// Re-reads config.toml if it changed. A broken file keeps the current config and pins an
-    /// error row to the launcher until it parses again.
-    private func reloadConfig() {
-        let text = try? String(contentsOf: Config.file, encoding: .utf8)
-        guard text != configText else { return }
-        configText = text
-        do {
-            apply(try text.map(Config.parse) ?? Config())
-            model.notice = nil
-        } catch {
-            model.notice = LauncherResult(
-                id: "config-error", title: String(localized: "config.toml: \(Config.describe(error))"),
-                subtitle: String(localized: "Using the last valid config"), icon: .symbol("exclamationmark.triangle"),
-                score: .infinity, actionTitle: String(localized: "Open config.toml"),
-                action: { NSWorkspace.shared.open(Config.file) })
-        }
-        settings?.model.reload() // an edit by hand shows in the settings window too
-    }
-
-    private func apply(_ config: Config) {
-        Feature.use(config.features)
-        Palette.shared.use(config.look.accent)
-        KeyboardShortcuts.setShortcut(config.hotkeys.launcher.shortcut, for: .toggleLauncher)
-        history?.settings = config.clipboard
-        history?.recording = Feature.clipboard.isOn || Feature.cleanLinks.isOn
-        NotePanel.stylesMarkdown = config.notes.markdown
-        notes.values.forEach { $0.restyle() }
-        pomodoro.defaultMinutes = config.pomodoro.defaultMinutes
-        pomodoro.breakMinutes = config.pomodoro.breakMinutes
-        (suggestsApps, showsDue, showsRunning) = (config.apps.suggestions, config.reminders.showDue, config.timers.showRunning)
-        model.learning = config.learning
-        model.keepsAppOpens = config.apps.suggestions
-        model.showsCards = config.answers.cards
-        let yours = Set(config.commands.map { $0.alias.lowercased() } + config.snippets.map { $0.name.lowercased() })
-        model.keywords = keywordExpansions(config.keywords, languageTable: languageKeywordTable(), taken: yours,
-                                           language: config.keywords.language) // wth → weather, clima → weather
-        (model.retired, model.renamed) = (config.keywords.retired, config.keywords.renamed)
-        // Chained so back-to-back reloads reach the providers in order.
-        weather.setCity(config.weather.city ?? "")
-        weather.setUnits(config.weather.units)
-        RemindersProvider.chosenLists.withLock { $0 = config.reminders.lists }
-        RemindersProvider.chosenApp.withLock { $0 = config.reminders.app }
-        CaptureProvider.chosen.withLock { $0 = .init(calendar: config.meetings.addTo, todos: config.reminders) }
-        TimeZoneProvider.chosenCities.withLock { $0 = config.timeZones.cities }
-        ColorProvider.chosenNotation.withLock { $0 = config.colors.copy }
-        chosenEndSound.withLock { $0 = config.timers.sound }
-        ContactsProvider.chosenEnter.withLock { $0 = config.contacts.enter }
-        configUpdate = Task { [previous = configUpdate, commands, currency, translate, files, apps, web, snippets] in
-            await previous?.value
-            await commands.setCommands(config.commands, browser: config.browser)
-            await snippets.setSnippets(config.snippets)
-            await web.setBrowser(config.browser)
-            await pages.setBrowser(config.browser)
-            await meetings.setBrowser(config.browser)
-            await meetings.setOptions(config.meetings)
-            if Feature.bookmarks.isOn { await pages.refresh() }
-            await currency.setDefaultTarget(config.currency.defaultTarget)
-            translate.setDefaultTarget(config.translate.defaultTarget)
-            await files.setSettings(config.files)
-            await apps.setOnline(config.apps.online)
-        }
-    }
-
-    private func refresh() {
-        // Hours the first time, for a big library: on its own, and only one at a time (it says when it's busy).
-        Task.detached(priority: .utility) { [photoIndexer] in await photoIndexer?.update() }
-        Task { [apps, currency, pages, contacts, tabs] in
-            if Feature.browserTabs.isOn { await tabs.refresh() }
-            await apps.rescan()
-            if Feature.currency.isOn { await currency.refreshIfStale() }
-            if Feature.bookmarks.isOn { await pages.refresh() }
-            if Feature.contacts.isOn { await contacts.refresh() }
-        }
-    }
 }

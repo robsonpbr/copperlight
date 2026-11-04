@@ -320,11 +320,14 @@ actor ClipboardProvider: ResultProvider {
     private let store: ClipboardStore
     private let paste: @MainActor @Sendable (ClipboardContent) -> Void
     private let copy: @MainActor @Sendable (ClipboardContent) -> Void
+    private let items: @Sendable (String) throws -> [ClipboardStore.Item]
     private var apps: [String: (name: String, path: String)?] = [:] // bundle id → app, looked up once
 
     init(store: ClipboardStore, paste: @escaping @MainActor @Sendable (ClipboardContent) -> Void,
-         copy: @escaping @MainActor @Sendable (ClipboardContent) -> Void) {
+         copy: @escaping @MainActor @Sendable (ClipboardContent) -> Void,
+         items: (@Sendable (String) throws -> [ClipboardStore.Item])? = nil) {
         (self.store, self.paste, self.copy) = (store, paste, copy)
+        self.items = items ?? { try store.items(matching: $0) }
     }
 
     /// What Enter does to an item: paste it, or (from `:copy` / `:delete`) copy or delete it.
@@ -347,7 +350,12 @@ actor ClipboardProvider: ResultProvider {
     func results(for query: String) -> [LauncherResult] { rows(for: query, mode: .paste) }
 
     func rows(for query: String, mode: Mode) -> [LauncherResult] {
-        let items = (try? store.items(matching: query)) ?? []
+        let items: [ClipboardStore.Item]
+        do { items = try self.items(query) } catch { // said, not an empty panel: that looks like nothing was ever copied
+            return [LauncherResult(id: "clipboard-unreadable", title: String(localized: "Couldn't read the clipboard history"),
+                                   icon: .symbol("exclamationmark.triangle"), score: .infinity, actionTitle: "", action: {},
+                                   preview: error.localizedDescription)] // long, with the SQL: a subtitle wouldn't show it
+        }
         let store = store
         let now = Date.now
         // The panel never takes focus, so the app in front is the one Enter pastes into. Without

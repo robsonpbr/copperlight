@@ -807,6 +807,756 @@ func configRejectsInvalidFiles(_ toml: String, _ messageContains: String) {
     #expect(checkboxToggle("plain" as NSString, at: 1) == nil)
 }
 
+@Test func markdownBoldAndItalicNest() {
+    func drawn(_ text: String) -> Set<String> {
+        Set(markdownSpans(text).filter { $0.style == .bold || $0.style == .italic }.map { "\((text as NSString).substring(with: $0.range))|\($0.style)" })
+    }
+    #expect(drawn("***both***") == ["both|bold", "**both**|italic"])
+    #expect(drawn("**a *b***") == ["a *b*|bold", "b|italic"])
+    #expect(drawn("***a* b**") == ["*a* b|bold", "a|italic"])
+    #expect(drawn("*a **b** c*") == ["a **b** c|italic", "b|bold"])
+    #expect(drawn("**a *b* c**") == ["a *b* c|bold", "b|italic"])
+    #expect(drawn("__*x*__") == ["*x*|bold", "x|italic"])
+    #expect(drawn("**_x_**") == ["_x_|bold", "x|italic"])
+    #expect(drawn("**hello*x***") == ["hello*x*|bold", "x|italic"])
+    #expect(drawn("word*x* and *x*word") == ["x|italic"] )
+    // What isn't emphasis stays that way.
+    for plain in ["******", "2 * 3 * 4", "2*3*4", "a*b, c*d", "snake_case_name", "*.txt and *.md", "* item", "**a\nb**", "*a\nb*"] {
+        #expect(drawn(plain).isEmpty, "\(plain)")
+    }
+    // A space just typed before the closing markers doesn't end the style, or it would blink off at each word.
+    #expect(drawn("**hi **").isEmpty)
+    #expect(markdownSpans("**hi **", typingAt: 5).contains { $0.style == .bold })
+    #expect(markdownSpans("*hi *", typingAt: 4).contains { $0.style == .italic })
+    #expect(markdownSpans("**https://a.b**").contains { $0.style == .link("https://a.b") }) // the markers aren't its address
+}
+
+/// `format` on text written with its selection in it, `|` the caret and `‹…›` what's selected. It answers the same way.
+private func formatted(_ format: NoteFormat, _ marked: String) -> String {
+    let source = marked as NSString
+    let plain = ["|", "‹", "›"].reduce(marked) { $0.replacingOccurrences(of: $1, with: "") } as NSString
+    let caret = source.range(of: "|"), open = source.range(of: "‹")
+    let selection = caret.location != NSNotFound ? NSRange(location: caret.location, length: 0)
+                                                 : NSRange(location: open.location, length: source.range(of: "›").location - open.location - 1)
+    let edit = noteEdit(format, in: plain, selection: selection)
+    let result = plain.replacingCharacters(in: edit.range, with: edit.replacement) as NSString
+    if edit.selection.length == 0 { return result.replacingCharacters(in: edit.selection, with: "|") }
+    return (result.replacingCharacters(in: NSRange(location: NSMaxRange(edit.selection), length: 0), with: "›") as NSString)
+        .replacingCharacters(in: NSRange(location: edit.selection.location, length: 0), with: "‹")
+}
+
+@Test func noteTitlesReadAsTheyShow() {
+    for (line, title) in [("**Title**", "Title"), ("# *Title*", "Title"), ("- [ ] milk", "milk"), ("- milk", "milk"), ("> said", "said"), ("1. first", "first"),
+                          ("***both*** and `code`", "both and code"), ("[site](https://a.b) now", "site now"), ("2 * 3 * 4", "2 * 3 * 4"), ("[*a](b*)", "a")] {
+        #expect(noteTitle(line + "\nbody") == title, "\(line)")
+    }
+    #expect(noteTitle("**\n\nsecond") == "**") // a line with only signs still reads as itself
+}
+
+@Test func noteFormatsWhatsSelected() {
+    #expect(formatted(.bold, "a ‹word› b") == "a **‹word›** b")
+    #expect(formatted(.italic, "a ‹word› b") == "a *‹word›* b")
+    #expect(formatted(.code, "a ‹word› b") == "a `‹word›` b")
+    #expect(formatted(.bold, "🙂 ‹olá›") == "🙂 **‹olá›**") // counted as NSTextStorage counts
+    // Pressed again, it comes off, the markers selected with it or not, and from anywhere in what's styled.
+    #expect(formatted(.bold, "a **‹word›** b") == "a ‹word› b")
+    #expect(formatted(.bold, "a ‹**word**› b") == "a ‹word› b")
+    #expect(formatted(.bold, "**one ‹two› three**") == "one ‹two› three")
+    #expect(formatted(.bold, "__‹word›__") == "‹word›")
+    #expect(formatted(.italic, "*‹word›*") == "‹word›")
+    #expect(formatted(.italic, "_‹word›_") == "‹word›")
+    #expect(formatted(.code, "`‹word›`") == "‹word›")
+    // Bold and italic stack, and each comes off alone.
+    #expect(formatted(.italic, "**‹word›**") == "***‹word›***")
+    #expect(formatted(.bold, "*‹word›*") == "***‹word›***")
+    #expect(formatted(.bold, "***‹word›***") == "*‹word›*")
+    #expect(formatted(.italic, "***‹word›***") == "**‹word›**")
+    #expect(formatted(.italic, "**_‹word›_**") == "**‹word›**")
+    #expect(formatted(.italic, "__‹word›__") == "__*‹word›*__")
+    #expect(formatted(.italic, "__*‹word›*__") == "__‹word›__")
+    // One inside the other, each comes off alone.
+    #expect(formatted(.italic, "**a ‹b›**") == "**a *‹b›***")
+    #expect(formatted(.italic, "**a *‹b›***") == "**a ‹b›**")
+    #expect(formatted(.italic, "**‹a› b**") == "***‹a›* b**")
+    #expect(formatted(.italic, "***‹a›* b**") == "**‹a› b**")
+    #expect(formatted(.bold, "*a ‹b› c*") == "*a **‹b›** c*")
+    #expect(formatted(.bold, "*a **‹b›** c*") == "*a ‹b› c*")
+    #expect(formatted(.italic, "‹a **b** c›") == "*‹a **b** c›*")
+    #expect(formatted(.italic, "*‹a **b** c›*") == "‹a **b** c›")
+    // Inside a word on both sides, italic can't draw: it takes the word. On one side it can.
+    #expect(formatted(.italic, "he‹ll›o") == "*he‹ll›o*")
+    #expect(formatted(.italic, "*he‹ll›o*") == "he‹ll›o")
+    #expect(formatted(.italic, "‹word›s") == "*‹word›*s")
+    #expect(formatted(.italic, "*‹word›*s") == "‹word›s")
+    // An address stays one: markers go around it, never into it.
+    #expect(formatted(.bold, "‹https://a.b›") == "**‹https://a.b›**")
+    #expect(formatted(.bold, "https://a|b.c") == "**https://a|b.c**")
+    #expect(formatted(.bold, "https://‹ab›.c") == "**https://‹ab›.c**")
+    #expect(formatted(.bold, "[x](http://a|b)") == "**[x](http://a|b)**")
+    #expect(formatted(.bold, "a‹   ›b") == "a‹   ›b") // nothing to style
+    #expect(formatted(.bold, "**_‹word›_**") == "_‹word›_")
+}
+
+/// Three clicks select a line with its newline, and ⌘A everything: each line gets its own markers, inside its list
+/// mark or heading, or none of it would draw.
+@Test func noteFormatsWholeLines() {
+    #expect(formatted(.bold, "‹one\n›two") == "**‹one**\n›two")
+    #expect(formatted(.bold, "**‹one**\n›two") == "‹one\n›two")
+    #expect(formatted(.bold, "‹one\n\ntwo›") == "**‹one**\n\n**two›**")
+    #expect(formatted(.bold, "**‹one**\n\n**two›**") == "‹one\n\ntwo›")
+    #expect(formatted(.bold, "‹**one**\ntwo›") == "‹**one**\n**two›**") // the lines that aren't yet
+    #expect(formatted(.bold, "‹- milk\n›eggs") == "‹- **milk**\n›eggs")
+    #expect(formatted(.bold, "‹- **milk**\n›eggs") == "‹- milk\n›eggs")
+    #expect(formatted(.italic, "‹# Title›") == "‹# *Title›*")
+    #expect(formatted(.bold, "‹- [ ] milk›") == "‹- [ ] **milk›**")
+    #expect(formatted(.bold, "‹1. milk›") == "‹1. **milk›**")
+    #expect(formatted(.bold, "‹> milk›") == "‹> **milk›**")
+    #expect(formatted(.bold, "a ‹word ›b") == "a **‹word** ›b") // spaces stay out: `**word **` wouldn't draw
+}
+
+/// ⌘B, type, ⌘B: bold is on while you type it, and then it's behind you.
+@Test func noteFormatsAsYouType() {
+    #expect(formatted(.bold, "a |") == "a **|**")
+    #expect(formatted(.bold, "**|**") == "|")
+    #expect(formatted(.italic, "*|*") == "|")
+    #expect(formatted(.code, "`|`") == "|")
+    #expect(formatted(.italic, "**|**") == "***|***")
+    #expect(formatted(.bold, "***|***") == "*|*")
+    #expect(formatted(.bold, "**hello|**") == "**hello**|")
+    #expect(formatted(.italic, "*hello|*") == "*hello*|")
+    #expect(formatted(.bold, "**hello |**") == "**hello** |") // the space goes after it, where it draws
+    #expect(formatted(.italic, "*hello |*") == "*hello* |")
+    #expect(formatted(.code, "`hello |`") == "`hello` |")
+    #expect(formatted(.bold, "** |**") == " |")
+    #expect(formatted(.bold, "__hello|__") == "__hello__|") // the other spelling, the same
+    #expect(formatted(.bold, "__hello |__") == "__hello__ |")
+    #expect(formatted(.bold, "__he|llo__") == "he|llo")
+    #expect(formatted(.italic, "_hello|_") == "_hello_|")
+    #expect(formatted(.italic, "_hello |_") == "_hello_ |")
+    #expect(formatted(.italic, "_he|llo_") == "he|llo")
+    #expect(formatted(.bold, "***hello |***") == "***hello** |*") // both on, and a space
+    #expect(formatted(.italic, "***hello |***") == "***hello* |**")
+    // Both on: each press stops its own, in either order.
+    #expect(formatted(.bold, "***hello|***") == "***hello**|*")
+    #expect(formatted(.italic, "***hello**|*") == "***hello***|")
+    #expect(formatted(.italic, "***hello|***") == "***hello*|**")
+    #expect(formatted(.bold, "***hello*|**") == "***hello***|")
+    #expect(formatted(.bold, "***both***|") == "*both*|")
+    #expect(formatted(.bold, "|***both***") == "|*both*")
+    #expect(formatted(.italic, "**a *b|***") == "**a *b*|**")
+    #expect(formatted(.bold, "**a *b*|**") == "**a *b***|")
+    // Against a word, italic draws when one side is free.
+    #expect(formatted(.italic, "word| b") == "word*|* b")
+    #expect(formatted(.italic, "word*x|* b") == "word*x*| b")
+    #expect(formatted(.italic, "*x|*word") == "*x*|word")
+    #expect(formatted(.code, "`hello|`") == "`hello`|")
+    // Anywhere else in it, it comes off.
+    #expect(formatted(.bold, "a **he|llo** b") == "a he|llo b")
+    #expect(formatted(.bold, "a **|hello** b") == "a |hello b")
+    #expect(formatted(.bold, "a |**hello** b") == "a |hello b")
+    #expect(formatted(.bold, "a **hello**| b") == "a hello| b")
+    // Inside a word, the word: `wo****rd` isn't anything.
+    #expect(formatted(.bold, "a wo|rd b") == "a **wo|rd** b")
+    #expect(formatted(.bold, "a ol|á b") == "a **ol|á** b")
+    #expect(formatted(.italic, "wo|rd") == "*wo|rd*")
+    #expect(formatted(.bold, "word| b") == "word**|** b") // at its end: what you type next
+}
+
+@Test func noteFormatsLines() {
+    #expect(formatted(.heading(1), "ti|tle") == "# ti|tle")
+    #expect(formatted(.heading(3), "|") == "### |")
+    #expect(formatted(.heading(2), "# ti|tle") == "## ti|tle")
+    #expect(formatted(.heading(2), "## ti|tle") == "ti|tle")
+    #expect(formatted(.heading(1), "  ti|tle") == "# ti|tle") // a heading starts its line, or doesn't draw
+    #expect(formatted(.bullet, "|") == "- |")
+    #expect(formatted(.bullet, "a\n|") == "a\n- |") // the last line, empty
+    #expect(formatted(.numbered, "1. a\n|") == "1. a\n2. |")
+    #expect(formatted(.quote, "a\n|\nb") == "a\n> |\nb")
+    #expect(formatted(.bullet, "mi|lk") == "- mi|lk")
+    #expect(formatted(.bullet, "- mi|lk") == "mi|lk")
+    #expect(formatted(.bullet, "* mi|lk") == "mi|lk")
+    #expect(formatted(.bullet, "  mi|lk") == "  - mi|lk") // indented stays indented
+    #expect(formatted(.checkbox, "mi|lk") == "- [ ] mi|lk")
+    #expect(formatted(.checkbox, "- mi|lk") == "- [ ] mi|lk")
+    #expect(formatted(.checkbox, "- [x] mi|lk") == "mi|lk")
+    #expect(formatted(.bullet, "- [ ] mi|lk") == "- mi|lk")
+    #expect(formatted(.numbered, "mi|lk") == "1. mi|lk")
+    #expect(formatted(.numbered, "9. mi|lk") == "mi|lk")
+    #expect(formatted(.numbered, "1. one\ntw|o") == "1. one\n2. tw|o") // goes on from the line above
+    #expect(formatted(.numbered, "‹5. a\nb›") == "‹5. a\n6. b›") // and from one in the selection
+    #expect(formatted(.numbered, "‹3. a\nb\n7. c\nd›") == "‹3. a\n4. b\n7. c\n8. d›")
+    #expect(formatted(.numbered, "9223372036854775806. a\nb|") == "9223372036854775806. a\n1. b|") // not a number to count from
+    #expect(formatted(.numbered, "‹9223372036854775807. a\nb›") == "‹9223372036854775807. a\n1. b›")
+    #expect(formatted(.quote, "mi|lk") == "> mi|lk")
+    #expect(formatted(.quote, ">mi|lk") == "mi|lk")
+    #expect(formatted(.quote, "# mi|lk") == "> mi|lk")
+    #expect(formatted(.heading(1), "> mi|lk") == "# mi|lk")
+    #expect(formatted(.bullet, "|- milk") == "|milk") // the caret stays with the text, or at its start
+    // Every line selected, blank ones left alone.
+    #expect(formatted(.quote, "‹one\ntwo›") == "> ‹one\n> two›")
+    #expect(formatted(.quote, "> ‹one\n> two›") == "‹one\ntwo›")
+    #expect(formatted(.bullet, "‹one\n\ntwo›") == "- ‹one\n\n- two›")
+    #expect(formatted(.bullet, "- ‹one\ntwo›") == "- ‹one\n- two›") // the lines that aren't yet
+    #expect(formatted(.numbered, "‹one\n\ntwo›") == "1. ‹one\n\n2. two›")
+    #expect(formatted(.heading(1), "‹one\ntwo›") == "# ‹one\n# two›")
+    #expect(formatted(.heading(1), "# ‹one\n# two›") == "‹one\ntwo›")
+    #expect(formatted(.heading(2), "# ‹one\n## two›") == "## ‹one\n## two›") // the lines that aren't yet
+    #expect(formatted(.checkbox, "‹one\n\ntwo›") == "- [ ] ‹one\n\n- [ ] two›")
+    #expect(formatted(.checkbox, "- [ ] ‹one\n\n- [x] two›") == "‹one\n\ntwo›")
+    #expect(formatted(.checkbox, "- ‹one\n1. two›") == "- [ ] ‹one\n- [ ] two›")
+    #expect(formatted(.bullet, "‹one\n›two") == "- ‹one\n›two") // three clicks: the next line isn't in it
+}
+
+@Test func noteFormatsLinks() {
+    #expect(formatted(.link, "‹site›") == "[site](|)")
+    #expect(formatted(.link, "|") == "[|]()")
+    #expect(formatted(.link, "[site|]()") == "[site](|)") // the name typed, on to its address
+    #expect(formatted(.link, "a si|te b") == "a [site](|) b")
+    #expect(formatted(.link, "[si|te](https://a.b)") == "si|te")
+    #expect(formatted(.link, "[site](https://|a.b)") == "site|")
+    #expect(formatted(.link, "[‹site›](https://a.b)") == "‹site›")
+    #expect(formatted(.link, "go https://a|.b now") == "go [|](https://a.b) now") // a bare address, ready for its name
+    #expect(formatted(.link, "go ‹https://a.b› now") == "go [|](https://a.b) now")
+    #expect(formatted(.link, "‹one\ntwo›") == "[one](|)\ntwo") // a link is one line
+    #expect(formatted(.link, "[si|te]()") == "[site](|)")
+    // Pressed again with no address yet, it comes off, and never nests.
+    #expect(formatted(.link, "[site](|)") == "site|")
+    #expect(formatted(.link, "[](|)") == "|")
+    #expect(formatted(.link, "[‹site›]()") == "‹site›")
+    #expect(formatted(.link, "go [|](https://a.b) now") == "go https://a.b| now") // back to the bare address
+    #expect(formatted(.link, "**https://a|.b**") == "**[|](https://a.b)**")
+}
+
+/// The same numbers each run, so what fails here fails the same way again (SplitMix64).
+private struct Seeded: RandomNumberGenerator {
+    var state: UInt64
+    mutating func next() -> UInt64 {
+        state &+= 0x9E37_79B9_7F4A_7C15
+        var mixed = state
+        mixed = (mixed ^ (mixed >> 30)) &* 0xBF58_476D_1CE4_E5B9
+        mixed = (mixed ^ (mixed >> 27)) &* 0x94D0_49BB_1331_11EB
+        return mixed ^ (mixed >> 31)
+    }
+}
+
+private let everyNoteFormat: [NoteFormat] = [.bold, .italic, .code, .link, .heading(1), .heading(2), .heading(3), .bullet, .numbered, .checkbox, .quote]
+
+/// Any text, any selection, any key: nothing crashes, nothing ends up out of range or inside an emoji, and the words
+/// survive. A link's address can go with it, by design, and the marks a line gets hold `x` and digits.
+@Test func noteFormatsNeverDamageText() {
+    var random = Seeded(state: 1)
+    let pieces = ["a", "word", "olá", "🙂", "👩🏽‍💻", " ", " ", "  ", "\n", "\r\n", "*", "**", "***", "_", "__", "`", "[", "]", "(", ")", "](",
+                  "https://a.b", "- ", "# ", "## ", "> ", "1. ", "- [ ] ", "- [x] ", "x"]
+    func words(_ text: String) -> String {
+        String(text.unicodeScalars.filter { (CharacterSet.alphanumerics.contains($0) && !"x0123456789".unicodeScalars.contains($0)) || $0.value > 0x2000 }.map(Character.init))
+    }
+    for _ in 0..<20_000 {
+        let text = (0..<Int.random(in: 0...10, using: &random)).map { _ in pieces.randomElement(using: &random)! }.joined() as NSString
+        func whole(_ index: Int) -> Int { index > 0 && index < text.length && UTF16.isTrailSurrogate(text.character(at: index)) ? index - 1 : index }
+        let start = whole(Int.random(in: 0...text.length, using: &random))
+        let end = Bool.random(using: &random) ? start : whole(Int.random(in: start...text.length, using: &random))
+        let format = everyNoteFormat.randomElement(using: &random)!
+        let edit = noteEdit(format, in: text, selection: NSRange(location: start, length: end - start))
+        let said = "\(format) on \((text as String).debugDescription) at \(start)…\(end)"
+        guard edit.range.location >= 0, NSMaxRange(edit.range) <= text.length else { Issue.record("range: \(said)"); return }
+        let result = text.replacingCharacters(in: edit.range, with: edit.replacement) as NSString
+        guard edit.selection.location >= 0, NSMaxRange(edit.selection) <= result.length else { Issue.record("selection: \(said)"); return }
+        if edit.selection.location > 0, edit.selection.location < result.length, UTF16.isTrailSurrogate(result.character(at: edit.selection.location)) { Issue.record("in an emoji: \(said)"); return }
+        if markdownSpans(result as String).contains(where: { NSMaxRange($0.range) > result.length }) { Issue.record("spans: \(said)"); return }
+        if format != .link, words(result as String) != words(text as String) { Issue.record("lost text: \(said) gave \((result as String).debugDescription)"); return }
+    }
+}
+
+/// A word selected in plain text, the same key twice: back to what it was.
+@Test func noteFormatsPressedTwiceAreBack() {
+    var random = Seeded(state: 2)
+    let words = ["alpha", "beta", "olá", "x1", "9", "🙂"]
+    for _ in 0..<3_000 {
+        let line = (0..<Int.random(in: 1...4, using: &random)).map { _ in words.randomElement(using: &random)! }
+        let text = (Bool.random(using: &random) ? "first line\n" : "") + line.joined(separator: " ") + (Bool.random(using: &random) ? "\nlast line" : "") as NSString
+        let pick = Int.random(in: 0..<line.count, using: &random)
+        let before = line[..<pick].joined(separator: " ").utf16.count + (pick > 0 ? 1 : 0)
+        let selection = NSRange(location: text.range(of: line.joined(separator: " ")).location + before, length: line[pick].utf16.count)
+        for format in everyNoteFormat where format != .link {
+            let once = noteEdit(format, in: text, selection: selection)
+            let changed = text.replacingCharacters(in: once.range, with: once.replacement) as NSString
+            let twice = noteEdit(format, in: changed, selection: once.selection)
+            let back = changed.replacingCharacters(in: twice.range, with: twice.replacement)
+            if back != text as String { Issue.record("\(format) on \((text as String).debugDescription) at \(selection) gave \(back.debugDescription)"); return }
+        }
+    }
+}
+
+/// A key as a person presses it. `code` is where it is on the keyboard, for keys found by place.
+private func command(_ characters: String, code: UInt16 = 0, _ flags: NSEvent.ModifierFlags = .command) -> NSEvent {
+    NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags, timestamp: 0, windowNumber: 0, context: nil,
+                     characters: characters, charactersIgnoringModifiers: characters, isARepeat: false, keyCode: code)!
+}
+
+// Never on screen: keys go straight to the panel.
+@MainActor @Suite(.serialized) struct NotePanels {
+    init() { NotePanel.textSize = NotePanel.defaultTextSize; NotePanel.stylesMarkdown = true }
+
+    private func note(_ text: String) throws -> NotePanel {
+        let file = FileManager.default.temporaryDirectory.appending(path: "copperlight-note-\(UUID().uuidString).txt")
+        try text.write(to: file, atomically: true, encoding: .utf8)
+        return NotePanel(file: file)
+    }
+    private func font(_ panel: NotePanel, at location: Int) -> NSFont {
+        panel.textView.textStorage!.attribute(.font, at: location, effectiveRange: nil) as! NSFont
+    }
+    private func traits(_ panel: NotePanel, at location: Int) -> NSFontDescriptor.SymbolicTraits { font(panel, at: location).fontDescriptor.symbolicTraits }
+    private func attribute(_ key: NSAttributedString.Key, _ panel: NotePanel, at location: Int) -> Any? {
+        panel.textView.textStorage!.attribute(key, at: location, effectiveRange: nil)
+    }
+    private func type(_ text: String, in panel: NotePanel) { panel.textView.insertText(text, replacementRange: panel.textView.selectedRange()) }
+    private func saved(_ panel: NotePanel) -> String? { try? String(contentsOf: panel.file, encoding: .utf8) }
+    /// The panel with its text in the window, the way a shown one has it, and undo steps made by hand.
+    private func undoable(_ text: String) throws -> (panel: NotePanel, undo: UndoManager) {
+        let panel = try note(text)
+        panel.contentView?.layoutSubtreeIfNeeded()
+        let undo = try #require(panel.textView.undoManager)
+        undo.groupsByEvent = false
+        undo.removeAllActions()
+        return (panel, undo)
+    }
+    private func step(_ undo: UndoManager, _ body: () -> Void) {
+        undo.beginUndoGrouping()
+        body()
+        undo.endUndoGrouping()
+    }
+
+    // MARK: A note, as you use it
+
+    @Test func escSavesWhatsUnsaved() throws {
+        let panel = try note("a")
+        type("b", in: panel)
+        #expect(saved(panel) == "a") // not yet: the pause hasn't passed
+        panel.sendEvent(command("\u{1B}", code: 53, []))
+        #expect(saved(panel) == "ab" && !panel.isVisible)
+    }
+
+    @Test func typingSavesAfterAPause() async throws {
+        let panel = try note("a")
+        type("b", in: panel)
+        #expect(saved(panel) == "a")
+        await eventually(within: coreAnswers) { saved(panel) == "ab" }
+        #expect(saved(panel) == "ab")
+    }
+
+    @Test func addNoteAddsALineAndSaves() throws {
+        let cases = [("a", "a\nmilk\n"), ("a\n", "a\nmilk\n"), ("", "milk\n")]
+        for (text, expected) in cases {
+            let panel = try note(text)
+            panel.append("milk")
+            #expect(panel.textView.string == expected && saved(panel) == expected)
+        }
+        // A new note, in a folder that isn't there yet.
+        let file = FileManager.default.temporaryDirectory.appending(path: "copperlight-notes-\(UUID().uuidString)/new.txt")
+        let new = NotePanel(file: file)
+        new.append("**b**")
+        #expect(saved(new) == "**b**\n")
+        #expect(traits(new, at: 2).contains(.bold)) // drawn like the rest
+        NotePanel.textSize = 20
+        let bigger = try note("a")
+        bigger.append("milk")
+        #expect(font(bigger, at: 3).pointSize == 20)
+    }
+
+    @Test func addNoteClearsUndo() throws {
+        let (panel, undo) = try undoable("a")
+        step(undo) { type("b", in: panel) }
+        panel.append("milk")
+        #expect(!undo.canUndo) // its steps point into the text as it was
+    }
+
+    @Test func editsFromElsewhereShow() throws {
+        let (panel, undo) = try undoable("a")
+        step(undo) { type("b", in: panel) }
+        panel.saveNow()
+        try "**edited**".write(to: panel.file, atomically: true, encoding: .utf8)
+        panel.reloadIfChanged()
+        #expect(panel.textView.string == "**edited**" && !undo.canUndo)
+        #expect(traits(panel, at: 2).contains(.bold))
+    }
+
+    /// What you've typed and not saved isn't thrown away for the file.
+    @Test func editsFromElsewhereWaitWhileYoureTyping() throws {
+        let panel = try note("a")
+        type("b", in: panel)
+        try "elsewhere".write(to: panel.file, atomically: true, encoding: .utf8)
+        panel.reloadIfChanged()
+        #expect(panel.textView.string == "ab")
+        panel.saveNow()
+        #expect(saved(panel) == "ab")
+    }
+
+    @Test func undoStaysUndoneWhenTheNoteReopens() throws {
+        let (panel, undo) = try undoable("word")
+        panel.textView.setSelectedRange(NSRange(location: 0, length: 4))
+        step(undo) { panel.sendEvent(command("b")) }
+        panel.saveNow()
+        undo.undo()
+        panel.sendEvent(command("\u{1B}", code: 53, []))
+        #expect(saved(panel) == "word")
+        panel.reloadIfChanged() // as opening it again does
+        #expect(panel.textView.string == "word")
+        #expect(NotePanel(file: panel.file).textView.string == "word")
+    }
+
+    @Test func aNoteKeepsItsPlaceOnScreen() throws {
+        guard let screen = NSScreen.screens.first else { return }
+        let panel = try note("a")
+        let card = NSRect(x: screen.visibleFrame.minX + 40, y: screen.visibleFrame.minY + 40, width: 400, height: 320)
+        panel.setFrame(card.insetBy(dx: -NotePanel.margin, dy: -NotePanel.margin), display: false)
+        panel.windowDidMove(Notification(name: NSWindow.didMoveNotification))
+        #expect(NotePanel(file: panel.file).frame.insetBy(dx: NotePanel.margin, dy: NotePanel.margin) == card)
+        // Left off every screen by a display that's gone, it comes back where you can see it.
+        let name = "note:" + panel.file.deletingPathExtension().lastPathComponent
+        var frames = StateStore.shared.get("windows", as: [String: CGRect].self) ?? [:]
+        frames[name] = CGRect(x: -90000, y: -90000, width: 400, height: 320)
+        StateStore.shared.set("windows", frames)
+        let back = NotePanel(file: panel.file)
+        #expect(NSScreen.screens.contains { $0.visibleFrame.intersects(back.frame) })
+    }
+
+    @Test func clickingACheckboxTicksIt() throws {
+        let (panel, undo) = try undoable("- [ ] milk")
+        let view = panel.textView
+        #expect((attribute(.link, panel, at: 2) as? URL)?.scheme == checkboxScheme)
+        let click = URL(string: "\(checkboxScheme):2")!
+        var handled = false
+        step(undo) { handled = panel.textView(view, clickedOnLink: click, at: 2) }
+        #expect(handled && view.string == "- [x] milk")
+        #expect(attribute(.strikethroughStyle, panel, at: 6) != nil)
+        panel.saveNow()
+        #expect(saved(panel) == "- [x] milk")
+        undo.undo()
+        #expect(view.string == "- [ ] milk" && attribute(.strikethroughStyle, panel, at: 6) == nil)
+        panel.saveNow()
+        #expect(saved(panel) == "- [ ] milk")
+        #expect(!panel.textView(view, clickedOnLink: URL(string: "https://a.b")!, at: 2)) // a link is the browser's
+        #expect(view.string == "- [ ] milk")
+    }
+
+    @Test func linksDraw() throws {
+        let text = "[site](https://a.b) and https://c.d" as NSString
+        let panel = try note(text as String)
+        #expect(attribute(.link, panel, at: 1) as? URL == URL(string: "https://a.b"))
+        #expect(attribute(.underlineStyle, panel, at: 1) != nil)
+        #expect(attribute(.link, panel, at: text.range(of: "(https").location + 1) == nil) // the address isn't a link of its own
+        #expect(attribute(.link, panel, at: text.range(of: "https://c.d").location) as? URL == URL(string: "https://c.d"))
+        NotePanel.stylesMarkdown = false
+        defer { NotePanel.stylesMarkdown = true }
+        #expect(attribute(.link, try note(text as String), at: 1) == nil)
+    }
+
+    // MARK: Pressed and typed in order
+
+    @Test func italicAsYouType() throws {
+        let panel = try note("")
+        panel.sendEvent(command("i"))
+        type("hello ", in: panel)
+        #expect(traits(panel, at: 1).contains(.italic)) // through the space
+        panel.sendEvent(command("i"))
+        type("more", in: panel)
+        #expect(panel.textView.string == "*hello* more")
+        #expect(traits(panel, at: 1).contains(.italic) && !traits(panel, at: 8).contains(.italic))
+    }
+
+    @Test func codeAsYouType() throws {
+        let panel = try note("")
+        panel.sendEvent(command("e"))
+        type("a b", in: panel)
+        panel.sendEvent(command("e"))
+        type(" c", in: panel)
+        #expect(panel.textView.string == "`a b` c")
+        #expect(traits(panel, at: 1).contains(.monoSpace) && !traits(panel, at: 6).contains(.monoSpace))
+    }
+
+    @Test func bothAsYouType() throws {
+        for keys in [["b", "i"], ["i", "b"]] {
+            let panel = try note("")
+            for key in keys { panel.sendEvent(command(key)) }
+            type("hello", in: panel)
+            #expect(traits(panel, at: 3).isSuperset(of: [.bold, .italic]))
+            for key in keys { panel.sendEvent(command(key)) }
+            type(" more", in: panel)
+            #expect(panel.textView.string == "***hello*** more", "\(keys)")
+            #expect(traits(panel, at: 3).isSuperset(of: [.bold, .italic]) && traits(panel, at: 13).isDisjoint(with: [.bold, .italic]), "\(keys)")
+        }
+    }
+
+    /// One stopped while the other goes on.
+    @Test func bothThenOneAsYouType() throws {
+        let panel = try note("")
+        panel.sendEvent(command("b"))
+        panel.sendEvent(command("i"))
+        type("a", in: panel)
+        panel.sendEvent(command("i"))
+        type(" b", in: panel)
+        panel.sendEvent(command("b"))
+        type(" c", in: panel)
+        #expect(panel.textView.string == "***a* b** c")
+        #expect(traits(panel, at: 3).isSuperset(of: [.bold, .italic]))
+        #expect(traits(panel, at: 6).contains(.bold) && !traits(panel, at: 6).contains(.italic))
+        #expect(traits(panel, at: 10).isDisjoint(with: [.bold, .italic]))
+    }
+
+    @Test func linkAsYouType() throws {
+        let panel = try note("")
+        panel.sendEvent(command("k"))
+        type("site", in: panel)
+        panel.sendEvent(command("k"))
+        type("https://a.b", in: panel)
+        #expect(panel.textView.string == "[site](https://a.b)")
+        #expect(attribute(.link, panel, at: 1) as? URL == URL(string: "https://a.b"))
+        panel.sendEvent(command("k"))
+        #expect(panel.textView.string == "site")
+        #expect(panel.textView.selectedRange() == NSRange(location: 4, length: 0))
+    }
+
+    @Test func linkOnWhatsSelected() throws {
+        let panel = try note("go there")
+        panel.textView.setSelectedRange(NSRange(location: 3, length: 5))
+        panel.sendEvent(command("k"))
+        type("https://a.b", in: panel)
+        #expect(panel.textView.string == "go [there](https://a.b)")
+    }
+
+    /// One line through every kind of line, by its key: each takes the place of the last.
+    @Test func aLineThroughEveryMark() throws {
+        let panel = try note("milk")
+        let shift: NSEvent.ModifierFlags = [.command, .shift]
+        for (key, expected) in [(command("L", code: 37, shift), "- [ ] milk"), (command("&", code: 26, shift), "- milk"), (command("(", code: 25, shift), "1. milk"),
+                                (command("'", code: 39), "> milk"), (command("1", code: 18), "# milk"), (command("2", code: 19), "## milk"), (command("2", code: 19), "milk")] {
+            panel.sendEvent(key)
+            #expect(panel.textView.string == expected)
+        }
+        panel.sendEvent(command("1", code: 18))
+        #expect(font(panel, at: 3).pointSize == 20)
+    }
+
+    // MARK: The keys
+
+    @Test func formatsDrawsAndSaves() throws {
+        let panel = try note("a word here")
+        panel.textView.setSelectedRange(NSRange(location: 2, length: 4))
+        panel.sendEvent(command("b"))
+        #expect(panel.textView.string == "a **word** here")
+        #expect(panel.textView.selectedRange() == NSRange(location: 4, length: 4))
+        #expect(font(panel, at: 4).fontDescriptor.symbolicTraits.contains(.bold))
+        panel.sendEvent(command("i"))
+        #expect(panel.textView.string == "a ***word*** here")
+        #expect(font(panel, at: 5).fontDescriptor.symbolicTraits.isSuperset(of: [.bold, .italic]))
+        #expect(font(panel, at: 0).fontDescriptor.symbolicTraits.isDisjoint(with: [.bold, .italic]))
+        panel.saveNow()
+        #expect(try String(contentsOf: panel.file, encoding: .utf8) == "a ***word*** here")
+    }
+
+    @Test func everyKeyDoesItsFormat() throws {
+        let shift: NSEvent.ModifierFlags = [.command, .shift]
+        let keys: [(NSEvent, String)] = [
+            (command("b"), "**|**"), (command("i"), "*|*"), (command("e"), "`|`"), (command("k"), "[|]()"),
+            (command("1", code: 18), "# |"), (command("2", code: 19), "## |"), (command("3", code: 20), "### |"),
+            (command("&", code: 18), "# |"), // the same key where its plain character isn't the digit
+            (command("&", code: 26, shift), "- |"), (command("(", code: 25, shift), "1. |"), (command("/", code: 26, shift), "- |"),
+            (command("1", code: 83), "# |"), (command("2", code: 84), "## |"), (command("3", code: 85), "### |"), (command("+", code: 18), "# |"), (command("=", code: 26, shift), "- |"), (command("'", code: 26, shift), "- |"), // digits by place, whatever they type
+            (command("L", code: 37, shift), "- [ ] |"), (command("'", code: 39), "> |"), (command("'", code: 42, shift), "> |"), (command("", code: 39), "> |"),
+        ]
+        for (key, expected) in keys {
+            let panel = try note("")
+            panel.sendEvent(key)
+            let caret = panel.textView.selectedRange().location
+            #expect((panel.textView.string as NSString).replacingCharacters(in: NSRange(location: caret, length: 0), with: "|") == expected)
+        }
+        let russian = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: 0, context: nil,
+                                       characters: "b", charactersIgnoringModifiers: "и", isARepeat: false, keyCode: 11)!
+        #expect(noteShortcut(russian) == .format(.bold)) // ⌘ has a layer of its own on these layouts
+        #expect(noteShortcut(command("0", code: 82)) == .normalSize)
+        #expect(noteShortcut(command("b", [.command, .option])) == nil)
+        #expect(noteShortcut(command("B", shift)) == nil)
+        #expect(noteShortcut(command("b", [.command, .control])) == nil)
+        #expect(noteShortcut(command("c")) == nil && noteShortcut(command("v")) == nil && noteShortcut(command("z")) == nil)
+    }
+
+    @Test func aFormatIsOneStepToUndo() throws {
+        let panel = try note("word")
+        panel.contentView?.layoutSubtreeIfNeeded() // the text joins the window with its first layout
+        let undo = try #require(panel.textView.undoManager)
+        undo.groupsByEvent = false
+        undo.removeAllActions()
+        panel.textView.setSelectedRange(NSRange(location: 0, length: 0))
+        undo.beginUndoGrouping()
+        panel.textView.insertText("more ", replacementRange: NSRange(location: 0, length: 0))
+        undo.endUndoGrouping()
+        panel.textView.setSelectedRange(NSRange(location: 5, length: 4))
+        undo.beginUndoGrouping()
+        panel.sendEvent(command("b"))
+        undo.endUndoGrouping()
+        #expect(panel.textView.string == "more **word**")
+        undo.undo()
+        #expect(panel.textView.string == "more word")
+        undo.redo()
+        #expect(panel.textView.string == "more **word**")
+    }
+
+    /// Undo changes the text without telling its delegate: it has to be saved and drawn all the same, or the file keeps
+    /// what you took back, and it returns the next time the note opens.
+    @Test func undoIsSavedAndDrawn() throws {
+        let panel = try note("word")
+        panel.contentView?.layoutSubtreeIfNeeded()
+        let undo = try #require(panel.textView.undoManager)
+        undo.groupsByEvent = false
+        undo.removeAllActions()
+        panel.textView.setSelectedRange(NSRange(location: 0, length: 4))
+        undo.beginUndoGrouping()
+        panel.sendEvent(command("b"))
+        undo.endUndoGrouping()
+        panel.saveNow() // as the pause after typing does
+        #expect(try String(contentsOf: panel.file, encoding: .utf8) == "**word**")
+        undo.undo()
+        #expect(!font(panel, at: 0).fontDescriptor.symbolicTraits.contains(.bold))
+        panel.saveNow()
+        #expect(try String(contentsOf: panel.file, encoding: .utf8) == "word")
+        undo.redo()
+        #expect(font(panel, at: 2).fontDescriptor.symbolicTraits.contains(.bold))
+        panel.saveNow()
+        #expect(try String(contentsOf: panel.file, encoding: .utf8) == "**word**")
+    }
+
+    /// Press it, type, press it: bold all the way, and the next word isn't.
+    @Test func typingInBoldStaysBold() throws {
+        let panel = try note("")
+        let type = { (text: String) in panel.textView.insertText(text, replacementRange: panel.textView.selectedRange()) }
+        panel.sendEvent(command("b"))
+        type("hi ")
+        #expect(panel.textView.string == "**hi **")
+        #expect(font(panel, at: 2).fontDescriptor.symbolicTraits.contains(.bold)) // doesn't blink off at the space
+        panel.sendEvent(command("b"))
+        type("more")
+        #expect(panel.textView.string == "**hi** more")
+        #expect(font(panel, at: 2).fontDescriptor.symbolicTraits.contains(.bold))
+        #expect(!font(panel, at: 8).fontDescriptor.symbolicTraits.contains(.bold))
+    }
+
+    @Test func aHeadingDrawsWhatsInIt() throws {
+        let panel = try note("# ***T*** and `c`")
+        let heading = font(panel, at: 5)
+        #expect(heading.fontDescriptor.symbolicTraits.isSuperset(of: [.bold, .italic]) && heading.pointSize == 20)
+        #expect(font(panel, at: 15).pointSize == 20) // code in a heading keeps the heading's size
+    }
+
+    @Test func holdingAFormatKeyDoesItOnce() throws {
+        let panel = try note("")
+        let held = { (key: String) in
+            NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: 0, context: nil,
+                             characters: key, charactersIgnoringModifiers: key, isARepeat: true, keyCode: 0)!
+        }
+        panel.sendEvent(command("b"))
+        panel.sendEvent(held("b"))
+        #expect(panel.textView.string == "****")
+        panel.sendEvent(held("+")) // the size goes on for as long as you hold it
+        panel.sendEvent(held("+"))
+        #expect(NotePanel.textSize == 18)
+    }
+
+    @Test func sizeWithNothingUsableSavedIsTheNormalOne() throws {
+        StateStore.shared.set("noteTextSize", nil as CGFloat?) // as on a new Mac
+        let panel = try note("a")
+        #expect(NotePanel.textSize == 14 && font(panel, at: 0).pointSize == 14)
+        panel.sendEvent(command("+"))
+        #expect(NotePanel.textSize == 16 && font(panel, at: 0).pointSize == 16)
+        StateStore.shared.set("noteTextSize", "big") // a hand edit
+        #expect(NotePanel.textSize == 14)
+        StateStore.shared.set("noteTextSize", 0.0)
+        #expect(NotePanel.textSize == 10)
+    }
+
+    /// `+` is a key of its own on some keyboards, and `=` with Shift on others.
+    @Test func sizeIsOneForEveryNote() throws {
+        let one = try note("# Title\nbody `code` **b**"), two = try note("body")
+        one.sendEvent(command("+", [.command, .shift]))
+        #expect(NotePanel.textSize == 16)
+        #expect(font(one, at: 8).pointSize == 16 && font(two, at: 0).pointSize == 16)
+        #expect(abs(font(one, at: 2).pointSize - 20.0 * 16 / 14) < 0.01) // a heading grows with it
+        #expect(abs(font(one, at: 14).pointSize - 13.0 * 16 / 14) < 0.01) // and code
+        #expect(font(one, at: 22).pointSize == 16) // and bold
+        #expect((one.textView.typingAttributes[.font] as? NSFont)?.pointSize == 16) // and what you type next
+        #expect(((one.textView.textStorage!.attribute(.paragraphStyle, at: 8, effectiveRange: nil) as? NSParagraphStyle)?.lineSpacing ?? 0) > 3)
+        one.sendEvent(command("+"))
+        one.sendEvent(command("="))
+        #expect(NotePanel.textSize == 20)
+        two.sendEvent(command("-"))
+        #expect(NotePanel.textSize == 18 && font(one, at: 8).pointSize == 18)
+        let later = try note("body")
+        #expect(font(later, at: 0).pointSize == 18) // one opened afterwards
+        one.sendEvent(command("0", code: 29))
+        #expect(NotePanel.textSize == 14 && font(two, at: 0).pointSize == 14 && abs(font(one, at: 2).pointSize - 20) < 0.01)
+        #expect(one.textView.string == "# Title\nbody `code` **b**") // only how it looks
+    }
+
+    /// ⌘+ and ⌘- leave you reading what you were reading, wherever the cursor is.
+    @Test func sizeKeepsYourPlace() throws {
+        let text = (1...400).map { "line \($0) with enough words to wrap around the card, on and on and on" }.joined(separator: "\n") as NSString
+        let panel = try note(text as String) // the cursor at the end, as a note opens
+        panel.contentView?.layoutSubtreeIfNeeded()
+        let view = panel.textView
+        func line(at y: CGFloat) -> String { text.substring(with: text.lineRange(for: NSRange(location: view.characterIndexForInsertion(at: NSPoint(x: 1, y: y)), length: 0))) }
+        view.scrollRangeToVisible(text.range(of: "line 100 "))
+        let top = line(at: view.visibleRect.minY + 1)
+        for key in [command("+"), command("+"), command("+"), command("-"), command("0", code: 29)] {
+            panel.sendEvent(key)
+            #expect(line(at: view.visibleRect.minY + 1) == top, "at \(NotePanel.textSize)")
+        }
+        view.scroll(.zero) // at the very top, it stays there
+        panel.sendEvent(command("+"))
+        #expect(view.visibleRect.minY == 0)
+    }
+
+    /// A cursor you can see stays where you can see it.
+    @Test func sizeKeepsTheCursorInView() throws {
+        let text = (1...400).map { "line \($0) with enough words to wrap around the card, on and on and on" }.joined(separator: "\n") as NSString
+        let panel = try note(text as String)
+        panel.contentView?.layoutSubtreeIfNeeded()
+        let view = panel.textView
+        let caret = text.range(of: "line 100 ").location
+        view.setSelectedRange(NSRange(location: caret, length: 0))
+        view.scrollRangeToVisible(NSRange(location: text.range(of: "line 98 ").location, length: 0))
+        for _ in 0..<6 {
+            panel.sendEvent(command("+"))
+            let first = view.characterIndexForInsertion(at: NSPoint(x: 1, y: view.visibleRect.minY + 1))
+            let last = view.characterIndexForInsertion(at: NSPoint(x: 1, y: view.visibleRect.maxY - 1))
+            #expect(first <= caret && caret <= last, "at \(NotePanel.textSize)")
+        }
+    }
+
+    @Test func sizeHasLimitsAndIsRemembered() throws {
+        let panel = try note("body")
+        for _ in 0..<40 { panel.sendEvent(command("+")) }
+        #expect(NotePanel.textSize == 40 && font(panel, at: 0).pointSize == 40)
+        panel.sendEvent(command("-"))
+        #expect(NotePanel.textSize == 38)
+        for _ in 0..<40 { panel.sendEvent(command("-")) }
+        #expect(NotePanel.textSize == 10 && font(panel, at: 0).pointSize == 10)
+        StateStore.shared.set("noteTextSize", 22.0) // as a new launch reads it
+        #expect(font(try note("body"), at: 0).pointSize == 22)
+        StateStore.shared.set("noteTextSize", 5000.0) // a hand edit
+        #expect(NotePanel.textSize == 40)
+    }
+
+    @Test func withoutMarkdownOnlyTheSizeWorks() throws {
+        NotePanel.stylesMarkdown = false
+        defer { NotePanel.stylesMarkdown = true }
+        let panel = try note("word")
+        panel.textView.setSelectedRange(NSRange(location: 0, length: 4))
+        for key in [command("b"), command("k"), command("1", code: 18), command("L", code: 37, [.command, .shift])] { panel.sendEvent(key) }
+        #expect(panel.textView.string == "word")
+        panel.sendEvent(command("+"))
+        #expect(font(panel, at: 0).pointSize == 16)
+    }
+}
+
 // MARK: Clipboard
 
 @MainActor @Test func clipboardSkipsMarkedItemsAndIgnoredApps() {
@@ -5002,4 +5752,163 @@ private struct ChipOnly: ResultProvider {
     model.remember() // run before the rename, typed
     model.query = ""
     #expect(model.recallOlder() && model.query == "wth")
+}
+
+// MARK: The app, assembled
+
+extension AppCore.Actions {
+    /// No windows: what the tests' core does with them.
+    static let none = AppCore.Actions(showTyping: { _ in }, showNote: { _ in }, newNote: { _ in }, addToNote: { _ in }, releaseNote: { _ in },
+                                      showClipboard: {}, showClipboardPanel: {}, showWelcome: {}, showSettings: { _ in }, setHotkey: { _ in },
+                                      styleNotes: { _ in }, configReloaded: {})
+}
+
+/// A fresh folder of its own, for one core's files.
+private func coreFolder() throws -> URL {
+    let folder = FileManager.default.temporaryDirectory.appending(path: "copperlight-core-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    return folder
+}
+
+/// The real wiring on `folder`, what launch does without its windows, sealed: it doesn't watch the real pasteboard or
+/// read the browsers' history. File search looks only in that folder, too, once `config` is in place.
+@MainActor private func startedCore(config: String? = "", in folder: URL? = nil) async throws -> (core: AppCore, folder: URL) {
+    let folder = try folder ?? coreFolder()
+    if let config {
+        let scoped = "[files]\nscopes = [\"\(folder.path)\"]\n" + config
+        try scoped.write(to: folder.appending(path: "config.toml"), atomically: true, encoding: .utf8)
+    }
+    let core = AppCore(configFile: folder.appending(path: "config.toml"), clipboardFile: folder.appending(path: "clipboard.sqlite"),
+                       state: StateStore(file: folder.appending(path: "state.json")), actions: .none, sealed: true)
+    core.start()
+    await core.settled()
+    return (core, folder)
+}
+
+/// How long the real wiring gets to answer. About 60 ms alone, but the whole suite runs at once and can stall it for
+/// seconds. Only a test that's failing anyway waits this long.
+private let coreAnswers = Duration.seconds(30)
+
+/// What's typed, once its rows are in: the ids of the round this query started, not the last one's.
+@MainActor private func rows(_ model: SearchModel, typing query: String) async -> [String] {
+    model.query = query
+    await eventually(within: coreAnswers) { !model.settling }
+    return model.results.map(\.id)
+}
+
+/// One at a time: starting a core and turning a feature off both set `Feature`, which is global.
+@MainActor @Suite(.serialized) struct AssembledApp {
+    /// Issue #1: the panel opened empty since v0.12, while copies were saved, because launch touched it before the
+    /// history was open. What's copied after launch shows when the panel opens.
+    @Test func clipboardShowsWhatWasCopied() async throws {
+        let (core, _) = try await startedCore()
+        try core.history?.store.record("git checkout -b release/0.15", app: nil)
+        core.prepareClipboard()
+        core.clipboardModel.query = ""
+        await eventually(within: coreAnswers) { !core.clipboardModel.results.isEmpty }
+        #expect(core.clipboardModel.results.map(\.title) == ["git checkout -b release/0.15"])
+    }
+
+    /// config.toml, read at launch: your word for a keyword works from the first keystroke, Tab making its chip.
+    @Test func appliesConfigAtLaunch() async throws {
+        let (core, _) = try await startedCore(config: "[keywords]\ntimer = \"tm\"\n")
+        #expect(core.model.keywords["tm"] == "timer" && core.model.retired == ["timer"])
+        core.model.query = "tm"
+        core.model.complete()
+        #expect(core.model.mode?.prefix == "timer ")
+    }
+
+    /// An edit to config.toml applies; a broken one keeps the last valid config and pins an error row until it's fixed.
+    @Test func reloadsConfig() async throws {
+        let (core, folder) = try await startedCore()
+        let file = folder.appending(path: "config.toml")
+        #expect(core.model.keywords["wth"] == nil && core.model.notice == nil)
+        try "[keywords]\nweather = \"wth\"\n".write(to: file, atomically: true, encoding: .utf8)
+        core.reloadConfig()
+        #expect(core.model.keywords["wth"] == "weather")
+        try "[keywords\nnot toml".write(to: file, atomically: true, encoding: .utf8)
+        core.reloadConfig()
+        #expect(core.model.notice?.id == "config-error" && core.model.keywords["wth"] == "weather")
+        try "[keywords]\nweather = \"forecast\"\n".write(to: file, atomically: true, encoding: .utf8)
+        core.reloadConfig()
+        #expect(core.model.notice == nil && core.model.keywords["forecast"] == "weather" && core.model.keywords["wth"] == nil)
+    }
+
+    /// Launch's first run writes the example config, which reads as the defaults.
+    @Test func writesTheExampleConfig() async throws {
+        let (core, folder) = try await startedCore(config: nil)
+        let text = try String(contentsOf: folder.appending(path: "config.toml"), encoding: .utf8)
+        #expect(try Config.parse(text) == Config() && core.model.notice == nil)
+    }
+
+    /// A feature turned off in config.toml goes quiet in the real wiring, and comes back.
+    @Test func featureOff() async throws {
+        defer { Feature.use(Config().features) }
+        let (core, folder) = try await startedCore(config: "[features]\nqr = false\n")
+        #expect(await !rows(core.model, typing: "qr").contains("builtin:qr"))
+        try "".write(to: folder.appending(path: "config.toml"), atomically: true, encoding: .utf8)
+        core.reloadConfig()
+        await core.settled()
+        #expect(await rows(core.model, typing: "qr").contains("builtin:qr"))
+    }
+
+    /// Why launch opens the history after the defaults: old copies are only pruned under your retention, the one in
+    /// config.toml, never the default's 90 days.
+    @Test func keepsClipboardUnderTheLoadedConfig() async throws {
+        let folder = try coreFolder()
+        try ClipboardStore(path: folder.appending(path: "clipboard.sqlite").path).record("from 200 days ago", app: nil, at: .now - 200 * 86_400)
+        let (core, _) = try await startedCore(config: "[clipboard]\nmax_days = 365\n", in: folder)
+        #expect(core.history?.settings?.maxDays == 365)
+        #expect(try core.history?.store.items().map(\.text) == ["from 200 days ago"])
+    }
+
+    /// Each keyword typed into the real wiring reaches its own feature: its own row, or its chip with Tab where the rows
+    /// depend on the Mac. A keyword added without a line here fails, so this can't go out of date. Not the ones that would
+    /// read Messages or protected folders.
+    @Test func everyKeywordReachesItsFeature() async throws {
+        let rowsByKeyword: [String: [String]] = [
+            ":": ["verb:"], ":!": ["shell:"], "colors": ["builtin:pick color"], "pick color": ["builtin:pick color"], "qr": ["builtin:qr"],
+            "stock": ["builtin:stock"], "weather": ["builtin:weather"], "wiki": ["builtin:wiki"], "define": ["builtin:define"],
+            "synonyms": ["builtin:synonyms"], "spell": ["builtin:spell"], "emoji": ["builtin:emoji"], "large": ["builtin:large"],
+            "speed": ["speed"], "clip": ["builtin:clipboard"], "note": ["builtin:note"], "add note": ["builtin:add note"],
+            "contact": ["builtin:contacts"], "meetings": ["builtin:meetings", "meeting:"], "week": ["builtin:week"], "month": ["builtin:month"],
+            "free": ["builtin:free", "free:"], "add event": ["builtin:add event"], "due": ["builtin:due", "reminder:"],
+            "add todo": ["builtin:add todo"], "tabs": ["builtin:tabs"], "timer": ["builtin:timer"], "pomo": ["pomodoro:"],
+            "stopwatch": ["stopwatch:"], "copy text": ["builtin:copy text"], "wifi password": ["wifi"], "camera": ["camera"],
+        ]
+        let chips = ["translate", "memory", "cpu", "port", "f"]
+        let skipped = ["screenshots", "downloads", "codes"]
+        #expect(Set(rowsByKeyword.keys).union(chips).union(skipped) == Set(Keyword.all), "every keyword has a line here")
+        let (core, _) = try await startedCore()
+        for (keyword, prefixes) in rowsByKeyword {
+            let found = { core.model.results.contains { row in prefixes.contains { row.id.hasPrefix($0) } } }
+            core.model.query = keyword
+            await eventually(within: coreAnswers, found)
+            #expect(found(), "\(keyword): \(core.model.results.map(\.id))")
+        }
+        for keyword in chips {
+            core.model.fill("")
+            core.model.query = keyword
+            core.model.complete()
+            #expect(core.model.mode?.prefix == keyword + " ", "\(keyword)")
+        }
+        core.model.fill("")
+    }
+
+    /// Nothing a test does can reach your real files: the folder they all come from is its own.
+    @Test func testsKeepToTheirOwnFolder() {
+        #expect(configDir.path.hasPrefix(FileManager.default.temporaryDirectory.path))
+        #expect(!configDir.path.contains(".config/copperlight") && !Config.file.path.contains(".config/copperlight"))
+    }
+}
+
+/// A clipboard history it can't read says so: an empty panel looks like nothing was ever copied.
+@MainActor @Test func clipboardReadErrorSays() async throws {
+    let provider = ClipboardProvider(store: try ClipboardStore(), paste: { _ in }, copy: { _ in },
+                                     items: { _ in throw CocoaError(.fileReadCorruptFile) })
+    let rows = await provider.results(for: "")
+    #expect(rows.map(\.id) == ["clipboard-unreadable"] && rows[0].title == "Couldn't read the clipboard history" && rows[0].preview?.isEmpty == false)
+    let working = try ClipboardStore()
+    try working.record("hello", app: nil)
+    #expect(await ClipboardProvider(store: working, paste: { _ in }, copy: { _ in }).results(for: "").map(\.title) == ["hello"])
 }

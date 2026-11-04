@@ -11,11 +11,23 @@ func noteFiles(in folder: URL = notesDir, main: URL = mainNoteFile) -> [URL] {
     return ([main] + files.filter { $0.pathExtension == "txt" }).filter { FileManager.default.fileExists(atPath: $0.path) }
 }
 
-/// A note's title: its first line with text, without a heading's `#`s. nil for an empty note.
+/// A note's title: its first line with text, as it reads, without its Markdown. nil for an empty note.
 func noteTitle(_ text: String) -> String? {
     text.split(separator: "\n").lazy
-        .map { $0.trimmingCharacters(in: .whitespaces).drop { $0 == "#" }.trimmingCharacters(in: .whitespaces) }
+        .map { withoutMarkdown(String($0.trimmingCharacters(in: .whitespaces).drop { $0 == "#" })) }
         .first { !$0.isEmpty }.map { String($0.prefix(80)) }
+}
+
+private func withoutMarkdown(_ line: String) -> String {
+    var marks = IndexSet() // a set: a link's address can hold another style's marker
+    for span in markdownSpans(line) {
+        switch span.style {
+        case .marker, .bullet, .checkbox: marks.insert(integersIn: Range(span.range)!)
+        default: break
+        }
+    }
+    let plain = marks.rangeView.reversed().reduce(line as NSString) { $0.replacingCharacters(in: NSRange($1), with: "") as NSString }
+    return (plain as String).trimmingCharacters(in: .whitespaces)
 }
 
 /// Where a new note goes: notes/, named by the time (nobody sees it). The file is written once you type.
@@ -85,6 +97,45 @@ extension Verb {
     var title = ""
 }
 
+/// What a key does in a note. Non-activating panels get no menu shortcuts, so they're routed by hand.
+enum NoteShortcut: Equatable {
+    case format(NoteFormat), bigger, smaller, normalSize
+}
+
+/// Letters and signs by what they type; digits by where they are, since not every keyboard types them without Shift.
+func noteShortcut(_ event: NSEvent) -> NoteShortcut? {
+    guard event.type == .keyDown else { return nil }
+    // What it types with ⌘ held: on Russian or Greek, ⌘ has a Latin layer of its own.
+    let key = (event.characters?.isEmpty == false ? event.characters : event.charactersIgnoringModifiers)?.lowercased()
+    switch event.modifierFlags.intersection([.command, .shift, .option, .control]) {
+    case .command:
+        switch (key, event.keyCode) {
+        case (_, 18), (_, 83): return .format(.heading(1))
+        case (_, 19), (_, 84): return .format(.heading(2))
+        case (_, 20), (_, 85): return .format(.heading(3))
+        case (_, 29), (_, 82): return .normalSize
+        case ("b", _): return .format(.bold)
+        case ("i", _): return .format(.italic)
+        case ("e", _): return .format(.code)
+        case ("k", _): return .format(.link)
+        case ("'", _), (_, 39): return .format(.quote) // 39: where `'` waits for the next key, it types nothing
+        case ("+", _), ("=", _): return .bigger
+        case ("-", _): return .smaller
+        default: return nil
+        }
+    case [.command, .shift]:
+        switch (key, event.keyCode) {
+        case (_, 26): return .format(.bullet)
+        case (_, 25): return .format(.numbered)
+        case ("l", _): return .format(.checkbox)
+        case ("'", _): return .format(.quote)
+        case ("+", _), ("=", _): return .bigger
+        default: return nil
+        }
+    default: return nil
+    }
+}
+
 /// A floating note: plain text on a glass card like the launcher's, autosaved to its file (note.txt, or one in notes/). It's a non-activating panel, so typing in it never pulls the app you were in out of the
 /// foreground, and hiding it hands keyboard focus straight back to that app. Drag it by its title; resize it from
 /// its bottom-right corner.
@@ -97,10 +148,16 @@ final class NotePanel: NSPanel, NSTextViewDelegate, NSWindowDelegate {
     /// `[notes] markdown`: draw the Markdown in notes (headings, bold, checkboxes…), or show plain text.
     static var stylesMarkdown = true
 
+    static let defaultTextSize: CGFloat = 14
+    /// How big every note's text is: ⌘+, ⌘-, ⌘0. In state.json, beside where the notes are.
+    static var textSize: CGFloat {
+        get { min(max(StateStore.shared.get("noteTextSize", as: CGFloat.self) ?? defaultTextSize, 10), 40) }
+        set { StateStore.shared.set("noteTextSize", newValue) }
+    }
+
     let file: URL
     private let frameKey: String // "note", "note:work"
-    private let textView: NSTextView
-    private let base: [NSAttributedString.Key: Any] // the note's font, color and spacing
+    let textView: NSTextView
     private let header = NoteHeader()
     private var pendingSave: Task<Void, Never>?
 
@@ -110,9 +167,6 @@ final class NotePanel: NSPanel, NSTextViewDelegate, NSWindowDelegate {
         frameKey = file == mainNoteFile ? "note" : "note:" + file.deletingPathExtension().lastPathComponent
         let scroll = NSTextView.scrollableTextView()
         textView = scroll.documentView as! NSTextView
-        let lines = NSMutableParagraphStyle()
-        lines.lineSpacing = 3
-        base = [.font: NSFont.systemFont(ofSize: 14), .foregroundColor: NSColor.labelColor, .paragraphStyle: lines]
         let card = NSRect(x: 0, y: 0, width: 360, height: 300)
         super.init(contentRect: card.insetBy(dx: -Self.margin, dy: -Self.margin),
                    styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -155,6 +209,9 @@ final class NotePanel: NSPanel, NSTextViewDelegate, NSWindowDelegate {
             center()
         }
         delegate = self
+        // Undo doesn't tell the text view's delegate, and the file would keep what you took back.
+        NotificationCenter.default.addObserver(self, selector: #selector(textChanged), name: .NSUndoManagerDidUndoChange, object: undoManager)
+        NotificationCenter.default.addObserver(self, selector: #selector(textChanged), name: .NSUndoManagerDidRedoChange, object: undoManager)
     }
 
     required init?(coder: NSCoder) { fatalError("not used") }
@@ -171,6 +228,13 @@ final class NotePanel: NSPanel, NSTextViewDelegate, NSWindowDelegate {
         reloadIfChanged() // a named note's folder isn't watched: edits made elsewhere show from here
         makeKeyAndOrderFront(nil)
         makeFirstResponder(textView)
+    }
+
+    /// The note's font, color and spacing.
+    private var base: [NSAttributedString.Key: Any] {
+        let lines = NSMutableParagraphStyle()
+        lines.lineSpacing = 3 * Self.textSize / Self.defaultTextSize
+        return [.font: NSFont.systemFont(ofSize: Self.textSize), .foregroundColor: NSColor.labelColor, .paragraphStyle: lines]
     }
 
     /// The note's text, set in the note's own font and spacing.
@@ -191,26 +255,38 @@ final class NotePanel: NSPanel, NSTextViewDelegate, NSWindowDelegate {
         textView.insertionPointColor = NSColor(Color.accent)
         textView.selectedTextAttributes = [.backgroundColor: NSColor(Color.accent).withAlphaComponent(0.22)]
         guard let storage = textView.textStorage else { return }
+        let scale = Self.textSize / Self.defaultTextSize
         storage.beginEditing()
         storage.setAttributes(base, range: NSRange(location: 0, length: storage.length))
         if Self.stylesMarkdown {
-            // Headings set the size, after the inline styles; markers only dim, so they go last.
-            let order = { (style: MarkdownStyle) in style == .marker ? 2 : { if case .heading = style { 1 } else { 0 } }() }
-            for span in markdownSpans(storage.string).sorted(by: { order($0.style) < order($1.style) }) {
-                storage.addAttributes(attributes(span.style, at: span.range), range: span.range)
+            // A heading sets the font over code's, bold and italic add to whichever it is, and markers only dim.
+            let order = { (style: MarkdownStyle) -> Int in
+                switch style {
+                case .code: 0
+                case .heading: 1
+                case .marker: 3
+                default: 2
+                }
+            }
+            let selected = textView.selectedRange()
+            for span in markdownSpans(storage.string, typingAt: selected.length == 0 ? selected.location : nil).sorted(by: { order($0.style) < order($1.style) }) {
+                switch span.style {
+                case .bold: storage.applyFontTraits(.boldFontMask, range: span.range) // traits, so bold and italic stack
+                case .italic: storage.applyFontTraits(.italicFontMask, range: span.range)
+                default: storage.addAttributes(attributes(span.style, at: span.range, scale: scale), range: span.range)
+                }
             }
         }
         storage.endEditing()
         textView.typingAttributes = base
     }
 
-    private func attributes(_ style: MarkdownStyle, at range: NSRange) -> [NSAttributedString.Key: Any] {
+    private func attributes(_ style: MarkdownStyle, at range: NSRange, scale: CGFloat) -> [NSAttributedString.Key: Any] {
         let copper = NSColor(Color.accent)
         switch style {
-        case .heading(let level): return [.font: NSFont.systemFont(ofSize: [20, 17, 15][min(max(level, 1), 3) - 1], weight: level < 3 ? .bold : .semibold)]
-        case .bold: return [.font: NSFont.systemFont(ofSize: 14, weight: .bold)]
-        case .italic: return [.font: NSFontManager.shared.convert(NSFont.systemFont(ofSize: 14), toHaveTrait: .italicFontMask)]
-        case .code: return [.font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular), .backgroundColor: NSColor.labelColor.withAlphaComponent(0.07)]
+        case .heading(let level): return [.font: NSFont.systemFont(ofSize: [20, 17, 15][min(max(level, 1), 3) - 1] * scale, weight: level < 3 ? .bold : .semibold)]
+        case .bold, .italic: return [:] // restyle's
+        case .code: return [.font: NSFont.monospacedSystemFont(ofSize: 13 * scale, weight: .regular), .backgroundColor: NSColor.labelColor.withAlphaComponent(0.07)]
         case .marker: return [.foregroundColor: NSColor.tertiaryLabelColor]
         case .bullet: return [.foregroundColor: copper]
         case .checkbox: return [.foregroundColor: copper, .link: URL(string: "\(checkboxScheme):\(range.location)")!]
@@ -271,7 +347,9 @@ final class NotePanel: NSPanel, NSTextViewDelegate, NSWindowDelegate {
         undoManager?.removeAllActions() // old undo steps point into text that's gone
     }
 
-    func textDidChange(_ notification: Notification) {
+    func textDidChange(_ notification: Notification) { textChanged() }
+
+    @objc private func textChanged() {
         restyle()
         pendingSave?.cancel()
         pendingSave = Task {
@@ -291,8 +369,51 @@ final class NotePanel: NSPanel, NSTextViewDelegate, NSWindowDelegate {
 
     override func sendEvent(_ event: NSEvent) {
         if event.type == .keyDown && event.keyCode == 53 { return close() } // Esc
+        if let shortcut = noteShortcut(event) { return perform(shortcut, held: event.isARepeat) }
         if performEditShortcut(event) { return }
         super.sendEvent(event)
+    }
+
+    private func perform(_ shortcut: NoteShortcut, held: Bool) {
+        switch shortcut {
+        case .format(let format):
+            guard Self.stylesMarkdown, !held else { return } // plain text asked for, or a toggle flickering
+            apply(noteEdit(format, in: textView.string as NSString, selection: textView.selectedRange()))
+        case .bigger: resize(to: Self.textSize + 2)
+        case .smaller: resize(to: Self.textSize - 2)
+        case .normalSize: resize(to: Self.defaultTextSize)
+        }
+    }
+
+    /// As typing: undoable, styled and saved.
+    private func apply(_ edit: NoteEdit) {
+        if (edit.range.length > 0 || !edit.replacement.isEmpty), textView.shouldChangeText(in: edit.range, replacementString: edit.replacement) {
+            textView.textStorage?.replaceCharacters(in: edit.range, with: edit.replacement)
+            textView.didChangeText()
+        }
+        textView.setSelectedRange(edit.selection)
+    }
+
+    /// One size for every note, so they all change.
+    private func resize(to size: CGFloat) {
+        Self.textSize = size
+        for note in NSApp.windows.compactMap({ $0 as? NotePanel }) { note.restyleInPlace() }
+    }
+
+    /// Restyled at a new size, with the same text at the top of the note. A cursor you could see, you still can.
+    private func restyleInPlace() {
+        let visible = textView.visibleRect, selected = textView.selectedRange(), length = (textView.string as NSString).length
+        func character(atY y: CGFloat) -> Int { textView.characterIndexForInsertion(at: NSPoint(x: visible.minX + 1, y: y)) }
+        let top = character(atY: visible.minY + 1), bottom = character(atY: visible.maxY - 1)
+        restyle()
+        // Asked about text not laid out yet, the view answers the note's end. Better to stay put than to jump there.
+        guard let layout = textView.textLayoutManager, textView.window != nil, top < length else { return }
+        layout.ensureLayout(for: layout.documentRange) // or where it is now is only an estimate
+        textView.scrollRangeToVisible(NSRange(location: top, length: 0)) // it only reports where text is on screen once it's in view
+        let onScreen = textView.firstRect(forCharacterRange: NSRange(location: top, length: 0), actualRange: nil)
+        let place = textView.convert(convertFromScreen(onScreen), from: nil)
+        textView.scroll(NSPoint(x: 0, y: place.minY - textView.textContainerInset.height))
+        if selected.location >= top, selected.location <= bottom { textView.scrollRangeToVisible(selected) }
     }
 }
 

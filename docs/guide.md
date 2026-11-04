@@ -317,8 +317,8 @@ more).
 glass card like the launcher's: drag it by its title, resize it from its bottom-right corner. Each note keeps its own
 place on screen. `add note` adds a line to note.txt.
 
-**Your notes:** they have no names. A note's first line is its title, on its card and in the list (a heading's `#`s
-left out). The list has every note, the last edited first, each with the line after its title and how long ago it
+**Your notes:** they have no names. A note's first line is its title, on its card and in the list (without its
+Markdown). The list has every note, the last edited first, each with the line after its title and how long ago it
 changed; the selected one's text shows beside the list. New Note comes last: Enter opens an empty one, saved once you
 type. The list is the Notes chip: `note` shows your last note and Notes, and Tab on it (or Enter) turns it into the chip,
 with only your notes, no apps or search row. Typed in the chip, `milk` keeps the notes with "milk" in them (with the
@@ -330,6 +330,20 @@ from the field too. Anywhere else, from 3 letters, a note with the words you typ
 and links (`[text](url)`, or a bare `https://…`) show styled, the syntax dimmed beside them. `- [ ]` is a checkbox:
 click it to tick it (`- [x]`, struck through), and ⌘Z to undo. A click on a link opens it. Only the look changes:
 the file stays plain text. Settings › Options › Notes turns it off (`[notes] markdown`).
+
+**Keys in a note:** each writes the Markdown for you, and pressed again takes it off. With Markdown turned off, they do
+nothing.
+
+| Keys | What they write |
+|---|---|
+| ⌘B, ⌘I, ⌘E | Bold, italic and code, around what's selected. With nothing selected: press it, type, and press it again to go on after it |
+| ⌘K | A link: what's selected is its name, and the cursor waits where the address goes. With nothing selected, type its name and press ⌘K again |
+| ⌘1, ⌘2, ⌘3 | A heading |
+| ⌘⇧7, ⌘⇧9, ⌘⇧L | A bullet, a number, a checkbox, on every selected line |
+| ⌘' | A quote, on every selected line |
+
+**Text size in notes:** ⌘+ makes the text bigger, ⌘- smaller, and ⌘0 brings back the normal size. It's one size for
+all your notes, and it stays until you change it.
 
 **System Settings:** a page by name from 3 letters (`bluetooth`, `displays`, `keyboard`, `privacy`), or by
 something on it (`dark mode`, `night shift`, `dock`, `default browser`, `login items`). Enter opens that page.

@@ -2495,3 +2495,5 @@
 "Reset All" = "Repor Tudo";
 
 "Your words replace the keyword's own: with wth for weather, “wth lisboa” and Tab give the Weather chip, and “weather” no longer does. Its words in your Mac's language go with it. To keep it too, write it in: weather, wth. Separate several with commas. Reset brings the keyword's own word back. For :, a word of symbols works beside it, stuck to what follows: ; for : is ;left. Saved in config.toml under [keywords]." = "As suas palavras substituem a da palavra-chave: com wth para weather, “wth lisboa” e Tab abrem o chip Tempo, e “weather” deixa de funcionar. As palavras dela no idioma do Mac vão com ela. Para manter também a original, escreva-a junto: weather, wth. Separe várias com vírgulas. Repor devolve a palavra original. Para :, uma palavra de símbolos funciona ao lado dele, colada ao que vem a seguir: ; para : é ;left. Guardado no config.toml em [keywords].";
+
+"Couldn't read the clipboard history" = "Não foi possível ler o histórico da área de transferência";

@@ -57,7 +57,7 @@ The little tools you'd otherwise install one by one, a keystroke away. No extra 
 | Tool | What it does |
 |---|---|
 | **Clipboard history**<br>`clip` | Everything you copy, text and images, searchable. Enter pastes it into the app you were in; pin what you reuse, or paste several in the order you copied them. Passwords are never recorded. |
-| **Floating notes**<br>`note`, `note milk` | Glass notes that float above your windows and save as you type, as many as you like, each titled by its first line. `note` lists them, last edited first; Markdown is styled as you type, and checkboxes tick with a click. |
+| **Floating notes**<br>`note`, `note milk` | Glass notes that float above your windows and save as you type, as many as you like, each titled by its first line. `note` lists them, last edited first; Markdown is styled as you type, checkboxes tick with a click, ⌘B, ⌘I and the like write it for you, and ⌘+ and ⌘- change the text size. |
 | **Pomodoro**<br>`pomo`, `pomo 50` | A focus timer that counts down in the menu bar and tells you when it's done. |
 | **Timer**<br>`timer 10 min tea`, `timer until 15:30` | A countdown for anything else, with what it's for: in the menu bar, with a sound when it's done. |
 | **Stopwatch**<br>`stopwatch` | Counts up in the menu bar; stopping it tells you the time. |

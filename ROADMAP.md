@@ -64,6 +64,8 @@ Roughly in that order, then a few weeks of daily use with fixes only.
 
 ## Done
 
+- **v0.16:** keys in notes: ⌘B, ⌘I, ⌘E, ⌘K, ⌘1 to ⌘3, ⌘⇧7, ⌘⇧9, ⌘⇧L and ⌘' write the Markdown and take it off again,
+  and `***bold italic***` draws as both. ⌘+, ⌘- and ⌘0 set one text size for every note.
 - **v0.15:** Copperlight in your Mac's language: Portuguese from Brazil and from Portugal first, each keyword with
   words in your language beside the English ones, and three plain text files to add a language
   ([TRANSLATING.md](TRANSLATING.md)). Any keyword renamed to a word of your own (`wth` for `weather`), with Reset.
