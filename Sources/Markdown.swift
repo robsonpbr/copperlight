@@ -322,6 +322,33 @@ private func lineFormat(_ mark: String) -> NoteFormat? {
     }
 }
 
+/// What Enter does on a list's line: the next line gets the next mark, and on an empty item the list ends. Nil anywhere
+/// else, for the plain new line.
+// ponytail: the numbers below stay as they are, as they do for ⌘⇧9. Renumber them all if a list out of order bothers people.
+func noteNewline(in text: NSString, selection: NSRange) -> NoteEdit? {
+    var start = 0, end = 0
+    text.getLineStart(&start, end: nil, contentsEnd: &end, for: NSRange(location: selection.location, length: 0))
+    let match = linePrefix.firstMatch(in: text as String, range: NSRange(location: start, length: end - start))!
+    let markRange = match.range(at: 2)
+    guard markRange.location != NSNotFound, selection.location >= NSMaxRange(markRange) else { return nil }
+    let mark = text.substring(with: markRange)
+    let next: String
+    switch lineFormat(mark) {
+    case .bullet: next = mark
+    case .checkbox: next = mark.prefix(1) + " [ ] "
+    case .numbered:
+        guard let number = Int(mark.dropLast(2)), number < 1_000_000 else { return nil }
+        next = "\(number + 1). "
+    default: return nil
+    }
+    let item = text.substring(with: NSRange(location: NSMaxRange(markRange), length: end - NSMaxRange(markRange)))
+    if selection.length == 0, item.allSatisfy(\.isWhitespace) {
+        return NoteEdit(range: NSRange(location: start, length: end - start), replacement: "", selection: NSRange(location: start, length: 0))
+    }
+    let added = "\n" + text.substring(with: match.range(at: 1)) + next
+    return NoteEdit(range: selection, replacement: added, selection: NSRange(location: selection.location + added.utf16.count, length: 0))
+}
+
 /// Headings, lists and quotes: the mark at the start of each line, in place of the one there. If they all have it, it
 /// comes off. Blank lines stay blank, unless the caret's on one.
 private func lineEdit(_ format: NoteFormat, _ text: NSString, _ selection: NSRange) -> NoteEdit {

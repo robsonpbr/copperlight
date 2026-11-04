@@ -833,12 +833,16 @@ func configRejectsInvalidFiles(_ toml: String, _ messageContains: String) {
 
 /// `format` on text written with its selection in it, `|` the caret and `‹…›` what's selected. It answers the same way.
 private func formatted(_ format: NoteFormat, _ marked: String) -> String {
+    edited(marked) { noteEdit(format, in: $0, selection: $1) }!
+}
+
+private func edited(_ marked: String, by change: (NSString, NSRange) -> NoteEdit?) -> String? {
     let source = marked as NSString
     let plain = ["|", "‹", "›"].reduce(marked) { $0.replacingOccurrences(of: $1, with: "") } as NSString
     let caret = source.range(of: "|"), open = source.range(of: "‹")
     let selection = caret.location != NSNotFound ? NSRange(location: caret.location, length: 0)
                                                  : NSRange(location: open.location, length: source.range(of: "›").location - open.location - 1)
-    let edit = noteEdit(format, in: plain, selection: selection)
+    guard let edit = change(plain, selection) else { return nil }
     let result = plain.replacingCharacters(in: edit.range, with: edit.replacement) as NSString
     if edit.selection.length == 0 { return result.replacingCharacters(in: edit.selection, with: "|") }
     return (result.replacingCharacters(in: NSRange(location: NSMaxRange(edit.selection), length: 0), with: "›") as NSString)
@@ -962,6 +966,29 @@ private func formatted(_ format: NoteFormat, _ marked: String) -> String {
     #expect(formatted(.bold, "word| b") == "word**|** b") // at its end: what you type next
 }
 
+@Test func noteListsGoOn() {
+    let enter = { (marked: String) in edited(marked, by: noteNewline) }
+    #expect(enter("- milk|") == "- milk\n- |")
+    #expect(enter("* milk|") == "* milk\n* |")
+    #expect(enter("  - milk|") == "  - milk\n  - |") // indented stays indented
+    #expect(enter("1. one|") == "1. one\n2. |")
+    #expect(enter("9. nine|") == "9. nine\n10. |")
+    #expect(enter("- [ ] milk|") == "- [ ] milk\n- [ ] |")
+    #expect(enter("- [x] milk|") == "- [x] milk\n- [ ] |") // a new one isn't ticked
+    #expect(enter("- mi|lk") == "- mi\n- |lk") // what's after the cursor goes with it
+    #expect(enter("- ‹mi›lk") == "- \n- |lk")
+    #expect(enter("a\n- b|\nc") == "a\n- b\n- |\nc")
+    // An empty one ends the list.
+    #expect(enter("- a\n- |") == "- a\n|")
+    #expect(enter("1. a\n2. |\nb") == "1. a\n|\nb")
+    #expect(enter("- [ ] |") == "|")
+    #expect(enter("  - |") == "|")
+    // Anywhere else, the plain new line.
+    for line in ["plain|", "|", "# title|", "> quote|", "|- milk", "- [ |] milk", "-|", "12345678. big|", "99999999999999999999. big|"] {
+        #expect(enter(line) == nil, "\(line)")
+    }
+}
+
 @Test func noteFormatsLines() {
     #expect(formatted(.heading(1), "ti|tle") == "# ti|tle")
     #expect(formatted(.heading(3), "|") == "### |")
@@ -1064,6 +1091,10 @@ private let everyNoteFormat: [NoteFormat] = [.bold, .italic, .code, .link, .head
         if edit.selection.location > 0, edit.selection.location < result.length, UTF16.isTrailSurrogate(result.character(at: edit.selection.location)) { Issue.record("in an emoji: \(said)"); return }
         if markdownSpans(result as String).contains(where: { NSMaxRange($0.range) > result.length }) { Issue.record("spans: \(said)"); return }
         if format != .link, words(result as String) != words(text as String) { Issue.record("lost text: \(said) gave \((result as String).debugDescription)"); return }
+        if let enter = noteNewline(in: text, selection: NSRange(location: start, length: 0)) {
+            let after = text.replacingCharacters(in: enter.range, with: enter.replacement) as NSString
+            guard NSMaxRange(enter.selection) <= after.length, words(after as String) == words(text as String) else { Issue.record("enter: \(said)"); return }
+        }
     }
 }
 
@@ -1543,6 +1574,60 @@ private func command(_ characters: String, code: UInt16 = 0, _ flags: NSEvent.Mo
         #expect(font(try note("body"), at: 0).pointSize == 22)
         StateStore.shared.set("noteTextSize", 5000.0) // a hand edit
         #expect(NotePanel.textSize == 40)
+    }
+
+    /// What the Return key asks for (StandardKeyBinding.dict). A key press itself goes nowhere in a window that's never shown.
+    private func pressEnter(_ panel: NotePanel, command: Selector = #selector(NSResponder.insertNewline(_:))) { panel.textView.doCommand(by: command) }
+
+    @Test func enterGoesOnWithAList() throws {
+        let panel = try note("- milk")
+        panel.textView.setSelectedRange(NSRange(location: 6, length: 0))
+        pressEnter(panel)
+        #expect(panel.textView.string == "- milk\n- ")
+        #expect(panel.textView.selectedRange() == NSRange(location: 9, length: 0))
+        type("eggs", in: panel)
+        #expect(panel.textView.string == "- milk\n- eggs")
+        #expect(attribute(.foregroundColor, panel, at: 9) as? NSColor == attribute(.foregroundColor, panel, at: 2) as? NSColor) // not dimmed like its mark
+    }
+
+    @Test func enterInAListIsOneStepToUndo() throws {
+        let (panel, undo) = try undoable("- milk")
+        panel.textView.setSelectedRange(NSRange(location: 6, length: 0))
+        step(undo) { pressEnter(panel) }
+        undo.undo()
+        #expect(panel.textView.string == "- milk")
+    }
+
+    @Test func enterOnAnEmptyItemEndsTheList() throws {
+        let panel = try note("- milk\n- ")
+        panel.textView.setSelectedRange(NSRange(location: 9, length: 0))
+        pressEnter(panel)
+        #expect(panel.textView.string == "- milk\n")
+        pressEnter(panel) // held: plain lines now, not a mark coming and going
+        #expect(panel.textView.string == "- milk\n\n")
+    }
+
+    @Test func enterIsPlainOutsideAList() throws {
+        let panel = try note("word")
+        panel.textView.setSelectedRange(NSRange(location: 4, length: 0))
+        pressEnter(panel)
+        #expect(panel.textView.string == "word\n")
+    }
+
+    @Test func optionEnterIsAlwaysPlain() throws {
+        let panel = try note("- milk")
+        panel.textView.setSelectedRange(NSRange(location: 6, length: 0))
+        pressEnter(panel, command: #selector(NSResponder.insertNewlineIgnoringFieldEditor(_:)))
+        #expect(panel.textView.string == "- milk\n")
+    }
+
+    @Test func withoutMarkdownEnterIsPlain() throws {
+        NotePanel.stylesMarkdown = false
+        defer { NotePanel.stylesMarkdown = true }
+        let panel = try note("- milk")
+        panel.textView.setSelectedRange(NSRange(location: 6, length: 0))
+        pressEnter(panel)
+        #expect(panel.textView.string == "- milk\n")
     }
 
     @Test func withoutMarkdownOnlyTheSizeWorks() throws {

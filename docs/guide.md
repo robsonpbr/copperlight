@@ -342,6 +342,9 @@ nothing.
 | ⌘⇧7, ⌘⇧9, ⌘⇧L | A bullet, a number, a checkbox, on every selected line |
 | ⌘' | A quote, on every selected line |
 
+**Enter in a list:** gives you the next bullet, number or checkbox. Enter on an empty one ends the list, and ⌥Enter
+starts a plain line. With Markdown turned off, Enter is only a new line.
+
 **Text size in notes:** ⌘+ makes the text bigger, ⌘- smaller, and ⌘0 brings back the normal size. It's one size for
 all your notes, and it stays until you change it.
 

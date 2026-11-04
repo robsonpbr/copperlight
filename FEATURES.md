@@ -486,7 +486,8 @@ The row shows the title and date Copperlight read before you press Enter; a noti
   styled as you type, the syntax dimmed; `- [ ]` checkboxes tick with a click (⌘Z undoes it). The files stay plain
   text.
 - **Keys in a note:** ⌘B bold, ⌘I italic, ⌘E code, ⌘K link, ⌘1 to ⌘3 headings, ⌘⇧7 bullets, ⌘⇧9 numbers, ⌘⇧L
-  checkboxes, ⌘' quotes. Each writes the Markdown, and pressed again takes it off.
+  checkboxes, ⌘' quotes. Each writes the Markdown, and pressed again takes it off. Enter goes on with a list: the next
+  bullet, number or checkbox. Enter on an empty one ends the list, and ⌥Enter starts a plain line.
 - **Text size in notes:** ⌘+ and ⌘- for bigger and smaller text, ⌘0 for the normal size: one size for every note,
   remembered.
 - **Clipboard history** (`clip`): text and images you copy, newest first under Today, Yesterday, Earlier,

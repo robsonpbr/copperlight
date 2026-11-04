@@ -308,6 +308,15 @@ final class NotePanel: NSPanel, NSTextViewDelegate, NSWindowDelegate {
         return true
     }
 
+    /// Enter goes on with a list. Return while typing an accent never gets here: the keyboard keeps that for itself.
+    func textView(_ textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+        guard selector == #selector(NSResponder.insertNewline(_:)), Self.stylesMarkdown,
+              let edit = noteNewline(in: textView.string as NSString, selection: textView.selectedRange())
+        else { return false }
+        apply(edit)
+        return true
+    }
+
     // Covers Esc.
     override func close() {
         saveNow()
