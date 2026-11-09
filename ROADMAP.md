@@ -64,6 +64,8 @@ Roughly in that order, then a few weeks of daily use with fixes only.
 
 ## Done
 
+- **v0.17:** `help`: every command there is on one sheet, as this Mac is set up. Search it, and Enter puts one in the
+  launcher.
 - **v0.16:** keys in notes: ⌘B, ⌘I, ⌘E, ⌘K, ⌘1 to ⌘3, ⌘⇧7, ⌘⇧9, ⌘⇧L and ⌘' write the Markdown and take it off again,
   and `***bold italic***` draws as both. Enter goes on with a list. ⌘+, ⌘- and ⌘0 set one text size for every note.
 - **v0.15:** Copperlight in your Mac's language: Portuguese from Brazil and from Portugal first, each keyword with

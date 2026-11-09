@@ -191,16 +191,32 @@
 
 "=" = "=";
 
+"A System Settings page" = "Página das Definições";
+
+"A break" = "Uma pausa";
+
 "A city, or nothing for where you are" = "Uma cidade, ou nada para a localização atual";
+
+"A color from the screen" = "Uma cor do ecrã";
+
+"A color, in every notation" = "Uma cor, em todas as notações";
+
+"A date from now" = "Uma data a partir de hoje";
 
 /* The f chip's placeholder */
 "A file's name" = "Nome de um ficheiro";
 
+"A folder, and what's in it" = "Uma pasta e o que tem dentro";
+
 "A meeting about to start" = "Uma reunião prestes a começar";
+
+"A menu of the app in front" = "Um menu da app em primeiro plano";
 
 "A name, or nothing for all" = "Um nome, ou nada para todos";
 
 "A name, or nothing for everyone" = "Um nome, ou nada para todos";
+
+"A plain line, in a list" = "Uma linha simples, numa lista";
 
 "A port number, like 3000" = "Um número de porta, como 3000";
 
@@ -214,6 +230,8 @@
 "A stock, the weather, a person, a color: drawn big across the card. Off, they're plain rows like the rest." = "Uma ação, o tempo, uma pessoa, uma cor: em grande, a ocupar o cartão. Desativado, são linhas simples como as restantes.";
 
 "A ticker: AAPL, MGLU3.SA" = "Um símbolo: AAPL, MGLU3.SA";
+
+"A timer until a time" = "Até uma hora";
 
 /* Placeholder in the Define chip / Placeholder in the Synonyms chip */
 "A word" = "Uma palavra";
@@ -269,6 +287,12 @@
 
 "Address" = "Endereço";
 
+"Adds a line to your note" = "Nova linha na nota";
+
+"Adds a to-do" = "Nova tarefa";
+
+"Adds an event" = "Novo evento";
+
 "AirDrop" = "AirDrop";
 
 "AirDrop & Handoff" = "AirDrop e Handoff";
@@ -311,6 +335,8 @@
 "Allow Full Disk Access to read codes from Messages" = "Conceder Acesso Total ao Disco para ler códigos de Mensagens";
 
 "Allowed" = "Permitido";
+
+"An app, by a few letters" = "Uma app, por algumas letras";
 
 /* A new note */
 "An empty one" = "Uma nota vazia";
@@ -399,9 +425,15 @@
 
 "Between %lld:00 and %lld:00, 30 minutes or more" = "Entre %lld:00 e %lld:00, 30 minutos ou mais";
 
+"Bigger and smaller text" = "Texto maior e menor";
+
 "Bluetooth" = "Bluetooth";
 
+"Bold" = "Negrito";
+
 "Bookmarks and history" = "Marcadores e histórico";
+
+"Bookmarks and recent pages" = "Marcadores e páginas recentes";
 
 "Bottom Half" = "Metade Inferior";
 
@@ -423,6 +455,8 @@
 "Browser Tabs" = "Separadores do Navegador";
 
 "Browser tabs" = "Separadores do navegador";
+
+"Bullets" = "Lista com marcas";
 
 "Calculator" = "Calculadora";
 
@@ -455,6 +489,8 @@
 
 "Check the connection and try again" = "Verificar a ligação e tentar novamente";
 
+"Checkboxes" = "Caixas de verificação";
+
 /* Enter on a : command that takes a name (:quit): fills it in / Enter on a file in :open with: fills it in, to pick an app / Enter on a file's Open With…: fills in :open with, to pick an app / Enter on a menu item of the app in front / Enter on an add row: types its name */
 "Choose" = "Escolher";
 
@@ -482,10 +518,14 @@
 
 "Clipboard history is off: can't open clipboard.sqlite" = "O histórico da área de transferência está desativado: não é possível abrir clipboard.sqlite";
 
+"Clocks" = "Relógios";
+
 "Close Window" = "Fechar Janela";
 
 /* Weather conditions */
 "Cloudy" = "Nublado";
+
+"Code" = "Código";
 
 "Codes from Messages" = "Códigos de Mensagens";
 
@@ -705,6 +745,8 @@
 
 "Displays" = "Ecrãs";
 
+"Does what the row says" = "Faz o que a linha diz";
+
 "Don't record copies made in" = "Não registar cópias feitas em";
 
 "Download" = "Download";
@@ -766,6 +808,8 @@
 
 "Event added" = "Evento adicionado";
 
+"Every command" = "Todos os comandos";
+
 "Every executable file in ~/.config/copperlight/scripts is a command too, found by its file name." = "Cada ficheiro executável em ~/.config/copperlight/scripts também é um comando, encontrado pelo nome do ficheiro.";
 
 "Every server and permission" = "Todos os servidores e permissões";
@@ -773,6 +817,8 @@
 "Every tab open in your browsers" = "Todos os separadores abertos nos navegadores";
 
 "Everything here is saved in ~/.config/copperlight/config.toml, with your comments kept. Edit it by hand any time: changes apply when you save." = "Tudo o que está aqui é guardado em ~/.config/copperlight/config.toml, com os comentários mantidos. É possível editá-lo à mão a qualquer momento: as alterações aplicam-se ao guardar.";
+
+"Everything you can type" = "Tudo o que pode escrever";
 
 "Exit %d" = "Código de saída %d";
 
@@ -802,6 +848,12 @@
 
 /* A Settings pane / The f chip: searches files only */
 "Files" = "Ficheiros";
+
+"Files, by name" = "Ficheiros, pelo nome";
+
+"Fills in, or shows more" = "Preenche ou mostra mais";
+
+"Find" = "Procurar";
 
 "Find the text in your photos, read on this Mac" = "Encontre o texto das fotos, reconhecido neste Mac";
 
@@ -845,6 +897,8 @@
 /* A day (today, next week), then 3 slots */
 "Free %@: %@" = "Livre %@: %@";
 
+"Free space" = "Espaço livre";
+
 "Freezing rain" = "Chuva gelada";
 
 "From 2 letters, or “f” and a name for files only. Uses Spotlight's index, so what Spotlight skips is skipped too." = "A partir de 2 letras, ou “f” e um nome para procurar só ficheiros. Usa o índice do Spotlight, por isso o que o Spotlight ignora também fica de fora.";
@@ -869,6 +923,8 @@
 /* Enter on a file while an Open or Save dialog is in front */
 "Go There" = "Ir para Lá";
 
+"Goes back, or hides it" = "Volta ou oculta";
+
 /* Today's high and low */
 "H %@ · L %@" = "Máx. %@ · Mín. %@";
 
@@ -876,17 +932,23 @@
 
 "HSL · hsl(27, 59%, 49%)" = "HSL · hsl(27, 59%, 49%)";
 
+"Headings" = "Títulos";
+
 "Heavy rain" = "Chuva forte";
 
 "Heavy showers" = "Aguaceiros fortes";
 
 "Heavy snow" = "Neve forte";
 
+"Help" = "Ajuda";
+
 /* The weather's place: where this Mac is */
 "Here" = "Aqui";
 
 /* A color's notation */
 "Hex" = "Hex";
+
+"Hex and binary" = "Hexadecimal e binário";
 
 "Hex · #c87533" = "Hex · #c87533";
 
@@ -921,6 +983,10 @@
 
 "In %@ days" = "Daqui a %@ dias";
 
+"In clipboard history: %@" = "No histórico da área de transferência: %@";
+
+"In the empty field: what you ran" = "No campo vazio: o que executou";
+
 "Insert:" = "Inserir:";
 
 /* Enter on an app you don't have: installs it */
@@ -931,6 +997,8 @@
 "Install with Homebrew" = "Instalar com Homebrew";
 
 "Installing %@…" = "A instalar %@…";
+
+"Installs an app you don't have" = "Instala uma app que não tem";
 
 "Internet Accounts" = "Contas de Internet";
 
@@ -943,6 +1011,8 @@
 "It holds about 2,000 characters" = "Cabem cerca de 2000 caracteres";
 
 "It needs your password: Enter copies the command for a terminal" = "Precisa da palavra-passe: Enter copia o comando para um terminal";
+
+"Italic" = "Itálico";
 
 "Its pages, as rows: wi-fi, displays" = "As suas páginas, como linhas: wi-fi, displays";
 
@@ -974,6 +1044,10 @@
 "Keeping Awake" = "A Manter Acordado";
 
 "Keyboard" = "Teclado";
+
+"Keys" = "Teclas";
+
+"Keys in a note" = "Teclas numa nota";
 
 /* A Settings pane */
 "Keywords" = "Palavras-chave";
@@ -1066,6 +1140,10 @@
 
 "Made on your Mac" = "Gerado no Mac";
 
+"Math and money" = "Contas e dinheiro";
+
+"Math and percentages" = "Contas e percentagens";
+
 "Maximize Window" = "Maximizar Janela";
 
 "Menu search" = "Pesquisa nos menus";
@@ -1089,6 +1167,8 @@
 
 "Mouse" = "Rato";
 
+"Move" = "Mover";
+
 "Move the note “%@” to the Trash?" = "Mover a nota “%@” para o Lixo?";
 
 "Move to Next Display" = "Mover para o Ecrã Seguinte";
@@ -1096,6 +1176,8 @@
 "Move to Trash" = "Mover para o Lixo";
 
 "Move “%@” to the Trash?" = "Mover “%@” para o Lixo?";
+
+"Moves through the rows" = "Percorre as linhas";
 
 /* :mute's row: turns the sound off */
 "Mute" = "Silenciar";
@@ -1235,6 +1317,8 @@
 
 "Nudge Up" = "Deslocar para Cima";
 
+"Numbers" = "Lista numerada";
+
 "ORIGIN  " = "ORIGEM  ";
 
 "Off means off: no rows, no commands, nothing in the background, nothing sent, no permission asked for. Saved in config.toml under [features]." = "Desativado quer dizer desativado: sem linhas, sem comandos, nada em segundo plano, nada enviado, nenhuma permissão pedida. Guardado no config.toml, em [features].";
@@ -1319,13 +1403,17 @@
 
 "Open the ones to keep, then save again" = "Abra os que devem ficar e volte a guardar";
 
-"Open this again from the menu bar, or type “welcome”." = "Volte a abrir pela barra de menus ou escreva “welcome”.";
+"Open this again from the menu bar, or type “welcome”. To see every command, type “help”." = "Volte a abrir pela barra de menus ou escreva “welcome”. Para ver todos os comandos, escreva “ajuda”.";
 
 "Open-Meteo sent no forecast" = "O Open-Meteo não enviou a previsão";
 
 "Open-Meteo · updated %@" = "Open-Meteo · atualizado às %@";
 
 "Opens" = "Abre";
+
+"Opens it, from any app" = "Abre, a partir de qualquer app";
+
+"Opens that address" = "Abre esse endereço";
 
 "Opens the file in its default app." = "Abre o ficheiro na aplicação predefinida.";
 
@@ -1380,6 +1468,8 @@
 "Pick" = "Escolher";
 
 "Pick Color" = "Escolher Cor";
+
+"Pick one and it waits in the launcher. Nothing runs until you press Enter there." = "Escolha um e fica à espera no lançador. Nada é executado até premir Enter lá.";
 
 /* A clipboard item's action: kept first, never cleared */
 "Pin" = "Fixar";
@@ -1490,6 +1580,8 @@
 
 "Quit every app? Apps with unsaved changes ask first." = "Sair de todas as aplicações? As aplicações com alterações por guardar perguntam primeiro.";
 
+"Quotes" = "Citações";
+
 "RGB · rgb(200, 117, 51)" = "RGB · rgb(200, 117, 51)";
 
 /* Weather conditions */
@@ -1505,6 +1597,8 @@
 "Recent Documents" = "Documentos Recentes";
 
 "Record Screen" = "Gravar Ecrã";
+
+"Records the screen" = "Grava o ecrã";
 
 /* A running app's action / Enter on a running app */
 "Relaunch" = "Reabrir";
@@ -1619,6 +1713,8 @@
 
 "Search %@ for “%@”" = "Pesquisar “%2$@” em %1$@";
 
+"Search %lld commands" = "Pesquisar em %lld comandos";
+
 "Search Contacts" = "Pesquisar Contactos";
 
 "Search Your Contacts" = "Pesquisar nos Contactos";
@@ -1630,6 +1726,8 @@
 "Search in" = "Pesquisar em";
 
 "Search past copies" = "Pesquisar cópias anteriores";
+
+"Searches the web" = "Pesquisa na web";
 
 "See %@’s Tabs" = "Ver Separadores do %@";
 
@@ -1648,6 +1746,8 @@
 "See Your Week" = "Ver a Semana";
 
 "See Yourself" = "Ver-se na Câmara";
+
+"See yourself before a call" = "Ver-se antes de uma chamada";
 
 /* Enter on Copy Text from Screen: you drag over the screen */
 "Select" = "Selecionar";
@@ -1862,7 +1962,11 @@
 
 "The app didn't quit, so it wasn't relaunched" = "A aplicação não foi fechada, por isso não foi reaberta";
 
+"The battery" = "A bateria";
+
 "The calendars that count, for meetings, week, month, free and the next meeting. Free looks within your working hours. Open in is where Enter on week and month goes." = "Os calendários que contam para meetings, week, month, free e a próxima reunião. O free procura dentro do horário de trabalho. Abrir em define onde o Enter em week e month abre.";
+
+"The colors you picked" = "As cores que escolheu";
 
 "The field's edge, the selected row, chips and the titles over answers. Your Mac's follows the color chosen in System Settings › Appearance." = "O contorno do campo, a linha selecionada, os chips e os títulos sobre as respostas. A cor de destaque do Mac segue a escolhida em Definições do Sistema › Aparência.";
 
@@ -1880,6 +1984,8 @@
 
 "The next meeting, meetings, week, month, free time, add event" = "A próxima reunião, meetings, week, month, free, add event";
 
+"The normal size" = "O tamanho normal";
+
 "The notification's sound" = "O som da notificação";
 
 "The number alone, for a spreadsheet" = "Só o número, para uma folha de cálculo";
@@ -1888,7 +1994,13 @@
 
 "The password for “%@”" = "A palavra-passe de “%@”";
 
+"The rest of today" = "O resto de hoje";
+
 "The rows you pick rise, and come first for what you typed: pick Slack after “ss” and “ss” is Slack from then on. Kept on this Mac, in state.json. Off, nothing new is kept and what's there isn't used. Forget deletes it." = "As linhas escolhidas sobem e vêm primeiro para o que foi escrito: escolha o Slack depois de “ss” e “ss” passa a ser o Slack. Fica guardado neste Mac, no state.json. Se desativado, nada de novo é guardado e o que existe não é usado. Esquecer apaga tudo.";
+
+"The screen" = "O ecrã";
+
+"The screenshot toolbar" = "A barra de captura de ecrã";
 
 "The scripts folder, as rows" = "A pasta de scripts, como linhas";
 
@@ -1999,6 +2111,8 @@
 "Try again in a moment" = "Tente novamente daqui a pouco";
 
 "Try another spelling, or a bigger town nearby" = "Experimente outra grafia ou uma cidade maior nas proximidades";
+
+"Try it" = "Experimentar";
 
 "Try other words" = "Experimente outras palavras";
 
@@ -2171,7 +2285,15 @@
 
 "What a pomodoro, a break or a timer plays when it ends." = "O som que um pomodoro, uma pausa ou um temporizador toca ao terminar.";
 
+"What's due" = "Lembretes pendentes";
+
+"What's on a port" = "O que está numa porta";
+
 "What's running" = "O que está a decorrer";
+
+"What's using memory" = "O que está a usar memória";
+
+"What's using the processor" = "O que está a usar o processador";
 
 "What’s listening on a port: port 3000" = "O que está à escuta numa porta: port 3000";
 
@@ -2226,7 +2348,11 @@
 
 "Without Location Services, macOS keeps it from apps" = "Sem os Serviços de Localização, o macOS não o revela às apps";
 
+"Words" = "Palavras";
+
 "Words in %@" = "Palavras em %@";
+
+"Words that mean the same" = "Sinónimos";
 
 "Working hours end" = "Fim do horário de trabalho";
 
@@ -2245,6 +2371,8 @@
 /* What a percent off takes away: 20% off 80 */
 "You save %@" = "Poupança de %@";
 
+"Your IP addresses" = "Os seus endereços IP";
+
 "Your Mac" = "O seu Mac";
 
 "Your Mac's accent color" = "Cor de destaque do Mac";
@@ -2255,15 +2383,31 @@
 
 "Your commands" = "Os seus comandos";
 
+"Your day" = "O seu dia";
+
+"Your free time" = "O seu tempo livre";
+
 "Your key stays in your Mac's keychain. Copperlight asks Todoist only when you add a to-do, show what's due or complete one." = "A chave fica no porta-chaves do Mac. O Copperlight só contacta o Todoist ao adicionar uma tarefa, mostrar o que é para hoje ou concluir uma.";
 
 "Your last note · Esc hides it" = "A última nota · Esc oculta-a";
 
+"Your latest downloads" = "As suas últimas transferências";
+
+"Your latest screenshots" = "As suas últimas capturas de ecrã";
+
+"Your month" = "O seu mês";
+
+"Your notes" = "As suas notas";
+
 "Your notes that say it" = "As notas que contêm isto";
+
+"Your open tabs" = "Os seus separadores abertos";
 
 "Your open tabs, by title" = "Os separadores abertos, pelo título";
 
 "Your own color" = "Cor personalizada";
+
+"Your week" = "A sua semana";
 
 
 /* Settings › Features: the group of features for your own things (notes, files) */
@@ -2276,6 +2420,8 @@
 "a picture" = "uma imagem";
 
 "a word for %@ is empty" = "uma palavra para %@ está vazia";
+
+"any text" = "qualquer texto";
 
 /* Ends “Allow Copperlight in Accessibility to …” */
 "arrange windows" = "organizar janelas";

@@ -17,6 +17,7 @@ struct BuiltinProvider: ResultProvider {
     let showNote: @MainActor @Sendable (URL) -> Void // a note's file
     let showClipboard: @MainActor @Sendable () -> Void
     var showWelcome: @MainActor @Sendable () -> Void = {}
+    var showHelp: @MainActor @Sendable () -> Void = {}
     var showSettings: @MainActor @Sendable () -> Void = {}
     var newNote: @MainActor @Sendable (String) -> Void = { _ in } // a new note starting with this text ("": empty)
     var notesFolder = notesDir
@@ -60,6 +61,10 @@ struct BuiltinProvider: ResultProvider {
             rows.append(LauncherResult(id: "builtin:welcome", title: String(localized: "Welcome to Copperlight"),
                                        subtitle: String(localized: "The hotkey, permissions, Open at Login"), icon: .symbol("hand.wave"),
                                        score: score, action: showWelcome))
+        }
+        if let score = score(query, prefixOf: "help", minLength: 3, title: "Help") {
+            rows.append(LauncherResult(id: "builtin:help", title: String(localized: "Help"), subtitle: String(localized: "Everything you can type"),
+                                       icon: .symbol("questionmark.circle"), score: score, action: showHelp))
         }
         // "settings" alone is System Settings' too, so only a plain fuzzy match there; "copperlight" goes straight to it.
         if let score = score(query, prefixOf: "copperlight settings", minLength: 3, title: "Copperlight Settings") {
@@ -142,6 +147,7 @@ struct CopperlightApp: App {
         MenuBarExtra("Copperlight", image: "Mark") { // the icon's C
             Button("Settings…") { delegate.showSettings() }.keyboardShortcut(",")
             Button("Welcome to Copperlight") { delegate.showWelcome() }
+            Button("Help") { delegate.showHelp() }
             Toggle("Launch at Login", isOn: Binding(get: { launchAtLogin }, set: { launchAtLogin = setLaunchAtLogin($0) }))
                 // The menu is built once, so ask again each time it opens: System Settings → Login Items may have
                 // changed it. onAppear covers the first open, before onReceive is listening.
@@ -182,6 +188,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             showClipboard: { [unowned self] in showClipboard() },
             showClipboardPanel: { [unowned self] in clipboardPanel.show() },
             showWelcome: { [unowned self] in showWelcome() },
+            showHelp: { [unowned self] in showHelp() },
             showSettings: { [unowned self] in showSettings($0) },
             setHotkey: { KeyboardShortcuts.setShortcut($0.shortcut, for: .toggleLauncher) },
             styleNotes: { [unowned self] markdown in
@@ -193,6 +200,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                           placeholder: String(localized: "Type anything", comment: "The launcher's empty field"))
     private lazy var clipboardPanel: LauncherPanel = LauncherPanel(model: core.clipboardModel,
                                                     placeholder: String(localized: "Search clipboard history, : for commands…"))
+    private lazy var helpPanel = CheatSheetPanel(fill: { [unowned self] text in
+        panel.model.fileDialog = frontFileDialog()
+        core.refresh()
+        panel.show()
+        panel.model.put(text)
+    })
     private var notes: [String: NotePanel] = [:] // by the file's path
     private var welcome: WelcomeWindow?
     private var settings: SettingsWindow?
@@ -269,6 +282,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         welcome?.model.keycaps = KeyboardShortcuts.getShortcut(for: .toggleLauncher)?.keycaps ?? []
         welcome?.show()
     }
+
+    /// `help`, and the menu bar's Help.
+    func showHelp() { helpPanel.show(core.cheatSheet()) }
 
     /// Opens Settings, on `pane` when given.
     func showSettings(_ pane: Pane? = nil) {

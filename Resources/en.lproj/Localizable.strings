@@ -192,16 +192,32 @@
 
 "=" = "=";
 
+"A System Settings page" = "A System Settings page";
+
+"A break" = "A break";
+
 "A city, or nothing for where you are" = "A city, or nothing for where you are";
+
+"A color from the screen" = "A color from the screen";
+
+"A color, in every notation" = "A color, in every notation";
+
+"A date from now" = "A date from now";
 
 /* The f chip's placeholder */
 "A file's name" = "A file's name";
 
+"A folder, and what's in it" = "A folder, and what's in it";
+
 "A meeting about to start" = "A meeting about to start";
+
+"A menu of the app in front" = "A menu of the app in front";
 
 "A name, or nothing for all" = "A name, or nothing for all";
 
 "A name, or nothing for everyone" = "A name, or nothing for everyone";
+
+"A plain line, in a list" = "A plain line, in a list";
 
 "A port number, like 3000" = "A port number, like 3000";
 
@@ -215,6 +231,8 @@
 "A stock, the weather, a person, a color: drawn big across the card. Off, they're plain rows like the rest." = "A stock, the weather, a person, a color: drawn big across the card. Off, they're plain rows like the rest.";
 
 "A ticker: AAPL, MGLU3.SA" = "A ticker: AAPL, MGLU3.SA";
+
+"A timer until a time" = "A timer until a time";
 
 /* Placeholder in the Define chip / Placeholder in the Synonyms chip */
 "A word" = "A word";
@@ -270,6 +288,12 @@
 
 "Address" = "Address";
 
+"Adds a line to your note" = "Adds a line to your note";
+
+"Adds a to-do" = "Adds a to-do";
+
+"Adds an event" = "Adds an event";
+
 "AirDrop" = "AirDrop";
 
 "AirDrop & Handoff" = "AirDrop & Handoff";
@@ -312,6 +336,8 @@
 "Allow Full Disk Access to read codes from Messages" = "Allow Full Disk Access to read codes from Messages";
 
 "Allowed" = "Allowed";
+
+"An app, by a few letters" = "An app, by a few letters";
 
 /* A new note */
 "An empty one" = "An empty one";
@@ -400,9 +426,15 @@
 
 "Between %lld:00 and %lld:00, 30 minutes or more" = "Between %lld:00 and %lld:00, 30 minutes or more";
 
+"Bigger and smaller text" = "Bigger and smaller text";
+
 "Bluetooth" = "Bluetooth";
 
+"Bold" = "Bold";
+
 "Bookmarks and history" = "Bookmarks and history";
+
+"Bookmarks and recent pages" = "Bookmarks and recent pages";
 
 "Bottom Half" = "Bottom Half";
 
@@ -424,6 +456,8 @@
 "Browser Tabs" = "Browser Tabs";
 
 "Browser tabs" = "Browser tabs";
+
+"Bullets" = "Bullets";
 
 "Calculator" = "Calculator";
 
@@ -456,6 +490,8 @@
 
 "Check the connection and try again" = "Check the connection and try again";
 
+"Checkboxes" = "Checkboxes";
+
 /* Enter on a : command that takes a name (:quit): fills it in / Enter on a file in :open with: fills it in, to pick an app / Enter on a file's Open With…: fills in :open with, to pick an app / Enter on a menu item of the app in front / Enter on an add row: types its name */
 "Choose" = "Choose";
 
@@ -483,10 +519,14 @@
 
 "Clipboard history is off: can't open clipboard.sqlite" = "Clipboard history is off: can't open clipboard.sqlite";
 
+"Clocks" = "Clocks";
+
 "Close Window" = "Close Window";
 
 /* Weather conditions */
 "Cloudy" = "Cloudy";
+
+"Code" = "Code";
 
 "Codes from Messages" = "Codes from Messages";
 
@@ -708,6 +748,8 @@
 
 "Displays" = "Displays";
 
+"Does what the row says" = "Does what the row says";
+
 "Don't record copies made in" = "Don't record copies made in";
 
 "Download" = "Download";
@@ -769,6 +811,8 @@
 
 "Event added" = "Event added";
 
+"Every command" = "Every command";
+
 "Every executable file in ~/.config/copperlight/scripts is a command too, found by its file name." = "Every executable file in ~/.config/copperlight/scripts is a command too, found by its file name.";
 
 "Every server and permission" = "Every server and permission";
@@ -776,6 +820,8 @@
 "Every tab open in your browsers" = "Every tab open in your browsers";
 
 "Everything here is saved in ~/.config/copperlight/config.toml, with your comments kept. Edit it by hand any time: changes apply when you save." = "Everything here is saved in ~/.config/copperlight/config.toml, with your comments kept. Edit it by hand any time: changes apply when you save.";
+
+"Everything you can type" = "Everything you can type";
 
 "Exit %d" = "Exit %d";
 
@@ -805,6 +851,12 @@
 
 /* A Settings pane / The f chip: searches files only */
 "Files" = "Files";
+
+"Files, by name" = "Files, by name";
+
+"Fills in, or shows more" = "Fills in, or shows more";
+
+"Find" = "Find";
 
 "Find the text in your photos, read on this Mac" = "Find the text in your photos, read on this Mac";
 
@@ -848,6 +900,8 @@
 /* A day (today, next week), then 3 slots */
 "Free %@: %@" = "Free %@: %@";
 
+"Free space" = "Free space";
+
 "Freezing rain" = "Freezing rain";
 
 "From 2 letters, or “f” and a name for files only. Uses Spotlight's index, so what Spotlight skips is skipped too." = "From 2 letters, or “f” and a name for files only. Uses Spotlight's index, so what Spotlight skips is skipped too.";
@@ -872,6 +926,8 @@
 /* Enter on a file while an Open or Save dialog is in front */
 "Go There" = "Go There";
 
+"Goes back, or hides it" = "Goes back, or hides it";
+
 /* Today's high and low */
 "H %@ · L %@" = "H %@ · L %@";
 
@@ -879,17 +935,23 @@
 
 "HSL · hsl(27, 59%, 49%)" = "HSL · hsl(27, 59%, 49%)";
 
+"Headings" = "Headings";
+
 "Heavy rain" = "Heavy rain";
 
 "Heavy showers" = "Heavy showers";
 
 "Heavy snow" = "Heavy snow";
 
+"Help" = "Help";
+
 /* The weather's place: where this Mac is */
 "Here" = "Here";
 
 /* A color's notation */
 "Hex" = "Hex";
+
+"Hex and binary" = "Hex and binary";
 
 "Hex · #c87533" = "Hex · #c87533";
 
@@ -924,6 +986,10 @@
 
 "In %@ days" = "In %@ days";
 
+"In clipboard history: %@" = "In clipboard history: %@";
+
+"In the empty field: what you ran" = "In the empty field: what you ran";
+
 "Insert:" = "Insert:";
 
 /* Enter on an app you don't have: installs it */
@@ -934,6 +1000,8 @@
 "Install with Homebrew" = "Install with Homebrew";
 
 "Installing %@…" = "Installing %@…";
+
+"Installs an app you don't have" = "Installs an app you don't have";
 
 "Internet Accounts" = "Internet Accounts";
 
@@ -946,6 +1014,8 @@
 "It holds about 2,000 characters" = "It holds about 2,000 characters";
 
 "It needs your password: Enter copies the command for a terminal" = "It needs your password: Enter copies the command for a terminal";
+
+"Italic" = "Italic";
 
 "Its pages, as rows: wi-fi, displays" = "Its pages, as rows: wi-fi, displays";
 
@@ -977,6 +1047,10 @@
 "Keeping Awake" = "Keeping Awake";
 
 "Keyboard" = "Keyboard";
+
+"Keys" = "Keys";
+
+"Keys in a note" = "Keys in a note";
 
 /* A Settings pane */
 "Keywords" = "Keywords";
@@ -1069,6 +1143,10 @@
 
 "Made on your Mac" = "Made on your Mac";
 
+"Math and money" = "Math and money";
+
+"Math and percentages" = "Math and percentages";
+
 "Maximize Window" = "Maximize Window";
 
 "Menu search" = "Menu search";
@@ -1092,6 +1170,8 @@
 
 "Mouse" = "Mouse";
 
+"Move" = "Move";
+
 "Move the note “%@” to the Trash?" = "Move the note “%@” to the Trash?";
 
 "Move to Next Display" = "Move to Next Display";
@@ -1099,6 +1179,8 @@
 "Move to Trash" = "Move to Trash";
 
 "Move “%@” to the Trash?" = "Move “%@” to the Trash?";
+
+"Moves through the rows" = "Moves through the rows";
 
 /* :mute's row: turns the sound off */
 "Mute" = "Mute";
@@ -1238,6 +1320,8 @@
 
 "Nudge Up" = "Nudge Up";
 
+"Numbers" = "Numbers";
+
 "ORIGIN  " = "ORIGIN  ";
 
 "Off means off: no rows, no commands, nothing in the background, nothing sent, no permission asked for. Saved in config.toml under [features]." = "Off means off: no rows, no commands, nothing in the background, nothing sent, no permission asked for. Saved in config.toml under [features].";
@@ -1322,13 +1406,17 @@
 
 "Open the ones to keep, then save again" = "Open the ones to keep, then save again";
 
-"Open this again from the menu bar, or type “welcome”." = "Open this again from the menu bar, or type “welcome”.";
+"Open this again from the menu bar, or type “welcome”. To see every command, type “help”." = "Open this again from the menu bar, or type “welcome”. To see every command, type “help”.";
 
 "Open-Meteo sent no forecast" = "Open-Meteo sent no forecast";
 
 "Open-Meteo · updated %@" = "Open-Meteo · updated %@";
 
 "Opens" = "Opens";
+
+"Opens it, from any app" = "Opens it, from any app";
+
+"Opens that address" = "Opens that address";
 
 "Opens the file in its default app." = "Opens the file in its default app.";
 
@@ -1383,6 +1471,8 @@
 "Pick" = "Pick";
 
 "Pick Color" = "Pick Color";
+
+"Pick one and it waits in the launcher. Nothing runs until you press Enter there." = "Pick one and it waits in the launcher. Nothing runs until you press Enter there.";
 
 /* A clipboard item's action: kept first, never cleared */
 "Pin" = "Pin";
@@ -1493,6 +1583,8 @@
 
 "Quit every app? Apps with unsaved changes ask first." = "Quit every app? Apps with unsaved changes ask first.";
 
+"Quotes" = "Quotes";
+
 "RGB · rgb(200, 117, 51)" = "RGB · rgb(200, 117, 51)";
 
 /* Weather conditions */
@@ -1508,6 +1600,8 @@
 "Recent Documents" = "Recent Documents";
 
 "Record Screen" = "Record Screen";
+
+"Records the screen" = "Records the screen";
 
 /* A running app's action / Enter on a running app */
 "Relaunch" = "Relaunch";
@@ -1626,6 +1720,8 @@
 
 "Search %@ for “%@”" = "Search %@ for “%@”";
 
+"Search %lld commands" = "Search %lld commands";
+
 "Search Contacts" = "Search Contacts";
 
 "Search Your Contacts" = "Search Your Contacts";
@@ -1637,6 +1733,8 @@
 "Search in" = "Search in";
 
 "Search past copies" = "Search past copies";
+
+"Searches the web" = "Searches the web";
 
 "See %@’s Tabs" = "See %@’s Tabs";
 
@@ -1655,6 +1753,8 @@
 "See Your Week" = "See Your Week";
 
 "See Yourself" = "See Yourself";
+
+"See yourself before a call" = "See yourself before a call";
 
 /* Enter on Copy Text from Screen: you drag over the screen */
 "Select" = "Select";
@@ -1869,7 +1969,11 @@
 
 "The app didn't quit, so it wasn't relaunched" = "The app didn't quit, so it wasn't relaunched";
 
+"The battery" = "The battery";
+
 "The calendars that count, for meetings, week, month, free and the next meeting. Free looks within your working hours. Open in is where Enter on week and month goes." = "The calendars that count, for meetings, week, month, free and the next meeting. Free looks within your working hours. Open in is where Enter on week and month goes.";
+
+"The colors you picked" = "The colors you picked";
 
 "The field's edge, the selected row, chips and the titles over answers. Your Mac's follows the color chosen in System Settings › Appearance." = "The field's edge, the selected row, chips and the titles over answers. Your Mac's follows the color chosen in System Settings › Appearance.";
 
@@ -1887,6 +1991,8 @@
 
 "The next meeting, meetings, week, month, free time, add event" = "The next meeting, meetings, week, month, free time, add event";
 
+"The normal size" = "The normal size";
+
 "The notification's sound" = "The notification's sound";
 
 "The number alone, for a spreadsheet" = "The number alone, for a spreadsheet";
@@ -1895,7 +2001,13 @@
 
 "The password for “%@”" = "The password for “%@”";
 
+"The rest of today" = "The rest of today";
+
 "The rows you pick rise, and come first for what you typed: pick Slack after “ss” and “ss” is Slack from then on. Kept on this Mac, in state.json. Off, nothing new is kept and what's there isn't used. Forget deletes it." = "The rows you pick rise, and come first for what you typed: pick Slack after “ss” and “ss” is Slack from then on. Kept on this Mac, in state.json. Off, nothing new is kept and what's there isn't used. Forget deletes it.";
+
+"The screen" = "The screen";
+
+"The screenshot toolbar" = "The screenshot toolbar";
 
 "The scripts folder, as rows" = "The scripts folder, as rows";
 
@@ -2006,6 +2118,8 @@
 "Try again in a moment" = "Try again in a moment";
 
 "Try another spelling, or a bigger town nearby" = "Try another spelling, or a bigger town nearby";
+
+"Try it" = "Try it";
 
 "Try other words" = "Try other words";
 
@@ -2178,7 +2292,15 @@
 
 "What a pomodoro, a break or a timer plays when it ends." = "What a pomodoro, a break or a timer plays when it ends.";
 
+"What's due" = "What's due";
+
+"What's on a port" = "What's on a port";
+
 "What's running" = "What's running";
+
+"What's using memory" = "What's using memory";
+
+"What's using the processor" = "What's using the processor";
 
 "What’s listening on a port: port 3000" = "What’s listening on a port: port 3000";
 
@@ -2233,7 +2355,11 @@
 
 "Without Location Services, macOS keeps it from apps" = "Without Location Services, macOS keeps it from apps";
 
+"Words" = "Words";
+
 "Words in %@" = "Words in %@";
+
+"Words that mean the same" = "Words that mean the same";
 
 "Working hours end" = "Working hours end";
 
@@ -2252,6 +2378,8 @@
 /* What a percent off takes away: 20% off 80 */
 "You save %@" = "You save %@";
 
+"Your IP addresses" = "Your IP addresses";
+
 "Your Mac" = "Your Mac";
 
 "Your Mac's accent color" = "Your Mac's accent color";
@@ -2262,15 +2390,31 @@
 
 "Your commands" = "Your commands";
 
+"Your day" = "Your day";
+
+"Your free time" = "Your free time";
+
 "Your key stays in your Mac's keychain. Copperlight asks Todoist only when you add a to-do, show what's due or complete one." = "Your key stays in your Mac's keychain. Copperlight asks Todoist only when you add a to-do, show what's due or complete one.";
 
 "Your last note · Esc hides it" = "Your last note · Esc hides it";
 
+"Your latest downloads" = "Your latest downloads";
+
+"Your latest screenshots" = "Your latest screenshots";
+
+"Your month" = "Your month";
+
+"Your notes" = "Your notes";
+
 "Your notes that say it" = "Your notes that say it";
+
+"Your open tabs" = "Your open tabs";
 
 "Your open tabs, by title" = "Your open tabs, by title";
 
 "Your own color" = "Your own color";
+
+"Your week" = "Your week";
 
 "Your words replace the keyword's own: with wth for weather, “wth lisboa” and Tab give the Weather chip, and “weather” no longer does. Its words in your Mac's language go with it. To keep it too, write it in: weather, wth. Separate several with commas. Reset brings the keyword's own word back. For :, a word of symbols works beside it, stuck to what follows: ; for : is ;left. Saved in config.toml under [keywords]." = "Your words replace the keyword's own: with wth for weather, “wth lisboa” and Tab give the Weather chip, and “weather” no longer does. Its words in your Mac's language go with it. To keep it too, write it in: weather, wth. Separate several with commas. Reset brings the keyword's own word back. For :, a word of symbols works beside it, stuck to what follows: ; for : is ;left. Saved in config.toml under [keywords].";
 
@@ -2284,6 +2428,8 @@
 "a picture" = "a picture";
 
 "a word for %@ is empty" = "a word for %@ is empty";
+
+"any text" = "any text";
 
 /* Ends “Allow Copperlight in Accessibility to …” */
 "arrange windows" = "arrange windows";

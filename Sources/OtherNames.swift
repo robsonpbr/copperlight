@@ -57,6 +57,7 @@ let otherNames: [String: [String]] = [
     "Run Shell Command": ["shell", "terminal", "bash", "zsh"],
     "Open Config": ["config.toml"],
     // Copperlight
+    "Help": ["cheat sheet", "cheatsheet", "all commands", "list commands", "every command"],
     "Note": ["notepad", "scratchpad", "jot", "memo"],
     "Clipboard History": ["paste history", "copy history", "copied", "pasteboard"],
     "Copperlight Settings": ["preferences", "options"],

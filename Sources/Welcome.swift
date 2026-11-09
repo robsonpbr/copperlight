@@ -231,8 +231,8 @@ private struct WelcomeView: View {
             }
             .buttonStyle(PillButtonStyle(prominent: true)).keyboardShortcut(.defaultAction)
             .padding(.top, 26).rise(shown, 0.34)
-            Text("Open this again from the menu bar, or type “welcome”.")
-                .font(.system(size: 12)).foregroundStyle(.tertiary)
+            Text("Open this again from the menu bar, or type “welcome”. To see every command, type “help”.")
+                .font(.system(size: 12)).foregroundStyle(.tertiary).multilineTextAlignment(.center)
                 .padding(.top, 12).rise(shown, 0.38)
         }
         .padding(.horizontal, 44).padding(.top, 14).padding(.bottom, 26)
@@ -363,7 +363,7 @@ private struct Row<Trailing: View>: View {
 }
 
 /// The rounded, faintly filled group the rows sit in.
-private struct Tray: ViewModifier {
+struct Tray: ViewModifier {
     @Environment(\.colorScheme) private var scheme
 
     func body(content: Content) -> some View {
@@ -410,7 +410,7 @@ private struct PillButtonStyle: ButtonStyle {
 
 extension View {
     /// Fades and lifts into place `delay` seconds after `shown`; only fades with Reduce Motion on.
-    fileprivate func rise(_ shown: Bool, _ delay: Double) -> some View { modifier(Rise(shown: shown, delay: delay)) }
+    func rise(_ shown: Bool, _ delay: Double) -> some View { modifier(Rise(shown: shown, delay: delay)) }
 }
 
 private struct Rise: ViewModifier {

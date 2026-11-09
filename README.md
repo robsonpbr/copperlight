@@ -154,7 +154,8 @@ alone says it's a Friday. Before you finish typing, `in 3` already answers in da
 
 ## What you can type
 
-A taste of what the field understands. Enter does the obvious thing: opens, copies, pastes or runs.
+A taste of what the field understands; type `help` for all of it, on one sheet. Enter does the obvious thing: opens,
+copies, pastes or runs.
 
 ### Open and find
 
@@ -306,8 +307,8 @@ time it's rebuilt. If you'll rebuild it, see [Signing](DEVELOPMENT.md#signing).
 ### First launch
 
 The first launch opens a welcome window: the hotkey, a button for each permission, and Open at Login. After
-that Copperlight lives in the menu bar (the C), with no Dock icon. Press ⌥Space and type. Its menu has
-**Settings…** (or type `copperlight settings`).
+that Copperlight lives in the menu bar (the C), with no Dock icon. Press ⌥Space and type; `help` shows every command.
+Its menu has **Settings…** (or type `copperlight settings`).
 
 ## Permissions
 

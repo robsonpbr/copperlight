@@ -16,6 +16,7 @@ final class AppCore {
         let showClipboard: @MainActor @Sendable () -> Void
         let showClipboardPanel: @MainActor @Sendable () -> Void // already prepared: to show a notice
         let showWelcome: @MainActor @Sendable () -> Void
+        let showHelp: @MainActor @Sendable () -> Void
         let showSettings: @MainActor @Sendable (Pane?) -> Void
         let setHotkey: @MainActor @Sendable (Hotkey) -> Void
         let styleNotes: @MainActor @Sendable (Bool) -> Void // `[notes] markdown`
@@ -51,7 +52,7 @@ final class AppCore {
     let pomodoro: Pomodoro
     let countdown: Countdown
     let stopwatch: Stopwatch
-    private lazy var builtins = BuiltinProvider(showNote: actions.showNote, showClipboard: actions.showClipboard, showWelcome: actions.showWelcome,
+    private lazy var builtins = BuiltinProvider(showNote: actions.showNote, showClipboard: actions.showClipboard, showWelcome: actions.showWelcome, showHelp: actions.showHelp,
                                                 showSettings: { [actions] in actions.showSettings(nil) }, newNote: actions.newNote)
     private lazy var capture = CaptureProvider(addToNote: actions.addToNote, showSettings: { [actions] in actions.showSettings(.options) })
     private lazy var verbs = VerbProvider(verbs: Verb.launcher(files: files) + Verb.notes(release: actions.releaseNote), more: { frontMenuRows($0) })
@@ -131,6 +132,7 @@ final class AppCore {
         providers: clipboardProvider.map { [$0] } ?? [], searchesEmptyQuery: true,
         exclusive: clipboardProvider.map { [VerbProvider.prefix: VerbProvider(verbs: $0.verbs)] } ?? [:])
     private var configText: String? // last config.toml contents seen; nil = no file
+    private var config = Config() // the one in use, for what's asked later (`help`)
     private var configUpdate: Task<Void, Never>?
 
     /// Launch, in this order: the example config if there's none, the defaults (the "last valid config" if the file is
@@ -202,6 +204,7 @@ final class AppCore {
     }
 
     private func apply(_ config: Config) {
+        self.config = config
         Feature.use(config.features)
         Palette.shared.use(config.look.accent)
         actions.setHotkey(config.hotkeys.launcher)
@@ -242,6 +245,13 @@ final class AppCore {
             await files.setSettings(config.files)
             await apps.setOnline(config.apps.online)
         }
+    }
+
+    /// `help`: every command there is, as this Mac is set up now.
+    func cheatSheet() -> [CheatSection] {
+        cheatSections(verbs: verbs.verbs, clipboardVerbs: clipboardProvider?.verbs ?? [], commands: config.commands, snippets: config.snippets,
+                      scripts: scripts(in: scriptsDir), renamed: model.renamed, languageTable: languageKeywordTable(), expansions: model.keywords,
+                      hotkey: config.hotkeys.launcher.shortcut.description)
     }
 
     /// Once the last config has reached the providers, which it does in the background.

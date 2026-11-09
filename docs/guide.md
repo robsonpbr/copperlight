@@ -19,6 +19,13 @@ config.toml.
 The launcher is the only global hotkey, and the panel has no modifier keys: anything besides Enter is a
 command you type after `:`. Everything else (note, clipboard history, pomodoro…) is found by typing.
 
+**Every command on one sheet:** type `help` (`ajuda` in Portuguese), or pick Help in the menu bar. It lists everything
+you can type on this Mac, in groups: a feature you turned off isn't there, a keyword you renamed shows your word, and
+your own commands, snippets and scripts have a group of their own. Typing narrows it (`window`, `paste`, `:le`), ↑ ↓
+and ← → move, and Esc closes it. Enter or a click puts that command in the launcher, ready to finish: `timer` becomes
+its chip and waits for the time, `25 usd to eur` shows its answer, and `:shut down` waits for your Enter. Nothing runs
+from the sheet.
+
 **Your color:** Settings › General › Look sets the accent, the color of the field's edge, the selected row, chips
 and the titles over answers: Copper (the icon's), Your Mac's accent color (it follows System Settings › Appearance),
 or Your own color, from a color picker. It's `[look] accent` in config.toml.

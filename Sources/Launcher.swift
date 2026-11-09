@@ -316,6 +316,9 @@ final class SearchModel {
         query = modeMatch == nil ? yours(text) : text
     }
 
+    /// From the cheat sheet: a name that takes text becomes its chip, ready for yours; anything else goes in as it is.
+    func put(_ text: String) { fill(named(text + " ") == nil ? text : text + " ") }
+
     /// `text` with a replaced keyword's own word at its start spelled your way: "pick color " → "pc ".
     private func yours(_ text: String) -> String {
         guard let keyword = Keyword.retiredWord(text, in: retired), let word = renamed[keyword] else { return text }
@@ -1184,7 +1187,7 @@ struct ResultRow: View {
 }
 
 /// The selected row's wash in the icon's colors, under the rows: one for the list, so it glides from row to row.
-private struct SelectionWash: View {
+struct SelectionWash: View {
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {

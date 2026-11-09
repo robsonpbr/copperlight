@@ -5844,7 +5844,7 @@ private struct ChipOnly: ResultProvider {
 extension AppCore.Actions {
     /// No windows: what the tests' core does with them.
     static let none = AppCore.Actions(showTyping: { _ in }, showNote: { _ in }, newNote: { _ in }, addToNote: { _ in }, releaseNote: { _ in },
-                                      showClipboard: {}, showClipboardPanel: {}, showWelcome: {}, showSettings: { _ in }, setHotkey: { _ in },
+                                      showClipboard: {}, showClipboardPanel: {}, showWelcome: {}, showHelp: {}, showSettings: { _ in }, setHotkey: { _ in },
                                       styleNotes: { _ in }, configReloaded: {})
 }
 
@@ -5980,6 +5980,34 @@ private let coreAnswers = Duration.seconds(30)
         core.model.fill("")
     }
 
+    /// `help` in the real wiring: found by typing, and the sheet says what config.toml says. What Enter puts in the
+    /// launcher makes the chip Tab would, or goes in as typed.
+    @Test func helpFollowsConfig() async throws {
+        defer { Feature.use(Config().features) }
+        let (core, _) = try await startedCore(config: """
+            [features]
+            qr = false
+            [keywords]
+            timer = "tm"
+            [[snippet]]
+            name = "sig"
+            text = "Best, Ana"
+            """)
+        #expect(await rows(core.model, typing: "help").first == "builtin:help")
+        let lines = core.cheatSheet().flatMap(\.lines)
+        #expect(!lines.contains { $0.fill == "qr" })
+        #expect(lines.contains { $0.typed == "tm 10m tea" && $0.fill == "timer" })
+        #expect(lines.contains { $0.typed == "sig" && $0.about == "Best, Ana" })
+        #expect(lines.contains { $0.fill == ":left" } && lines.contains { $0.fill == "uuid" })
+        core.model.put("timer")
+        #expect(core.model.mode?.prefix == "timer ")
+        core.model.put("25 usd to eur")
+        #expect(core.model.mode == nil && core.model.query == "25 usd to eur")
+        core.model.put(":left")
+        #expect(core.model.mode == nil && core.model.query == ":left")
+        core.model.fill("")
+    }
+
     /// Nothing a test does can reach your real files: the folder they all come from is its own.
     @Test func testsKeepToTheirOwnFolder() {
         #expect(configDir.path.hasPrefix(FileManager.default.temporaryDirectory.path))
@@ -5996,4 +6024,198 @@ private let coreAnswers = Duration.seconds(30)
     let working = try ClipboardStore()
     try working.record("hello", app: nil)
     #expect(await ClipboardProvider(store: working, paste: { _ in }, copy: { _ in }).results(for: "").map(\.title) == ["hello"])
+}
+
+// MARK: The cheat sheet
+
+/// Every command there is, whatever you've set up: nothing here reads the Mac's features or files.
+@MainActor private func wholeSheet(isOn: (Feature) -> Bool = { _ in true }) -> [CheatSection] {
+    cheatSections(verbs: Verb.launcher(files: FileSearchProvider()) + Verb.notes(release: { _ in }),
+                  commands: [.init(alias: "gh", action: .url("https://github.com/search?q={query}", browser: nil, profile: nil))],
+                  snippets: [.init(name: "sig", text: "Best,\nAna")],
+                  scripts: [Script(path: "/tmp/deploy", name: "deploy", title: "Deploy App")], isOn: isOn)
+}
+
+/// A new keyword, `:` command or text tool is on the sheet by itself, or the sheet fails here.
+@MainActor @Test func cheatSheetHasEverything() {
+    let verbs = Verb.launcher(files: FileSearchProvider()) + Verb.notes(release: { _ in })
+    let lines = wholeSheet().flatMap(\.lines)
+    let fills = Set(lines.compactMap(\.fill))
+    for keyword in Keyword.all { #expect(fills.contains(keyword), "\(keyword)") }
+    for verb in verbs { #expect(fills.contains(":" + verb.keyword), "\(verb.keyword)") }
+    for tool in textTools { #expect(fills.contains(tool.name), "\(tool.name)") }
+    #expect(Set(lines.map(\.id)).count == lines.count, "the same line twice")
+    #expect(lines.allSatisfy { !$0.typed.isEmpty && !$0.about.isEmpty })
+    #expect(Set(wholeSheet().map(\.id)).count == wholeSheet().count, "the same section twice")
+}
+
+/// Turning a feature off takes its lines away, for every feature: a new one without a line here fails. Links without
+/// tracking is the one with nothing to type.
+@MainActor @Test func cheatSheetLeavesOutWhatsOff() {
+    let everything = wholeSheet().flatMap(\.lines).count
+    for feature in Feature.listed where feature != .cleanLinks {
+        #expect(wholeSheet(isOn: { $0 != feature }).flatMap(\.lines).count < everything, "\(feature) has no line")
+    }
+    let none = wholeSheet(isOn: { _ in false })
+    #expect(!none.isEmpty && !none.flatMap(\.lines).contains { $0.fill == "weather" || $0.fill == ":left" || $0.fill == "sig" })
+    #expect(none.allSatisfy { !$0.lines.isEmpty }, "a section with nothing in it")
+}
+
+/// It shows the word you'd type: yours, else your language's, else its own. Enter still goes by the keyword, which the
+/// launcher turns into yours.
+@Test @MainActor func cheatSheetSaysYourWords() {
+    let verbs: [Verb] = []
+    let typed = { (sections: [CheatSection]) in sections.flatMap(\.lines).first { $0.fill == "weather" }?.typed }
+    #expect(typed(cheatSections(verbs: verbs, isOn: { _ in true })) == "weather lisbon")
+    #expect(typed(cheatSections(verbs: verbs, renamed: ["weather": "wth"], isOn: { _ in true })) == "wth lisbon")
+    let portuguese = ["weather": "clima, tempo"]
+    #expect(typed(cheatSections(verbs: verbs, languageTable: portuguese, expansions: ["clima": "weather", "tempo": "weather"],
+                                isOn: { _ in true })) == "clima lisbon")
+    // `language = false`, or a word of the language that's your command's name: nothing expands it, so it isn't shown.
+    #expect(typed(cheatSections(verbs: verbs, languageTable: portuguese, isOn: { _ in true })) == "weather lisbon")
+    #expect(typed(cheatSections(verbs: verbs, renamed: ["weather": "wth"], languageTable: portuguese, expansions: ["clima": "weather"],
+                                isOn: { _ in true })) == "wth lisbon")
+}
+
+/// Your own commands, snippets and scripts are there by name, saying what they are.
+@MainActor @Test func cheatSheetShowsYours() throws {
+    let yours = try #require(wholeSheet().first { $0.lines.contains { $0.typed == "gh" } })
+    #expect(yours.lines.map(\.typed) == ["gh", "sig", "deploy"] && yours.lines.map(\.fill) == ["gh", "sig", "deploy"])
+    #expect(yours.lines.map(\.about) == ["https://github.com/search?q={query}", "Best, Ana", "Deploy App"])
+    #expect(!cheatSections(verbs: [], isOn: { _ in true }).contains { $0.title == yours.title }, "no section without any")
+}
+
+/// Every word has to be in the line, its section's title or the keyword behind it, accents and case aside.
+@Test func cheatSheetSearch() {
+    let sections = [CheatSection(title: "Windows", symbol: "macwindow", lines: [.init(typed: ":left", about: "Left Half", fill: ":left"),
+                                                                                 .init(typed: ":close", about: "Close Window", fill: ":close")]),
+                    CheatSection(title: "Seu dia", symbol: "calendar", lines: [.init(typed: "clima lisbon", about: "Previsão", fill: "weather"),
+                                                                                .init(typed: "semana", about: "Sua semana", fill: "week")])]
+    let typed = { (filter: String) in cheatMatching(sections, filter).flatMap(\.lines).map(\.typed) }
+    #expect(typed("") == [":left", ":close", "clima lisbon", "semana"] && typed("   ") == typed(""))
+    #expect(typed("window") == [":left", ":close"], "a section's name lists it")
+    #expect(typed(":le") == [":left"] && typed("LEFT") == [":left"])
+    #expect(typed("previsao") == ["clima lisbon"], "without its accent")
+    #expect(typed("weather") == ["clima lisbon"], "the keyword, on a Mac in another language")
+    #expect(typed("sua semana") == ["semana"] && typed("left close").isEmpty, "every word, in the same line")
+    #expect(cheatMatching(sections, "zzz").isEmpty, "no empty section left over")
+}
+
+/// Each section once, in its order, onto the shortest column: none ends up far longer than the rest.
+@Test func cheatSheetColumns() {
+    let sizes = [12, 3, 8, 5, 20, 2, 9, 6, 4, 7]
+    let sections = sizes.enumerated().map { index, size in
+        CheatSection(title: "\(index)", symbol: "", lines: (0..<size).map { .init(typed: "\($0)", about: "") })
+    }
+    let columns = cheatColumns(sections, count: 3)
+    #expect(columns.count == 3 && columns.flatMap(\.self).map(\.id).sorted() == sections.map(\.id).sorted())
+    #expect(columns.allSatisfy { column in column.map { Int($0.id)! } == column.map { Int($0.id)! }.sorted() })
+    let heights = columns.map { $0.reduce(0) { $0 + $1.lines.count + 3 } }
+    #expect(heights.max()! - heights.min()! <= sizes.max()! + 3)
+    #expect(cheatColumns(sections, count: 1) == [sections] && cheatColumns([], count: 3).flatMap(\.self).isEmpty)
+}
+
+/// A search that leaves one long section flows it across the columns, in order, rather than down the first one. Short
+/// ones stay whole, and so does anything while there are enough sections to fill the columns.
+@Test func cheatSheetFlowsLongResults() {
+    let section = { (title: String, size: Int) in CheatSection(title: title, symbol: "", lines: (0..<size).map { .init(typed: "\(title)\($0)", about: "") }) }
+    let long = section("Windows", 28)
+    let flowed = cheatColumns([long], count: 4)
+    #expect(flowed.map { $0.flatMap(\.lines).count } == [7, 7, 7, 7])
+    #expect(flowed.flatMap(\.self).flatMap(\.lines) == long.lines && flowed.flatMap(\.self).allSatisfy { $0.title == "Windows" })
+    #expect(Set(flowed.flatMap(\.self).map(\.id)).count == 4, "each piece has its own id")
+    #expect(cheatColumns([section("A", 5), section("B", 3)], count: 4).map(\.count) == [1, 1, 0, 0])
+    #expect(cheatColumns([long, section("B", 3)], count: 2).map { $0.flatMap(\.lines).count } == [28, 3], "enough sections")
+}
+
+@MainActor private func cheatModel() -> CheatSheet {
+    let model = CheatSheet()
+    model.columns = 2
+    model.sections = [CheatSection(title: "One", symbol: "", lines: [.init(typed: "a", about: "A", fill: "a"), .init(typed: "b", about: "B", fill: "b")]),
+                      CheatSection(title: "Keys", symbol: "", lines: [.init(typed: "⌘B", about: "Bold")]),
+                      CheatSection(title: "Two", symbol: "", lines: [.init(typed: "c", about: "C", fill: "c")])]
+    return model
+}
+
+/// ↑ ↓ go through what Enter can fill in, a key to press being skipped, and stop at the ends; a search starts at the top.
+@MainActor @Test func cheatSheetMoves() {
+    let model = cheatModel()
+    #expect(model.lines.map(\.typed) == ["a", "b", "c"] && model.selected?.typed == "a")
+    model.move(-1)
+    #expect(model.selected?.typed == "a")
+    model.move(1); model.move(1); model.move(1)
+    #expect(model.selected?.typed == "c")
+    model.filter = "" // the field writes back what it already has
+    #expect(model.selected?.typed == "c", "still where it was")
+    model.filter = "b"
+    #expect(model.lines.map(\.typed) == ["b"] && model.selected?.typed == "b")
+    model.filter = "zzz"
+    #expect(model.selected == nil)
+    model.move(1)
+    #expect(model.selected == nil)
+    model.filter = ""
+    model.hop(1)
+    #expect(model.selected?.typed == "c", "the next section's first line")
+    model.hop(1)
+    #expect(model.selected?.typed == "c")
+    model.hop(-1)
+    #expect(model.selected?.typed == "a")
+}
+
+/// ← → go to the next column at about the same height, or its last line if it's shorter.
+@MainActor @Test func cheatSheetHopsAcross() {
+    let model = CheatSheet()
+    model.columns = 2
+    let section = { (title: String, typed: [String]) in CheatSection(title: title, symbol: "", lines: typed.map { .init(typed: $0, about: "", fill: $0) }) }
+    model.sections = [section("L", ["a", "b", "c", "d"]), section("R", ["e", "f"])]
+    model.move(1)
+    model.hop(1)
+    #expect(model.selected?.typed == "f", "the same height")
+    model.hop(-1)
+    #expect(model.selected?.typed == "b")
+    model.move(2)
+    model.hop(1)
+    #expect(model.selected?.typed == "f", "a shorter column: its last line")
+}
+
+@MainActor private func press(_ code: UInt16, on panel: CheatSheetPanel) throws {
+    panel.sendEvent(try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil,
+                                                  characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: code)))
+}
+
+/// The keys, on a panel that's never shown. Enter hands over what it fills in and runs nothing; ← → hop while there's
+/// no text for them to move through.
+@MainActor @Test func cheatSheetKeys() throws {
+    var filled: [String] = []
+    let panel = CheatSheetPanel(fill: { filled.append($0) })
+    panel.model.columns = 2
+    panel.model.sections = cheatModel().sections
+    try press(125, on: panel) // ↓
+    #expect(panel.model.selected?.typed == "b")
+    try press(36, on: panel) // Return
+    #expect(filled == ["b"])
+    try press(124, on: panel) // →
+    #expect(panel.model.selected?.typed == "c")
+    try press(123, on: panel) // ←
+    #expect(panel.model.selected?.typed == "a")
+    panel.model.filter = "a"
+    try press(124, on: panel)
+    #expect(panel.model.selected?.typed == "a", "→ moves in the text")
+    try press(48, on: panel) // Tab, as in the launcher
+    #expect(filled == ["b", "a"])
+    panel.model.filter = "zzz"
+    try press(36, on: panel)
+    #expect(filled == ["b", "a"], "nothing to fill in")
+}
+
+/// `help`: found from 3 letters, like `welcome`, and what it opens is the sheet.
+@MainActor @Test func helpRow() async throws {
+    var opened = 0
+    let provider = BuiltinProvider(showNote: { _ in }, showClipboard: {}, showHelp: { opened += 1 })
+    let row = try #require(provider.results(for: "hel").first { $0.id == "builtin:help" })
+    #expect(row.title == "Help" && row.score == 50 && row.completion == nil)
+    row.action()
+    #expect(opened == 1)
+    #expect(provider.results(for: "cheat sheet").contains { $0.id == "builtin:help" }, "its other names")
+    #expect(provider.results(for: "he").first { $0.id == "builtin:help" }?.score != 50)
 }

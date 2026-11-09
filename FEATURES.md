@@ -73,6 +73,7 @@ Settings › Keywords, or `[keywords]` (`weather = "wth"`); `:` gets yours besid
 | `speed` | An internet speed test (macOS's `networkQuality`) | Runs it, then copies the result |
 | `cpu`, `memory`, `cpu chrome` | Your processes, the busiest first by CPU or by memory | Ends it, or quits an app (asks first) |
 | `:layout save work`, `:layout work` | Every window on screen, saved by name | Saves them, or puts them back |
+| `help`, `cheat sheet` | Every command there is, on one sheet | Puts the one you pick in the launcher |
 
 ## The launcher
 
@@ -514,6 +515,12 @@ The row shows the title and date Copperlight read before you press Enter; a noti
 - **Codes from Messages** (`codes`, `2fa`, `otp`): the verification codes in the messages of the last 15 minutes,
   newest first, with who sent them; Tab shows the message, Enter copies the code. Read from Messages' own database
   on this Mac, which takes Full Disk Access (a row says where to give it).
+- **Help** (`help`, or `cheat sheet`; Help in the menu bar too): every command there is, on one sheet in the launcher's
+  glass: the keywords with an example, the `:` commands, the text tools, your own commands, snippets and scripts, and
+  the keys. It's this Mac's: a feature that's off isn't there, and a keyword shows your word for it, or your language's.
+  Typing narrows it, by what you'd type, what it does or its group. ↑ ↓ and ← → move. Enter or a click closes it and
+  puts that command in the launcher, a name that takes text as its chip; nothing runs until you press Enter there. Esc
+  closes it.
 - **Welcome** (`welcome`): opens by itself on first launch. Shows the hotkey and checks it off once you've
   pressed it; Allow buttons for Accessibility, Calendars, Reminders and Notifications, each turning into a
   check as soon as macOS says yes (Open Settings if it was refused); Open at Login; Start Typing (Enter) opens
@@ -556,7 +563,7 @@ one it can't make cleanly is refused, and the file stays as it was. Edits made b
 
 ## Menu bar
 
-The C, with Settings… (⌘,), Welcome to Copperlight, Launch at Login and Quit. A running pomodoro or timer adds its countdown next to it,
+The C, with Settings… (⌘,), Welcome to Copperlight, Help, Launch at Login and Quit. A running pomodoro or timer adds its countdown next to it,
 and `:awake` a sun while it keeps the Mac awake (click either to stop it; for a while, its menu says until when). Keeping
 awake ends when its time is up, or when Copperlight quits.
 
