@@ -26,6 +26,14 @@ and ← → move, and Esc closes it. Enter or a click puts that command in the l
 its chip and waits for the time, `25 usd to eur` shows its answer, and `:shut down` waits for your Enter. Nothing runs
 from the sheet.
 
+**A new version:** once a day, Copperlight asks GitHub for the latest version number and sends nothing else. When a
+newer one is out, the empty launcher says so at the bottom: Enter opens the download page, and Tab offers Skip This
+Version, quiet until the next one. The menu bar has it too. Download the zip and replace the app in Applications: your
+settings and permissions stay. Settings › Features › Update check turns it off.
+
+**Reporting a problem:** Settings › About › Copy Diagnostics copies the versions, the permissions and what's wrong, to
+paste in an issue. Nothing you typed or copied is in it, and your home folder shows as `~`.
+
 **Your color:** Settings › General › Look sets the accent, the color of the field's edge, the selected row, chips
 and the titles over answers: Copper (the icon's), Your Mac's accent color (it follows System Settings › Appearance),
 or Your own color, from a color picker. It's `[look] accent` in config.toml.
@@ -82,7 +90,9 @@ A calculation shows on a band over its row: what you typed = the answer, big, an
 20%`: "20% of 150 is 30"; `20% off 80`: "You save 16"). A currency too: what you had → what it makes, with
 the rate and the two flags faintly behind; Enter copies it as money (€21.48), the row below the number alone. Rates
 are live, from Coinbase's public rates (every currency in one request, so it never learns which one you convert),
-fetched when you open the launcher and they're over 5 minutes old; the band says how fresh they are. Crypto converts
+fetched when you open the launcher and they're over 5 minutes old; the band says how fresh they are. Numbers follow
+your Mac's number format (System Settings › General › Language & Region): where it writes `1.234,56`, type `12,5 * 2`
+and the answer is `25`, and `10 / 4` is `2,5`. With both marks, the last one is the decimal point on any Mac. Crypto converts
 too: `0.1 btc in eur`.
 
 **Chips:** a name that takes text (`translate `, `define `, `spell `, `emoji `, `stock `, `qr `, `large `, `contact `, `tabs `, `pomo `, `timer `, `port `, `note `, `add todo `, `add event `, `add note `,

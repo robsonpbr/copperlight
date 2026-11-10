@@ -9,14 +9,14 @@ let lastAnswer = Mutex<Double?>(nil)
 /// or that isn't really math (a bare number like `42`, a lone constant like `pi`).
 /// Besides Expression's math: `20% of 150`, `150 + 20%` (20% of 150 added), `20% off 80`, `30 is what % of 150`,
 /// `0b1010`, `10k` (in math: `10k * 3`), and `ans`.
-func calculate(_ query: String, ans: Double? = nil) -> Double? {
-    var text = query.trimmingCharacters(in: .whitespaces)
+func calculate(_ query: String, ans: Double? = nil, mark: String = decimalMark) -> Double? {
+    var text = plainNumbers(query.trimmingCharacters(in: .whitespaces), mark: mark)
     // Empty parens: Expression 0.13.9 crashes (out-of-range index) describing the error for
     // inputs like "x 2()". No math needs them. Fuzzed ~6M random inputs with this guard: no crash.
     guard Double(text) == nil, !text.contains(#/\(\s*\)/#) else { return nil }
     text = text.replacing(#/\b0b([01]+)\b/#) { binary in Int(binary.1, radix: 2).map(String.init) ?? String(binary.0) }
     // Thousands, as plain digits: "10k" alone stays a number, which isn't math.
-    text = text.replacing(#/\b(\d+(?:\.\d+)?)k\b/#) { short in Double(short.1).map { formatNumber($0 * 1000) } ?? String(short.0) }
+    text = text.replacing(#/\b(\d+(?:\.\d+)?)k\b/#) { short in Double(short.1).map { formatNumber($0 * 1000, mark: ".") } ?? String(short.0) }
     // Expression's % is the remainder (10 % 3), so only these shapes mean percent.
     if let percent = text.wholeMatch(of: #/(\d+(?:\.\d+)?)\s*%\s+of\s+(.+)/#) {
         text = "(\(percent.1) / 100) * (\(percent.2))"
@@ -63,17 +63,17 @@ func convertBase(_ query: String, ans: Double? = nil) -> String? {
 }
 
 /// What a percentage hid: `150 + 20%` → "20% of 150 is 30", `20% off 80` → "You save 16". nil for any other shape.
-func percentNote(_ query: String, ans: Double? = nil) -> String? {
-    let text = query.trimmingCharacters(in: .whitespaces)
-    let value = { (part: Substring) in Double(part) ?? calculate(String(part), ans: ans) }
+func percentNote(_ query: String, ans: Double? = nil, mark: String = decimalMark) -> String? {
+    let text = plainNumbers(query.trimmingCharacters(in: .whitespaces), mark: mark)
+    let value = { (part: Substring) in Double(part) ?? calculate(String(part), ans: ans, mark: ".") }
     if let off = text.wholeMatch(of: #/(\d+(?:\.\d+)?)\s*%\s+off\s+(.+)/#), let base = value(off.2), let percent = Double(off.1) {
-        return String(localized: "You save \(formatNumber(base * percent / 100))", comment: "What a percent off takes away: 20% off 80")
+        return String(localized: "You save \(formatNumber(base * percent / 100, mark: mark))", comment: "What a percent off takes away: 20% off 80")
     }
     // The shapes `calculate` reads first: "20% of 150 + 10%" is 20% of 165.
     guard !text.contains(#/%\s+of\s/#), !text.contains(#/(?i)\bwhat\s*(?:%|percent)/#),
           let change = text.wholeMatch(of: #/(.+?)\s*[+-]\s*(\d+(?:\.\d+)?)\s*%/#), let base = value(change.1), let percent = Double(change.2)
     else { return nil }
-    return String(localized: "\(String(change.2))% of \(formatNumber(base)) is \(formatNumber(base * percent / 100))")
+    return String(localized: "\(formatNumber(percent, mark: mark))% of \(formatNumber(base, mark: mark)) is \(formatNumber(base * percent / 100, mark: mark))")
 }
 
 /// The result on a band, what was typed = the answer; its row copies it with Enter, and Tab puts it in the field

@@ -210,6 +210,10 @@ Settings › Keywords, or `[keywords]` (`weather = "wth"`); `:` gets yours besid
   - Hex and binary: `0xff + 1`, `0b1010 * 2`; `255 in hex` (0xFF), `0xff in dec`, `(2^8 - 1) to binary`; `0xff`
     alone shows 255.
   - `ans`: the last result you copied with Enter (`ans * 2`, `ans in hex`). Forgotten on quit.
+- **Decimal marks:** as your Mac writes numbers (System Settings › General › Language & Region › Number format). Where
+  it writes `1.234,56`, a comma is the decimal point (`12,5 * 2`, `39,90 eur`), and answers come back with one: `2,5`,
+  €1.234,56. A number with both marks reads right on any Mac: `1.234,56` and `1,234.56` are both 1234.56. Answers are
+  never grouped, so they paste into a spreadsheet set up the same way.
 - **Currency:** `25 usd to eur`, `12,50 gbp in brl`, `100jpy usd`. On a band: what you had → what it makes, big,
   with the currency names, the rate (`1 USD = 0.8593 EUR`) and how fresh it is ("Live rate, 2 min ago"), and both flags faintly behind, one at each end.
   Enter copies it as money (€21.48); the row below copies the number alone (21.48). Without a target, it converts to
@@ -558,14 +562,21 @@ and a city for the weather, your cities for `time`, what a color is copied as, M
 lengths, and the sound a pomodoro or a timer ends with), Keywords (your own words in place of each keyword's, with Reset, and your language's), Clipboard (how much to keep, apps not recorded), Files (folders
 searched, names hidden, app descriptions online or not),
 Browser (where links open, which profile), Commands and Snippets (add, edit, delete), and About (version, license,
-and the open source it's built with). Every change goes straight into config.toml, editing only its own lines, comments kept;
+Copy Diagnostics for a bug report, and the open source it's built with). Every change goes straight into config.toml, editing only its own lines, comments kept;
 one it can't make cleanly is refused, and the file stays as it was. Edits made by hand show up in the window.
 
 ## Menu bar
 
-The C, with Settings… (⌘,), Welcome to Copperlight, Help, Launch at Login and Quit. A running pomodoro or timer adds its countdown next to it,
+The C, with Settings… (⌘,), Welcome to Copperlight, Help, Launch at Login and Quit, and Update to Copperlight 0.17… on top when a new version is out. A running pomodoro or timer adds its countdown next to it,
 and `:awake` a sun while it keeps the Mac awake (click either to stop it; for a while, its menu says until when). Keeping
 awake ends when its time is up, or when Copperlight quits.
+
+## Updates
+
+Once a day, when you open the launcher, Copperlight asks GitHub for the latest version number and sends nothing else.
+When a newer one is out, a row waits at the bottom of the empty launcher: Enter opens the download page, Tab offers Skip
+This Version, quiet until the next one. It doesn't install anything. `updates = false` under `[features]`, or Settings ›
+Features, turns the check off.
 
 ## Permissions
 

@@ -16,8 +16,8 @@ you leaves your Mac. Ideas are welcome: [open an issue](https://github.com/robso
 1.0 means it updates itself, your settings won't break under you, and it works for everyone, in their language and
 with VoiceOver.
 
-- **Updates:** tell you when a new version is out, and install it, checking that it's really Copperlight first.
-- **Settings for everything:** the options still missing (decimals and separators for math, a stock watchlist,
+- **Updates:** install a new version for you, checking that it's really Copperlight first.
+- **Settings for everything:** the options still missing (how many decimals math shows, a stock watchlist,
   which dictionary), a search over all of Settings, and resetting a feature to its defaults. Turning any feature off,
   your own words for its keyword (even the `:` prefix) and Settings › Options are done.
 - **Settings that last:** every config.toml key and the saved state settled before 1.0; after it, old keys keep
@@ -25,7 +25,7 @@ with VoiceOver.
 - **Other languages:** the whole interface, rows, Settings and docs in other languages; what you type stays as it is.
 - **VoiceOver:** every row, chip and answer card read out properly.
 - **Sturdier:** with permissions refused, on several screens, in other number and date formats, on Intel, and after
-  weeks of clipboard history; Copy Diagnostics in About, for reporting a problem without crash reports.
+  weeks of clipboard history.
 - **If it's ready:** `brew install` through Copperlight's own tap.
 
 Roughly in that order, then a few weeks of daily use with fixes only.
@@ -65,7 +65,9 @@ Roughly in that order, then a few weeks of daily use with fixes only.
 ## Done
 
 - **v0.17:** `help`: every command there is on one sheet, as this Mac is set up. Search it, and Enter puts one in the
-  launcher.
+  launcher. Copperlight says when a new version is out, in the empty launcher and the menu bar, from a check once a
+  day. Copy Diagnostics in Settings › About, for a bug report.
+  Math, currency and units read and write numbers as your Mac does: `12,5 * 2` where it writes `1.234,56`.
 - **v0.16:** keys in notes: ⌘B, ⌘I, ⌘E, ⌘K, ⌘1 to ⌘3, ⌘⇧7, ⌘⇧9, ⌘⇧L and ⌘' write the Markdown and take it off again,
   and `***bold italic***` draws as both. Enter goes on with a list. ⌘+, ⌘- and ⌘0 set one text size for every note.
 - **v0.15:** Copperlight in your Mac's language: Portuguese from Brazil and from Portugal first, each keyword with

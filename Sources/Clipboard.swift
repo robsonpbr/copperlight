@@ -170,6 +170,8 @@ struct ClipboardStore: Sendable {
     }
 
     /// Everything but the pinned items.
+    func count() throws -> Int { try db.read { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM item") ?? 0 } }
+
     func clear() throws {
         try db.write { try $0.execute(sql: "DELETE FROM item WHERE pinned = 0") }
     }

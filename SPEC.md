@@ -1,7 +1,8 @@
 # Copperlight — Spec
 
 A minimal macOS launcher, and it stays small: no plugin store, no AI service, no sync, no accounts, no credentials.
-Its only requests are public and say nothing about you: currency rates, and for app search Homebrew's app list, app
+Its only requests are public and say nothing about you: currency rates, the latest version number from GitHub once a
+day (`[features] updates = false` turns it off; decided 2026-11-09), and for app search Homebrew's app list, app
 homepages and App Store descriptions, which `[apps] online = false` turns off. The exceptions say what you asked
 for, and only when you ask: `stock AAPL` sends that ticker to Yahoo Finance, in the Stock chip only (Tab) and once
 typing pauses, kept a minute; Enter on the Public IP row (`ip`) asks api.ipify.org (decided 2026-10-28); Enter on `speed` runs macOS's

@@ -83,6 +83,24 @@ func calculatorRejectsNonMath(_ input: String) {
     #expect(formatNumber(5, decimals: 2...2) == "5.00")
 }
 
+@Test func decimalCommaWhereTheMacUsesOne() {
+    // Both marks: the last one is the decimal point, on any Mac.
+    #expect(calculate("1.234,5 + 0.5") == 1235 && calculate("1,234.5 + 0.5") == 1235)
+    #expect(calculate("1.234.567,5 * 2") == 2_469_135 && calculate("max(1,2.5)") == 2.5)
+    // A lone comma is the decimal point only where the Mac's is one: elsewhere it parts a function's arguments.
+    #expect(calculate("12,5 * 2", mark: ",") == 25 && calculate("12,5 * 2") == nil && calculate("max(1,2)") == 2)
+    #expect(calculate("12,5% of 80", mark: ",") == 10 && calculate("1,5k * 2", mark: ",") == 3000)
+    #expect(calculate("12,5", mark: ",") == nil) // a number alone still isn't math
+    #expect(percentNote("150 + 12,5%", mark: ",") == "12,5% of 150 is 18,75")
+    // Answers come back with the Mac's mark, never grouped, so they paste into a spreadsheet set up the same way.
+    #expect(formatNumber(2.5, mark: ",") == "2,5" && formatNumber(1_234_567.5, mark: ",") == "1234567,5")
+    #expect(parseCurrency("1.234,56 eur usd")?.amount == 1234.56 && parseCurrency("1,234.56 usd eur")?.amount == 1234.56)
+    #expect(parseCurrency("39,90 * 2 eur", mark: ",")?.amount == 79.8)
+    #expect(parseUnits("1.234,5 km in mi")?.value == 1234.5)
+    let rows = currencyRows(CurrencyQuery(amount: 1234.56, from: "EUR", to: "EUR"), rates: ["EUR": 1], updated: .now, mark: ",")
+    #expect(rows.map(\.title) == ["Copy €1.234,56", "Copy 1234,56"])
+}
+
 // MARK: Currency
 
 @Test(arguments: [
@@ -4760,7 +4778,7 @@ private struct Carded: ResultProvider {
     let file = FileManager.default.temporaryDirectory.appending(path: "settings-\(UUID().uuidString).toml")
     defer { try? FileManager.default.removeItem(at: file) }
     try Config.example.write(to: file, atomically: true, encoding: .utf8)
-    let window = SettingsWindow(showWelcome: {}, forget: { _ in }, file: file)
+    let window = SettingsWindow(showWelcome: {}, forget: { _ in }, diagnostics: { "" }, file: file)
     window.model.problem = "config.toml has a mistake (line 3). Fix it there and these settings come back."
     window.setFrameOrigin(NSPoint(x: -6000, y: -6000)) // off every screen
     window.orderFrontRegardless()
@@ -5848,6 +5866,110 @@ extension AppCore.Actions {
                                       styleNotes: { _ in }, configReloaded: {})
 }
 
+// MARK: Update check
+
+/// GitHub, for the update check: says `latest`, or nothing, and counts the asking.
+private final class FakeGitHub: Sendable {
+    private let state: Mutex<(latest: String?, asked: Int)>
+    init(latest: String?) { state = Mutex((latest, 0)) }
+    var asked: Int { state.withLock { $0.asked } }
+    func says(_ latest: String?) { state.withLock { $0.latest = latest } }
+    var answer: @Sendable () async -> Data? {
+        { [self] in
+            state.withLock { state in
+                state.asked += 1
+                return state.latest.map { Data("{\"tag_name\": \"v\($0)\"}".utf8) }
+            }
+        }
+    }
+}
+
+private let updateStart = Date(timeIntervalSince1970: 1_800_000_000) // whole seconds: it goes through StateStore
+private let hours: TimeInterval = 3600
+@MainActor private func updateStore() -> StateStore {
+    StateStore(file: FileManager.default.temporaryDirectory.appending(path: "copperlight-update-\(UUID().uuidString).json"))
+}
+
+@Test func versionsCompareAsNumbers() {
+    #expect(isNewerVersion("0.17", than: "0.16"))
+    #expect(isNewerVersion("0.17", than: "0.9"), "as numbers, not letters")
+    #expect(isNewerVersion("1.0", than: "0.17"))
+    #expect(isNewerVersion("0.17.1", than: "0.17"))
+    #expect(!isNewerVersion("0.16", than: "0.16"))
+    #expect(!isNewerVersion("0.15", than: "0.16"), "a build ahead of the release")
+}
+
+@Test func latestVersionFromGitHub() throws {
+    // What api.github.com/repos/robsonpbr/copperlight/releases/latest answered (Tests/Fixtures, trimmed to a few fields).
+    let recorded = try Data(contentsOf: URL(filePath: #filePath).deletingLastPathComponent().appending(path: "Fixtures/github-latest-release.json"))
+    #expect(latestVersion(in: recorded) == "0.16")
+    #expect(latestVersion(in: Data(#"{"tag_name": "0.17.1"}"#.utf8)) == "0.17.1")
+    #expect(latestVersion(in: Data(#"{"tag_name": "nightly"}"#.utf8)) == nil, "not a version, so never a newer one")
+    #expect(latestVersion(in: Data(#"{"message": "API rate limit exceeded"}"#.utf8)) == nil)
+    #expect(latestVersion(in: Data("<html>".utf8)) == nil)
+}
+
+@MainActor @Test func updateCheckAsksOnceADay() async {
+    let github = FakeGitHub(latest: "0.17")
+    let check = UpdateCheck(store: updateStore(), current: "0.16", fetch: github.answer)
+    #expect(check.available == nil, "nothing known before asking")
+    await check.refreshIfStale(now: updateStart)
+    #expect(check.available == "0.17" && github.asked == 1)
+    await check.refreshIfStale(now: updateStart.addingTimeInterval(23 * hours))
+    #expect(github.asked == 1)
+    await check.refreshIfStale(now: updateStart.addingTimeInterval(24 * hours))
+    #expect(github.asked == 2)
+}
+
+/// Quitting neither asks again nor forgets, and once you've updated it's quiet by itself.
+@MainActor @Test func updateCheckSurvivesARestart() async {
+    let github = FakeGitHub(latest: "0.17")
+    let store = updateStore()
+    await UpdateCheck(store: store, current: "0.16", fetch: github.answer).refreshIfStale(now: updateStart)
+    let relaunched = UpdateCheck(store: store, current: "0.16", fetch: github.answer)
+    #expect(relaunched.available == "0.17")
+    await relaunched.refreshIfStale(now: updateStart.addingTimeInterval(hours))
+    #expect(github.asked == 1)
+    #expect(UpdateCheck(store: store, current: "0.17", fetch: github.answer).available == nil)
+}
+
+/// A request that fails is still the day's one request, and what was known stays.
+@MainActor @Test func updateCheckFailureKeepsWhatItKnew() async {
+    let github = FakeGitHub(latest: "0.17")
+    let check = UpdateCheck(store: updateStore(), current: "0.16", fetch: github.answer)
+    await check.refreshIfStale(now: updateStart)
+    github.says(nil)
+    await check.refreshIfStale(now: updateStart.addingTimeInterval(24 * hours))
+    #expect(check.available == "0.17" && github.asked == 2)
+    await check.refreshIfStale(now: updateStart.addingTimeInterval(25 * hours))
+    #expect(github.asked == 2)
+}
+
+/// Enter opens the page; Tab's Skip quiets the row until a newer one, and the menu bar still has it.
+@MainActor @Test func updateRowSkips() async throws {
+    let github = FakeGitHub(latest: "0.17")
+    let store = updateStore()
+    let check = UpdateCheck(store: store, current: "0.16", fetch: github.answer)
+    #expect(check.rows.isEmpty)
+    await check.refreshIfStale(now: updateStart)
+    let row = try #require(check.rows.first)
+    #expect(row.title == "Copperlight 0.17 is available" && row.subtitle == "You have 0.16")
+    let skip = try #require(await row.actions?().first)
+    skip.action()
+    #expect(check.rows.isEmpty && check.available == "0.17")
+    #expect(UpdateCheck(store: store, current: "0.16", fetch: github.answer).rows.isEmpty, "skipping lasts")
+    github.says("0.18")
+    await check.refreshIfStale(now: updateStart.addingTimeInterval(24 * hours))
+    #expect(check.rows.first?.title == "Copperlight 0.18 is available")
+}
+
+@MainActor @Test func diagnosticsNeverShowYourHomeFolder() {
+    let report = diagnosticsReport(configProblem: "can't read /Users/ana/.config/copperlight/config.toml",
+                                   clipboard: "can't open /Users/ana/.config/copperlight/clipboard.sqlite", featuresOff: [], home: "/Users/ana")
+    #expect(report.contains("config.toml: can't read ~/.config/") && report.contains("Clipboard history: can't open ~/.config/"))
+    #expect(!report.contains("/Users/ana"))
+}
+
 /// A fresh folder of its own, for one core's files.
 private func coreFolder() throws -> URL {
     let folder = FileManager.default.temporaryDirectory.appending(path: "copperlight-core-\(UUID().uuidString)")
@@ -5857,14 +5979,15 @@ private func coreFolder() throws -> URL {
 
 /// The real wiring on `folder`, what launch does without its windows, sealed: it doesn't watch the real pasteboard or
 /// read the browsers' history. File search looks only in that folder, too, once `config` is in place.
-@MainActor private func startedCore(config: String? = "", in folder: URL? = nil) async throws -> (core: AppCore, folder: URL) {
+@MainActor private func startedCore(config: String? = "", in folder: URL? = nil,
+                                     latestRelease: @escaping @Sendable () async -> Data? = { nil }) async throws -> (core: AppCore, folder: URL) {
     let folder = try folder ?? coreFolder()
     if let config {
         let scoped = "[files]\nscopes = [\"\(folder.path)\"]\n" + config
         try scoped.write(to: folder.appending(path: "config.toml"), atomically: true, encoding: .utf8)
     }
     let core = AppCore(configFile: folder.appending(path: "config.toml"), clipboardFile: folder.appending(path: "clipboard.sqlite"),
-                       state: StateStore(file: folder.appending(path: "state.json")), actions: .none, sealed: true)
+                       state: StateStore(file: folder.appending(path: "state.json")), actions: .none, latestRelease: latestRelease, sealed: true)
     core.start()
     await core.settled()
     return (core, folder)
@@ -6008,6 +6131,50 @@ private let coreAnswers = Duration.seconds(30)
         core.model.fill("")
     }
 
+    /// The real path: config.toml's switch, what opening the launcher does, the empty launcher's rows. What else opening
+    /// it would ask for is off, so nothing reaches a real server.
+    @Test func updateNoticeFollowsConfig() async throws {
+        defer { Feature.use(Config().features) }
+        let quiet = "[apps]\nonline = false\n[features]\nbrowser_tabs = false\ncurrency = false\nbookmarks = false\ncontacts = false\n"
+        let github = FakeGitHub(latest: "99.0")
+        let (core, folder) = try await startedCore(config: quiet, latestRelease: github.answer)
+        await core.refresh().value
+        #expect(github.asked == 1 && core.updates.available == "99.0")
+        core.model.query = "" // what the launcher shows when it opens; those rows come just after it settles
+        await eventually(within: coreAnswers) { core.model.results.contains { $0.id == "update:99.0" } }
+        #expect(core.model.results.contains { $0.id == "update:99.0" })
+        await core.refresh().value
+        #expect(github.asked == 1)
+
+        try (quiet + "updates = false\n").write(to: folder.appending(path: "config.toml"), atomically: true, encoding: .utf8)
+        core.reloadConfig()
+        await core.settled()
+        #expect(core.updates.available == nil && core.updates.rows.isEmpty, "off takes it out of the menu bar and the launcher")
+
+        let unasked = FakeGitHub(latest: "99.0")
+        let (off, _) = try await startedCore(config: quiet + "updates = false\n", latestRelease: unasked.answer)
+        await off.refresh().value
+        #expect(unasked.asked == 0, "off sends nothing")
+    }
+
+    /// What a bug report needs, from the app as it really is: `[features]`, config.toml's state, the clipboard's.
+    @Test func diagnosticsSayWhatsWrong() async throws {
+        defer { Feature.use(Config().features) }
+        let (core, folder) = try await startedCore(config: "[features]\nweather = false\nstocks = false\n")
+        try core.history?.store.record("a private copy", app: nil)
+        let report = core.diagnostics()
+        let version = try #require(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
+        #expect(report.hasPrefix("Copperlight \(version)"))
+        #expect(report.contains(ProcessInfo.processInfo.operatingSystemVersionString))
+        #expect(report.contains("Features off: stocks, weather") && report.contains("config.toml: fine"))
+        #expect(report.contains("Clipboard history: 1 saved") && report.contains("Permissions: Accessibility "))
+        #expect(!report.contains("a private copy") && !report.contains(NSHomeDirectory()))
+
+        try "x =".write(to: folder.appending(path: "config.toml"), atomically: true, encoding: .utf8)
+        core.reloadConfig()
+        #expect(core.diagnostics().contains("config.toml: line 1"))
+    }
+
     /// Nothing a test does can reach your real files: the folder they all come from is its own.
     @Test func testsKeepToTheirOwnFolder() {
         #expect(configDir.path.hasPrefix(FileManager.default.temporaryDirectory.path))
@@ -6050,10 +6217,10 @@ private let coreAnswers = Duration.seconds(30)
 }
 
 /// Turning a feature off takes its lines away, for every feature: a new one without a line here fails. Links without
-/// tracking is the one with nothing to type.
+/// tracking and the update check are the ones with nothing to type.
 @MainActor @Test func cheatSheetLeavesOutWhatsOff() {
     let everything = wholeSheet().flatMap(\.lines).count
-    for feature in Feature.listed where feature != .cleanLinks {
+    for feature in Feature.listed where feature != .cleanLinks && feature != .updates {
         #expect(wholeSheet(isOn: { $0 != feature }).flatMap(\.lines).count < everything, "\(feature) has no line")
     }
     let none = wholeSheet(isOn: { _ in false })

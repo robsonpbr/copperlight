@@ -228,6 +228,7 @@ switches. Finding apps, the search row and Copperlight's own rows are always on.
 | `shortcuts` | `:shortcut` |
 | `shell` | `:!` shell lines |
 | `homebrew` | Installing an app you don't have, from its row |
+| `updates` | The update check: once a day, the latest version number from GitHub |
 
 A name that isn't one of these is an error row, so a typo doesn't go unnoticed. A clock already running when its
 feature is turned off keeps going until it ends.

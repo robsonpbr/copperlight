@@ -121,9 +121,30 @@ let configDir = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath
     return action.map { NSApp.sendAction($0, to: nil, from: nil) } ?? false
 }
 
-/// Plain `1234.5` style: no grouping, `.` decimals, so copied values paste anywhere.
-func formatNumber(_ value: Double, decimals: ClosedRange<Int> = 0...10) -> String {
-    value.formatted(.number.locale(Locale(identifier: "en_US_POSIX")).grouping(.never).precision(.fractionLength(decimals)))
+/// The Mac's decimal mark, from System Settings › General › Language & Region: "," or ".". Always "." under tests, so
+/// they don't depend on the Mac running them. ponytail: read at launch; a change shows after a relaunch.
+let decimalMark = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
+    && Locale.current.decimalSeparator == "," ? "," : "."
+
+/// Plain `1234.5` style, with `mark` for the decimal point: no grouping, so copied values paste anywhere.
+func formatNumber(_ value: Double, decimals: ClosedRange<Int> = 0...10, mark: String = decimalMark) -> String {
+    let plain = value.formatted(.number.locale(Locale(identifier: "en_US_POSIX")).grouping(.never).precision(.fractionLength(decimals)))
+    return mark == "," ? plain.replacing(".", with: ",") : plain
+}
+
+/// Typed numbers the way Swift reads them. With both marks the last one is the decimal point, on any Mac:
+/// `1.234,56` and `1,234.56` are 1234.56. A lone comma (`12,5`) is one only where the Mac's mark is, since elsewhere it
+/// parts a function's arguments (`max(1,2)`). Anything else stays as typed.
+func plainNumbers(_ text: String, mark: String = decimalMark) -> String {
+    text.replacing(#/\d+(?:[.,]\d+)+/#) { match in
+        let number = String(match.0), marks = number.filter { $0 == "." || $0 == "," }
+        if let point = marks.last, let group = marks.first, group != point, !marks.dropLast().contains(point) {
+            let groups = number.prefix { $0 != point }.split(separator: group)
+            guard (1...3).contains(groups[0].count), groups.dropFirst().allSatisfy({ $0.count == 3 }) else { return number }
+            return number.filter { $0 != group }.replacing(String(point), with: ".")
+        }
+        return mark == "," && marks == "," ? number.replacing(",", with: ".") : number
+    }
 }
 
 /// How often a row was picked: each Enter adds 1, and the count halves every week.

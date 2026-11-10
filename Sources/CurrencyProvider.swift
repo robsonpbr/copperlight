@@ -9,9 +9,9 @@ struct CurrencyQuery: Equatable {
 /// `25USD to EUR`, `25 usd in eur`, `25usd eur`, `12,50 gbp usd`, and math before it (`39*8 usd`). Case-insensitive.
 /// With no target (`25 usd`) it converts to `defaultTarget`, or to USD when that's the source
 /// (EUR if the default is USD itself), so `25 eur` still shows something.
-func parseCurrency(_ query: String, defaultTarget: String = "EUR") -> CurrencyQuery? {
+func parseCurrency(_ query: String, defaultTarget: String = "EUR", mark: String = decimalMark) -> CurrencyQuery? {
     let pattern = #/([\d(][\d.,\s+\-*\/^()]*?)\s*([a-z]{3})(?:\s+(?:(?:to|in)\s+)?([a-z]{3}))?/#.ignoresCase()
-    guard let match = query.trimmingCharacters(in: .whitespaces).wholeMatch(of: pattern) else { return nil }
+    guard let match = plainNumbers(query.trimmingCharacters(in: .whitespaces), mark: mark).wholeMatch(of: pattern) else { return nil }
     let number = String(match.1)
     let amount = number.wholeMatch(of: #/\d+(?:[.,]\d+)?/#) != nil ? Double(number.replacing(",", with: "."))
         : number.contains(where: "+-*/^".contains) ? calculate(number).flatMap { $0 >= 0 && $0.isFinite ? $0 : nil } : nil
@@ -86,7 +86,7 @@ func flagPicture(_ flag: String) -> CGImage? {
 
 /// The conversion on a band (what you had → what it makes, the rate, its flags behind), and its two rows: Enter copies
 /// it as money (€21.48), the row below the number alone. `updated`: when `rates` came. Empty for a currency it lacks.
-func currencyRows(_ query: CurrencyQuery, rates: [String: Double], updated: Date, now: Date = .now) -> [LauncherResult] {
+func currencyRows(_ query: CurrencyQuery, rates: [String: Double], updated: Date, now: Date = .now, mark: String = decimalMark) -> [LauncherResult] {
     guard let value = convert(query, rates: rates), let rate = convert(CurrencyQuery(amount: 1, from: query.from, to: query.to), rates: rates)
     else { return [] }
     let english = Locale(identifier: "en_US")
@@ -94,13 +94,14 @@ func currencyRows(_ query: CurrencyQuery, rates: [String: Double], updated: Date
     let small = { (amount: Double) in amount.magnitude < 1 && amount != 0 }
     let money = { (amount: Double, code: String) in
         let style = FloatingPointFormatStyle<Double>.Currency(code: code).locale(english)
-        return amount.formatted(small(amount) ? style.precision(.fractionLength(2...6)) : style)
+        let text = amount.formatted(small(amount) ? style.precision(.fractionLength(2...6)) : style)
+        return mark == "," ? String(text.map { $0 == "," ? "." : $0 == "." ? "," : $0 }) : text // €1,234.56 → €1.234,56
     }
     let name = { (code: String) in english.localizedString(forCurrencyCode: code) ?? code }
-    let shown = money(value, query.to), number = formatNumber(value, decimals: small(value) ? 2...6 : 2...2)
+    let shown = money(value, query.to), number = formatNumber(value, decimals: small(value) ? 2...6 : 2...2, mark: mark)
     let card = CurrencyCard(from: money(query.amount, query.from), fromName: name(query.from), fromCode: query.from, to: shown,
                             toName: name(query.to), toCode: query.to,
-                            rate: "1 \(query.from) = \(formatNumber(rate, decimals: rate < 0.01 ? 2...8 : 2...4)) \(query.to)",
+                            rate: "1 \(query.from) = \(formatNumber(rate, decimals: rate < 0.01 ? 2...8 : 2...4, mark: mark)) \(query.to)",
                             when: rateAge(updated, now: now))
     let copy = String(localized: "Copy", comment: "Enter on a currency conversion")
     return [LauncherResult(id: "currency", title: String(localized: "Copy \(shown)", comment: "A conversion's row: Enter copies it"),

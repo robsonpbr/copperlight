@@ -145,6 +145,10 @@ struct CopperlightApp: App {
 
     var body: some Scene {
         MenuBarExtra("Copperlight", image: "Mark") { // the icon's C
+            if let version = delegate.updates.available {
+                Button("Update to Copperlight \(version)…") { NSWorkspace.shared.open(UpdateCheck.page) }
+                Divider()
+            }
             Button("Settings…") { delegate.showSettings() }.keyboardShortcut(",")
             Button("Welcome to Copperlight") { delegate.showWelcome() }
             Button("Help") { delegate.showHelp() }
@@ -195,7 +199,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NotePanel.stylesMarkdown = markdown
                 notes.values.forEach { $0.restyle() }
             },
-            configReloaded: { [unowned self] in settings?.model.reload() }))
+            configReloaded: { [unowned self] in settings?.model.reload() }),
+        latestRelease: fetchLatestRelease)
     private lazy var panel: LauncherPanel = LauncherPanel(model: core.model,
                                                           placeholder: String(localized: "Type anything", comment: "The launcher's empty field"))
     private lazy var clipboardPanel: LauncherPanel = LauncherPanel(model: core.clipboardModel,
@@ -209,6 +214,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var notes: [String: NotePanel] = [:] // by the file's path
     private var welcome: WelcomeWindow?
     private var settings: SettingsWindow?
+    var updates: UpdateCheck { core.updates }
     private var watcher: DirectoryWatcher?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -289,7 +295,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Opens Settings, on `pane` when given.
     func showSettings(_ pane: Pane? = nil) {
         if settings?.isVisible != true {
-            settings = SettingsWindow(showWelcome: { [unowned self] in showWelcome() }, forget: { [unowned self] in core.model.forget($0) })
+            settings = SettingsWindow(showWelcome: { [unowned self] in showWelcome() }, forget: { [unowned self] in core.model.forget($0) },
+                                      diagnostics: { [unowned self] in core.diagnostics() })
         }
         if let pane { settings?.model.pane = pane }
         settings?.show()

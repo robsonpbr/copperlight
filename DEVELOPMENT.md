@@ -15,7 +15,7 @@ lists everything it does, [docs/guide.md](docs/guide.md) explains it in detail a
 - **Config over code.** Settings live in one plain `config.toml` that applies on save. If an idea can be a
   `[[command]]`, a snippet or a script in `~/.config/copperlight/scripts/`, it becomes an example there, not a feature.
 - **Nothing about the user leaves the Mac.** Its only requests are public and carry nothing about the user:
-  daily currency rates, and for app search Homebrew's whole app list, app homepages and App Store descriptions
+  daily currency rates, the latest version number, and for app search Homebrew's whole app list, app homepages and App Store descriptions
   (`[apps] online = false` turns those off). No telemetry, no accounts, no sync, no credentials.
 - **No AI service and no plugin store.** What runs on the Mac is fine: Apple's on-device model writes app search
   words when Apple Intelligence is on, and Vision reads the text in photos.

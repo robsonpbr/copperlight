@@ -17,6 +17,7 @@ asks for itself is here.
 | Server | When | What it sends | To turn it off |
 |---|---|---|---|
 | api.coinbase.com | When you open the launcher, at most every 5 minutes | Nothing: it asks for every currency's rate at once, so it never learns which ones you convert | `[features] currency = false` |
+| api.github.com | When you open the launcher, at most once a day | Nothing: it asks for Copperlight's latest version number | `[features] updates = false` |
 | formulae.brew.sh | Once a week | Nothing: it downloads Homebrew's whole public app list, so it never learns which apps you have | `[apps] online = false` |
 | Each app's homepage | Once per app, for the apps in Homebrew's list that you have | A plain request for the page, to read its one-line summary | `[apps] online = false` |
 | itunes.apple.com | Once per app you got from the App Store | The app's bundle id, to read the App Store's description | `[apps] online = false` |
@@ -69,7 +70,7 @@ Everything is in `~/.config/copperlight/`, on your Mac, and nowhere else:
 - `config.toml`: your settings. Never a key or a password.
 - `note.txt` and `notes/`: your notes.
 - `state.json`: what you open most and what you picked for what you typed, recent queries, saved layouts, the
-  running timer, the apps you open around each time of day, and the colors you picked.
+  running timer, the apps you open around each time of day, the colors you picked, and the last update check.
 - `clipboard.sqlite`: your clipboard history, readable only by you. Deleted items are overwritten. Copies that apps
   mark as passwords, and copies made in password managers, are never recorded.
 - `rates.json`, `apps.json` and `homebrew-apps.json`: currency rates and app descriptions.

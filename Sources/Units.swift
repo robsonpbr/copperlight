@@ -82,7 +82,7 @@ struct UnitQuery {
 /// `10 km in mi`, `10km mi`, `30c`, `5'` (feet), `10 in in cm`. Without a target, metric and US units convert to
 /// each other (`10 km` → miles). nil unless both units exist and measure the same thing.
 func parseUnits(_ query: String) -> UnitQuery? {
-    guard let match = query.trimmingCharacters(in: .whitespaces).wholeMatch(of: #/(-?\d+(?:[.,]\d+)?)\s*(\S.*)/#),
+    guard let match = plainNumbers(query.trimmingCharacters(in: .whitespaces)).wholeMatch(of: #/(-?\d+(?:[.,]\d+)?)\s*(\S.*)/#),
           let value = Double(match.1.replacing(",", with: "."))
     else { return nil }
     var words = match.2.split(whereSeparator: \.isWhitespace).map(String.init)

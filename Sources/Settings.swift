@@ -163,11 +163,12 @@ import SwiftUI
 final class SettingsWindow: AppWindow {
     let model: SettingsModel
 
-    init(showWelcome: @escaping @MainActor () -> Void, forget: @escaping @MainActor (SearchModel.Learned) -> Void, file: URL = Config.file) {
+    init(showWelcome: @escaping @MainActor () -> Void, forget: @escaping @MainActor (SearchModel.Learned) -> Void,
+         diagnostics: @escaping @MainActor () -> String, file: URL = Config.file) {
         let model = SettingsModel(file: file)
         self.model = model
         super.init(title: String(localized: "Copperlight Settings"), style: .miniaturizable,
-                   content: SettingsView(model: model, showWelcome: showWelcome, forget: forget))
+                   content: SettingsView(model: model, showWelcome: showWelcome, forget: forget, diagnostics: diagnostics))
         // A real toolbar holds the pane's title, and content scrolling under it fades out instead of running behind it.
         toolbar = NSToolbar()
         toolbarStyle = .unified
@@ -223,6 +224,7 @@ private struct SettingsView: View {
     let model: SettingsModel
     let showWelcome: @MainActor () -> Void
     let forget: @MainActor (SearchModel.Learned) -> Void
+    let diagnostics: @MainActor () -> String
     private var pane: Pane { model.pane }
 
     var body: some View {
@@ -247,7 +249,7 @@ private struct SettingsView: View {
                     case .browser: BrowserPane(model: model)
                     case .commands: CommandsPane(model: model)
                     case .snippets: SnippetsPane(model: model)
-                    case .about: AboutPane()
+                    case .about: AboutPane(diagnostics: diagnostics)
                     }
                 }
                 .formStyle(.grouped)
@@ -1120,6 +1122,9 @@ private struct Editor<Fields: View>: View {
 
 /// Version, license and links, then the open source Copperlight is built with (Acknowledgements.swift).
 private struct AboutPane: View {
+    let diagnostics: @MainActor () -> String
+    @State private var copied = false
+
     var body: some View {
         Section {
             LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")
@@ -1129,6 +1134,15 @@ private struct AboutPane: View {
             LabeledContent("Source code") { Link("github.com/robsonpbr/copperlight", destination: URL(string: "https://github.com/robsonpbr/copperlight")!) }
         } footer: {
             Note("Copperlight is free and open source. © 2026 Robson Ramos.")
+        }
+        Section {
+            Button {
+                copyToClipboard(diagnostics())
+                copied = true
+                Task { try? await Task.sleep(for: .seconds(2)); copied = false }
+            } label: { copied ? Text("Copied") : Text("Copy Diagnostics") }
+        } footer: {
+            Note("For a bug report: the versions, the permissions and what's wrong. Nothing you typed or copied.")
         }
         Section {
             ForEach(acknowledgements) { credit in

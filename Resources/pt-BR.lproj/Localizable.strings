@@ -582,6 +582,8 @@
 
 "Copperlight" = "Copperlight";
 
+"Copperlight %@ is available" = "Copperlight %@ está disponível";
+
 "Copperlight Settings" = "Ajustes do Copperlight";
 
 "Copperlight can't see your calendars" = "O Copperlight não tem acesso aos seus calendários";
@@ -606,6 +608,8 @@
 "Copy All" = "Copiar Tudo";
 
 "Copy Command" = "Copiar Comando";
+
+"Copy Diagnostics" = "Copiar Diagnóstico";
 
 "Copy File" = "Copiar Arquivo";
 
@@ -654,6 +658,8 @@
 "Couldn't reach Yahoo Finance" = "Não foi possível acessar o Yahoo Finance";
 
 "Couldn't read Things" = "Não foi possível ler o Things";
+
+"Couldn't read the clipboard history" = "Não foi possível ler o histórico da área de transferência";
 
 "Couldn't run %@" = "Não foi possível executar %@";
 
@@ -868,6 +874,8 @@
 "For %@" = "Por %@";
 
 "For Pick Color and the colors you picked. A color you type shows every notation." = "Para Escolher Cor e as cores que você escolheu. Uma cor digitada mostra todas as notações.";
+
+"For a bug report: the versions, the permissions and what's wrong. Nothing you typed or copied." = "Para relatar um problema: as versões, as permissões e o que está errado. Nada do que você digitou ou copiou.";
 
 "For an amount without a target, like “25 usd”." = "Para um valor sem moeda de destino, como “25 usd”.";
 
@@ -1332,6 +1340,8 @@
 
 "Older items are deleted. Images take room (a screenshot is 1–5 MB); 0 keeps text only." = "Os itens mais antigos são apagados. Imagens ocupam espaço (uma captura de tela tem 1–5 MB); 0 guarda só texto.";
 
+"Once a day, asks GitHub for the latest version number" = "Uma vez por dia, pergunta ao GitHub qual é a versão mais recente";
+
 /* A file's action: opens it in its app / An app's action: opens it / Enter on Open in Calendar / Enter on Open in Contacts / Enter on a Wikipedia article: opens it / Enter on a clipboard item's action / Enter on a definition: opens it in Dictionary / Enter on a disk: opens it in Finder / Enter on a file in a typed path / Enter on a row, unless the row says otherwise / Enter on a script filter's row: opens it / Enter on a stock: opens it on Yahoo Finance / Enter on an app just installed / Enter on the row that opens the to-do app / Enter on the weather: opens the Weather app */
 "Open" = "Abrir";
 
@@ -1344,6 +1354,9 @@
 "Open Config" = "Abrir Configuração";
 
 "Open Copperlight" = "Abrir Copperlight";
+
+/* Enter on the row saying a new version is out */
+"Open Download Page" = "Abrir Página de Download";
 
 "Open Link" = "Abrir Link";
 
@@ -1637,6 +1650,10 @@
 
 "Replace the running timer (%@ left) with one until %@?" = "Substituir o timer em andamento (faltam %@) por um até %@?";
 
+"Reset" = "Redefinir";
+
+"Reset All" = "Redefinir Tudo";
+
 "Restart" = "Reiniciar";
 
 "Restart the Mac? Apps with unsaved changes ask first." = "Reiniciar o Mac? Apps com alterações não salvas perguntam antes.";
@@ -1803,6 +1820,11 @@
 
 /* A file's detail / Label: a file's size */
 "Size" = "Tamanho";
+
+/* Enter on Skip This Version */
+"Skip" = "Pular";
+
+"Skip This Version" = "Pular Esta Versão";
 
 "Sleep" = "Repouso";
 
@@ -2239,6 +2261,10 @@
 /* An event or reminder without a title */
 "Untitled" = "Sem título";
 
+"Update check" = "Verificação de atualizações";
+
+"Update to Copperlight %@…" = "Atualizar para o Copperlight %@…";
+
 "Upload" = "Upload";
 
 "Use %@" = "Usar %@";
@@ -2368,6 +2394,8 @@
 /* A day: yesterday / How far a date is from today */
 "Yesterday" = "Ontem";
 
+"You have %@" = "Você tem a %@";
+
 /* What a percent off takes away: 20% off 80 */
 "You save %@" = "Você economiza %@";
 
@@ -2408,6 +2436,8 @@
 "Your own color" = "Cor personalizada";
 
 "Your week" = "Sua semana";
+
+"Your words replace the keyword's own: with wth for weather, “wth lisboa” and Tab give the Weather chip, and “weather” no longer does. Its words in your Mac's language go with it. To keep it too, write it in: weather, wth. Separate several with commas. Reset brings the keyword's own word back. For :, a word of symbols works beside it, stuck to what follows: ; for : is ;left. Saved in config.toml under [keywords]." = "Suas palavras substituem a da palavra-chave: com wth para weather, “wth lisboa” e Tab abrem o chip Tempo, e “weather” deixa de funcionar. As palavras dela no idioma do seu Mac vão junto. Para manter a original também, escreva-a junto: weather, wth. Separe várias com vírgulas. Redefinir traz a palavra original de volta. Para :, uma palavra de símbolos funciona ao lado dele, colada ao que vem depois: ; para : é ;left. Salvo no config.toml em [keywords].";
 
 
 /* Settings › Features: the group of features for your own things (notes, files) */
@@ -2635,11 +2665,3 @@
 "… %lld more characters" = "… mais %lld caracteres";
 
 "↑ brings back what you ran" = "↑ traz de volta o que você executou";
-
-"Reset" = "Redefinir";
-
-"Reset All" = "Redefinir Tudo";
-
-"Your words replace the keyword's own: with wth for weather, “wth lisboa” and Tab give the Weather chip, and “weather” no longer does. Its words in your Mac's language go with it. To keep it too, write it in: weather, wth. Separate several with commas. Reset brings the keyword's own word back. For :, a word of symbols works beside it, stuck to what follows: ; for : is ;left. Saved in config.toml under [keywords]." = "Suas palavras substituem a da palavra-chave: com wth para weather, “wth lisboa” e Tab abrem o chip Tempo, e “weather” deixa de funcionar. As palavras dela no idioma do seu Mac vão junto. Para manter a original também, escreva-a junto: weather, wth. Separe várias com vírgulas. Redefinir traz a palavra original de volta. Para :, uma palavra de símbolos funciona ao lado dele, colada ao que vem depois: ; para : é ;left. Salvo no config.toml em [keywords].";
-
-"Couldn't read the clipboard history" = "Não foi possível ler o histórico da área de transferência";

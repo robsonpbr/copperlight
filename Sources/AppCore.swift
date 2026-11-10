@@ -29,9 +29,11 @@ final class AppCore {
     private let actions: Actions
     private let sealed: Bool // for tests: the real pasteboard isn't watched, and the browsers' history isn't read
 
-    init(configFile: URL, clipboardFile: URL, state: StateStore, actions: Actions, sealed: Bool = false) {
+    init(configFile: URL, clipboardFile: URL, state: StateStore, actions: Actions,
+         latestRelease: @escaping @Sendable () async -> Data?, sealed: Bool = false) {
         (self.configFile, self.clipboardFile, self.state, self.actions, self.sealed) = (configFile, clipboardFile, state, actions, sealed)
         (pomodoro, countdown, stopwatch) = (Pomodoro(store: state), Countdown(store: state), Stopwatch(store: state))
+        updates = UpdateCheck(store: state, fetch: latestRelease)
     }
 
     private let apps = AppProvider()
@@ -52,6 +54,7 @@ final class AppCore {
     let pomodoro: Pomodoro
     let countdown: Countdown
     let stopwatch: Stopwatch
+    let updates: UpdateCheck
     private lazy var builtins = BuiltinProvider(showNote: actions.showNote, showClipboard: actions.showClipboard, showWelcome: actions.showWelcome, showHelp: actions.showHelp,
                                                 showSettings: { [actions] in actions.showSettings(nil) }, newNote: actions.newNote)
     private lazy var capture = CaptureProvider(addToNote: actions.addToNote, showSettings: { [actions] in actions.showSettings(.options) })
@@ -90,13 +93,13 @@ final class AppCore {
     }
 
     /// The empty launcher's rows besides meetings and reminders: Finder's selection, the next item to paste in order,
-    /// what's running, and the apps you open around now. Its own function: inline, it slows the compiler down.
+    /// what's running, the apps you open around now, and a new version. Its own function: inline, it slows the compiler down.
     private func idleRows() -> [LauncherResult] {
         var rows = finderIdle
         if let history { rows += pasteNextRows(.shared, store: history.store, paste: { [weak self] in self?.pasteFromLauncher($0) }) }
         if showsRunning { rows += runningClocks(pomodoro: pomodoro, timer: countdown, stopwatch: stopwatch) }
         if suggestsApps { rows += suggestionRows(state.get(AppOpen.stateSection, as: [AppOpen].self) ?? []) }
-        return rows
+        return rows + updates.rows
     }
     /// The files selected in Finder when the hotkey was pressed over it (or the row asking to see them), on top.
     var finderIdle: [LauncherResult] = []
@@ -132,6 +135,7 @@ final class AppCore {
         providers: clipboardProvider.map { [$0] } ?? [], searchesEmptyQuery: true,
         exclusive: clipboardProvider.map { [VerbProvider.prefix: VerbProvider(verbs: $0.verbs)] } ?? [:])
     private var configText: String? // last config.toml contents seen; nil = no file
+    private var configProblem: String? // its mistake, while it has one
     private var config = Config() // the one in use, for what's asked later (`help`)
     private var configUpdate: Task<Void, Never>?
 
@@ -191,8 +195,9 @@ final class AppCore {
         configText = text
         do {
             apply(try text.map(Config.parse) ?? Config())
-            model.notice = nil
+            (model.notice, configProblem) = (nil, nil)
         } catch {
+            configProblem = Config.describe(error)
             let file = configFile
             model.notice = LauncherResult(
                 id: "config-error", title: String(localized: "config.toml: \(Config.describe(error))"),
@@ -206,6 +211,7 @@ final class AppCore {
     private func apply(_ config: Config) {
         self.config = config
         Feature.use(config.features)
+        updates.isOn = Feature.updates.isOn
         Palette.shared.use(config.look.accent)
         actions.setHotkey(config.hotkeys.launcher)
         history?.settings = config.clipboard
@@ -254,17 +260,24 @@ final class AppCore {
                       hotkey: config.hotkeys.launcher.shortcut.description)
     }
 
+    /// Copy Diagnostics, in Settings › About.
+    func diagnostics() -> String {
+        let clipboard = historyError.map { "can't open clipboard.sqlite: \($0)" } ?? (try? history?.store.count()).map { "\($0) saved" } ?? "can't read it"
+        return diagnosticsReport(configProblem: configProblem, clipboard: clipboard, featuresOff: config.features.off.map(\.rawValue).sorted())
+    }
+
     /// Once the last config has reached the providers, which it does in the background.
     func settled() async { await configUpdate?.value }
 
     /// What's read when the launcher opens.
-    func refresh() {
+    @discardableResult func refresh() -> Task<Void, Never> {
         // Hours the first time, for a big library: on its own, and only one at a time (it says when it's busy).
         Task.detached(priority: .utility) { [photoIndexer] in await photoIndexer?.update() }
-        Task { [apps, currency, pages, contacts, tabs] in
+        return Task { [apps, currency, pages, contacts, tabs, updates] in
             if Feature.browserTabs.isOn { await tabs.refresh() }
             await apps.rescan()
             if Feature.currency.isOn { await currency.refreshIfStale() }
+            await updates.refreshIfStale()
             if Feature.bookmarks.isOn { await pages.refresh() }
             if Feature.contacts.isOn { await contacts.refresh() }
         }

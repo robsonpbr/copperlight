@@ -583,6 +583,8 @@
 
 "Copperlight" = "Copperlight";
 
+"Copperlight %@ is available" = "Copperlight %@ is available";
+
 "Copperlight Settings" = "Copperlight Settings";
 
 "Copperlight can't see your calendars" = "Copperlight can't see your calendars";
@@ -607,6 +609,8 @@
 "Copy All" = "Copy All";
 
 "Copy Command" = "Copy Command";
+
+"Copy Diagnostics" = "Copy Diagnostics";
 
 "Copy File" = "Copy File";
 
@@ -871,6 +875,8 @@
 "For %@" = "For %@";
 
 "For Pick Color and the colors you picked. A color you type shows every notation." = "For Pick Color and the colors you picked. A color you type shows every notation.";
+
+"For a bug report: the versions, the permissions and what's wrong. Nothing you typed or copied." = "For a bug report: the versions, the permissions and what's wrong. Nothing you typed or copied.";
 
 "For an amount without a target, like “25 usd”." = "For an amount without a target, like “25 usd”.";
 
@@ -1335,6 +1341,8 @@
 
 "Older items are deleted. Images take room (a screenshot is 1–5 MB); 0 keeps text only." = "Older items are deleted. Images take room (a screenshot is 1–5 MB); 0 keeps text only.";
 
+"Once a day, asks GitHub for the latest version number" = "Once a day, asks GitHub for the latest version number";
+
 /* A file's action: opens it in its app / An app's action: opens it / Enter on Open in Calendar / Enter on Open in Contacts / Enter on a Wikipedia article: opens it / Enter on a clipboard item's action / Enter on a definition: opens it in Dictionary / Enter on a disk: opens it in Finder / Enter on a file in a typed path / Enter on a row, unless the row says otherwise / Enter on a script filter's row: opens it / Enter on a stock: opens it on Yahoo Finance / Enter on an app just installed / Enter on the row that opens the to-do app / Enter on the weather: opens the Weather app */
 "Open" = "Open";
 
@@ -1347,6 +1355,9 @@
 "Open Config" = "Open Config";
 
 "Open Copperlight" = "Open Copperlight";
+
+/* Enter on the row saying a new version is out */
+"Open Download Page" = "Open Download Page";
 
 "Open Link" = "Open Link";
 
@@ -1811,6 +1822,11 @@
 /* A file's detail / Label: a file's size */
 "Size" = "Size";
 
+/* Enter on Skip This Version */
+"Skip" = "Skip";
+
+"Skip This Version" = "Skip This Version";
+
 "Sleep" = "Sleep";
 
 "Sleep Displays" = "Sleep Displays";
@@ -2246,6 +2262,10 @@
 /* An event or reminder without a title */
 "Untitled" = "Untitled";
 
+"Update check" = "Update check";
+
+"Update to Copperlight %@…" = "Update to Copperlight %@…";
+
 "Upload" = "Upload";
 
 "Use %@" = "Use %@";
@@ -2374,6 +2394,8 @@
 
 /* A day: yesterday / How far a date is from today */
 "Yesterday" = "Yesterday";
+
+"You have %@" = "You have %@";
 
 /* What a percent off takes away: 20% off 80 */
 "You save %@" = "You save %@";

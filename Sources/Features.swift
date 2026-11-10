@@ -13,7 +13,7 @@ enum Feature: String, CaseIterable, Sendable {
     case clipboard, cleanLinks = "clean_links", notes, snippets, scripts, commands, contacts, messageCodes = "message_codes", calendar, reminders, files, latestFiles = "latest_files", browserTabs = "browser_tabs",
          bookmarks, systemSettings = "system_settings", menus, timers, pomodoro, stopwatch, screenText = "screen_text"
     // Windows and the Mac
-    case windows, runningApps = "running_apps", mac, sound, keepAwake = "keep_awake", bluetooth, wifiPassword = "wifi_password", camera, shortcuts, shell, homebrew
+    case windows, runningApps = "running_apps", mac, sound, keepAwake = "keep_awake", bluetooth, wifiPassword = "wifi_password", camera, shortcuts, shell, homebrew, updates
     // Not offered yet
     case fileContent = "file_content", photoText = "photo_text"
 
@@ -44,7 +44,7 @@ enum Feature: String, CaseIterable, Sendable {
         switch self {
         case .calculator, .currency, .units, .timeZones, .dates, .colors, .qr, .stocks, .weather, .wikipedia, .define, .spelling,
              .translate, .emoji, .textTools, .largeType, .macInfo, .speedTest, .processes: .answers
-        case .windows, .runningApps, .mac, .sound, .keepAwake, .bluetooth, .wifiPassword, .camera, .shortcuts, .shell, .homebrew: .mac
+        case .windows, .runningApps, .mac, .sound, .keepAwake, .bluetooth, .wifiPassword, .camera, .shortcuts, .shell, .homebrew, .updates: .mac
         default: .yours
         }
     }
@@ -142,6 +142,7 @@ enum Feature: String, CaseIterable, Sendable {
         case .shortcuts: (String(localized: "Shortcuts"), String(localized: ":shortcut and a shortcut's name"))
         case .shell: (String(localized: "Shell"), String(localized: ":! and a command"))
         case .homebrew: (String(localized: "Install with Homebrew"), String(localized: "Apps you don't have, installed from their row"))
+        case .updates: (String(localized: "Update check"), String(localized: "Once a day, asks GitHub for the latest version number"))
         case .fileContent: (String(localized: "Text inside files"), "")
         case .photoText: (String(localized: "Text in photos"), "")
         }
