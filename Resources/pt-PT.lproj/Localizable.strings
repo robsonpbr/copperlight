@@ -637,7 +637,7 @@
 
 "Couldn't add the reminder" = "Não foi possível adicionar o lembrete";
 
-"Couldn't change Launch at Login" = "Não foi possível alterar Abrir ao Iniciar Sessão";
+"Couldn't change Open at Login" = "Não foi possível alterar Abrir ao Iniciar Sessão";
 
 "Couldn't clear clipboard history" = "Não foi possível limpar o histórico da área de transferência";
 
@@ -1077,7 +1077,6 @@
 
 "Latest screenshots and downloads" = "Últimas capturas de ecrã e transferências";
 
-"Launch at Login" = "Abrir ao Iniciar Sessão";
 
 /* A Settings pane */
 "Launcher" = "Lançador";
@@ -2263,7 +2262,7 @@
 
 "Update check" = "Verificação de atualizações";
 
-"Update to Copperlight %@…" = "Atualizar para o Copperlight %@…";
+"Download Copperlight %@…" = "Transferir o Copperlight %@…";
 
 "Upload" = "Upload";
 
@@ -2273,6 +2272,7 @@
 
 "Users & Groups" = "Utilizadores e Grupos";
 
+"Using the defaults" = "A usar as predefinições";
 "Using the last valid config" = "A usar a última configuração válida";
 
 "VPN" = "VPN";

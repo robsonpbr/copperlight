@@ -7,7 +7,7 @@ edits it for you: the hotkey, which features are on, your own keywords, what the
 snippets. It changes only the lines it needs and keeps your comments, and a change it can't make
 cleanly (dotted keys, inline tables) isn't saved. Or edit the file in any editor: saved changes apply
 immediately. If the file doesn't parse, the launcher pins an error row at the top saying where the problem is
-(Enter opens the file), and the last valid config stays in use until you fix it. Every setting is optional.
+(Enter opens the file), and the last valid config stays in use until you fix it, after a relaunch too. Every setting is optional.
 Deleting the file means all defaults.
 
 ```toml
@@ -307,10 +307,11 @@ Everything lives in `~/.config/copperlight/`:
 - `note.txt`: the note's text. Saved 500 ms after you stop typing, and when the note hides or the app
   quits. Edits made elsewhere are picked up while the note doesn't have focus.
 - `notes/`: the other notes, one text file each, named by when they were made (a note's title is its first line),
-  saved the same way. Edits made elsewhere show the next time the note opens. Delete a file to delete that note.
+  saved the same way. Edits made elsewhere show right away in an open note, unless you're typing in it. Delete a file to delete that note.
 - `state.json`: app state, one top-level section per feature (`frecency`, `learned`: the row picked for each
   text typed, `windows`, `pomodoro`, `opened`: the apps you opened from the launcher and when, the last 500, for
-  suggestions, `colors`: the colors you picked, the last 30, `noteTextSize`: the size of the notes' text). Written by the app
+  suggestions, `colors`: the colors you picked, the last 30, `noteTextSize`: the size of the notes' text, `lastConfig`: config.toml as it last loaded, used at launch while the file
+  doesn't parse). Written by the app
   (debounced, atomic). Sections it doesn't know are kept. If the file is unreadable it's moved to
   `state.json.bad` and the app starts fresh.
 - `rates.json`: currency rates, Coinbase's response as it came (every currency per 1 EUR). Refreshed in the

@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import CoreLocation
 import Carbon.HIToolbox
 import CoreBluetooth
 import Foundation
@@ -99,6 +100,18 @@ func calculatorRejectsNonMath(_ input: String) {
     #expect(parseUnits("1.234,5 km in mi")?.value == 1234.5)
     let rows = currencyRows(CurrencyQuery(amount: 1234.56, from: "EUR", to: "EUR"), rates: ["EUR": 1], updated: .now, mark: ",")
     #expect(rows.map(\.title) == ["Copy €1.234,56", "Copy 1234,56"])
+}
+
+@Test func thousandsMarkAlone() {
+    // The other mark before groups of three digits groups them: `1,000 usd` is a thousand dollars, not one.
+    #expect(parseCurrency("1,000 usd eur")?.amount == 1000 && parseCurrency("1.000 eur usd", mark: ",")?.amount == 1000)
+    #expect(calculate("1.000 * 3", mark: ",") == 3000 && calculate("1,000 * 3") == 3000)
+    // Several of the same mark can only be grouping, whichever mark it is.
+    #expect(calculate("1,000,000 / 2") == 500_000 && calculate("1.000.000 / 2") == 500_000)
+    #expect(calculate("1.000.000 / 2", mark: ",") == 500_000 && calculate("1,000,000 / 2", mark: ",") == 500_000)
+    // The Mac's own mark stays the decimal point, and short groups stay as typed.
+    #expect(calculate("1.000 * 3") == 3 && calculate("1,000 * 3", mark: ",") == 3)
+    #expect(calculate("max(1,2)") == 2 && calculate("0,500 * 2") == nil)
 }
 
 // MARK: Currency
@@ -1745,6 +1758,19 @@ private func testPNG(width: Int, height: Int, red: CGFloat = 1) -> Data {
     #expect(queue.ids.isEmpty)
 }
 
+/// Paste Next sits below the meeting to join, and a queue left alone for half an hour is dropped.
+@MainActor @Test func pasteNextGivesWay() throws {
+    let store = try ClipboardStore()
+    let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+    for (index, text) in ["name", "email", "phone"].enumerated() { try store.record(text, app: nil, at: t0 + Double(index)) }
+    let queue = PasteQueue()
+    queue.ids = try store.items().map(\.id)
+    let row = try #require(pasteNextRows(queue, store: store, paste: { _ in }).first)
+    #expect(row.score < 100 && row.score > 99.997) // under Join, over what's counting
+    #expect(pasteNextRows(queue, store: store, now: .now + 29 * 60, paste: { _ in }).count == 1)
+    #expect(pasteNextRows(queue, store: store, now: .now + 31 * 60, paste: { _ in }).isEmpty && queue.ids.isEmpty)
+}
+
 @Test func clipboardStoresImages() throws {
     let store = try ClipboardStore()
     let t0 = Date(timeIntervalSince1970: 1_800_000_000)
@@ -2618,6 +2644,8 @@ private struct Sized: ResultProvider {
     let apps = AppProvider(index: nil, brew: "/opt/homebrew/bin/brew")
     await apps.rescan()
     await apps.setCasks(casks)
+    #expect(await apps.results(for: "quillm").isEmpty) // offline until config.toml says `[apps] online`
+    await apps.setOnline(true)
     let found = await apps.results(for: "quillm")
     #expect(found.map(\.title) == ["Install Quillmark", "Install Quillmark Sync"]) // once each, the closest name first
     #expect(found.first?.id == "install:quillmark")
@@ -2625,6 +2653,9 @@ private struct Sized: ResultProvider {
     #expect(found.allSatisfy { $0.output != nil && $0.score < 0 }) // below apps you have; Enter runs brew
     #expect(!(await apps.results(for: "chess")).contains { $0.id.hasPrefix("install:") }) // you have an app by that name
     #expect(await apps.results(for: "qu").allSatisfy { !$0.id.hasPrefix("install:") }) // from 3 letters
+    await apps.setOnline(false) // turned off in Settings: gone at once, not after a relaunch
+    await apps.setOnline(true)
+    #expect(await apps.results(for: "quillm").isEmpty) // the list it had is dropped, and loads again on the next open
 
     let withoutBrew = AppProvider(index: nil, brew: nil)
     await withoutBrew.setCasks(casks)
@@ -4417,6 +4448,12 @@ private let unknownTicker = Data(#"{"chart":{"result":null,"error":{"code":"Not 
 
 // MARK: Weather
 
+/// Where you are leaves the Mac rounded to about a kilometer, to Apple's geocoder as to the forecast.
+@Test func whereYouAreIsRounded() {
+    let place = roughly(CLLocationCoordinate2D(latitude: 38.722_252, longitude: -9.139_337))
+    #expect(place.latitude == 38.72 && place.longitude == -9.14)
+}
+
 @Test func weather() async throws {
     // What Open-Meteo answered for Lisbon (Tests/Fixtures/open-meteo-*.json, its hours trimmed to two days).
     let fixtures = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "Fixtures")
@@ -6042,6 +6079,23 @@ private let coreAnswers = Duration.seconds(30)
         #expect(core.model.notice == nil && core.model.keywords["forecast"] == "weather" && core.model.keywords["wth"] == nil)
     }
 
+    /// A file broken before launch runs on the last config that loaded, so what you turned off stays off; with none
+    /// before it, the row says it's the defaults.
+    @Test func brokenAtLaunchKeepsTheLastConfig() async throws {
+        defer { Feature.use(Config().features) }
+        let (first, folder) = try await startedCore(config: "[features]\nqr = false\n")
+        #expect(!Feature.qr.isOn)
+        _ = first
+        let state = folder.appending(path: "state.json") // written a second after, as quitting does at once
+        await eventually(within: coreAnswers) { (try? String(contentsOf: state, encoding: .utf8))?.contains("lastConfig") == true }
+        try "[features\nnot toml".write(to: folder.appending(path: "config.toml"), atomically: true, encoding: .utf8)
+        Feature.use(Config().features)
+        let (core, _) = try await startedCore(config: nil, in: folder)
+        #expect(!Feature.qr.isOn && core.model.notice?.subtitle == "Using the last valid config")
+        let (fresh, _) = try await startedCore(config: "[features\nnot toml")
+        #expect(Feature.qr.isOn && fresh.model.notice?.subtitle == "Using the defaults")
+    }
+
     /// Launch's first run writes the example config, which reads as the defaults.
     @Test func writesTheExampleConfig() async throws {
         let (core, folder) = try await startedCore(config: nil)
@@ -6225,6 +6279,7 @@ private let coreAnswers = Duration.seconds(30)
     }
     let none = wholeSheet(isOn: { _ in false })
     #expect(!none.isEmpty && !none.flatMap(\.lines).contains { $0.fill == "weather" || $0.fill == ":left" || $0.fill == "sig" })
+    #expect(!wholeSheet(isOn: { $0 != .mac }).flatMap(\.lines).contains { $0.fill == "screenshot" || $0.fill == "record" })
     #expect(none.allSatisfy { !$0.lines.isEmpty }, "a section with nothing in it")
 }
 

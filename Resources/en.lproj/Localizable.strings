@@ -638,7 +638,7 @@
 
 "Couldn't add the reminder" = "Couldn't add the reminder";
 
-"Couldn't change Launch at Login" = "Couldn't change Launch at Login";
+"Couldn't change Open at Login" = "Couldn't change Open at Login";
 
 "Couldn't clear clipboard history" = "Couldn't clear clipboard history";
 
@@ -759,6 +759,8 @@
 "Download" = "Download";
 
 "Download %@ to translate here" = "Download %@ to translate here";
+
+"Download Copperlight %@…" = "Download Copperlight %@…";
 
 "Download, upload and latency, with Apple’s servers" = "Download, upload and latency, with Apple’s servers";
 
@@ -1077,8 +1079,6 @@
 "Latency %lld ms, %lld ms under load · %@" = "Latency %lld ms, %lld ms under load · %@";
 
 "Latest screenshots and downloads" = "Latest screenshots and downloads";
-
-"Launch at Login" = "Launch at Login";
 
 /* A Settings pane */
 "Launcher" = "Launcher";
@@ -2264,8 +2264,6 @@
 
 "Update check" = "Update check";
 
-"Update to Copperlight %@…" = "Update to Copperlight %@…";
-
 "Upload" = "Upload";
 
 "Use %@" = "Use %@";
@@ -2273,6 +2271,8 @@
 "Use What's Selected in Finder" = "Use What's Selected in Finder";
 
 "Users & Groups" = "Users & Groups";
+
+"Using the defaults" = "Using the defaults";
 
 "Using the last valid config" = "Using the last valid config";
 

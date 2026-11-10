@@ -168,14 +168,20 @@ enum LocationStatus: Sendable { case unasked, allowed, refused }
         done.forEach { $0.resume(returning: coordinate) }
     }
 
-    /// Where this Mac is, named by its town (Apple's geocoder). nil: Location Services couldn't tell.
+    /// Where this Mac is, roughly, named by its town (Apple's geocoder). nil: Location Services couldn't tell.
     nonisolated static func here() async -> Place? {
-        guard let coordinate = await shared.coordinate() else { return nil }
+        guard let exact = await shared.coordinate() else { return nil }
+        let coordinate = roughly(exact) // all that leaves the Mac, to Apple's geocoder and to Open-Meteo
         let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
         let name = try? await CLGeocoder().reverseGeocodeLocation(location).first?.locality
         return Place(name: name ?? String(localized: "Where you are", comment: "The weather's place when its town has no name"),
                      latitude: coordinate.latitude, longitude: coordinate.longitude)
     }
+}
+
+/// Rounded to 2 decimals, about a kilometer: enough for a town's name and its weather.
+func roughly(_ coordinate: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
+    CLLocationCoordinate2D(latitude: (coordinate.latitude * 100).rounded() / 100, longitude: (coordinate.longitude * 100).rounded() / 100)
 }
 
 /// The forecast for a place, from Open-Meteo: free, no key. Its coordinates go rounded to 2 decimals, about a kilometer.

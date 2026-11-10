@@ -57,7 +57,7 @@ make clean   # remove build/ and the generated project
 `Copperlight.xcodeproj` is generated: XcodeGen lists the source files, so the Makefile regenerates it every time.
 Never edit it; change `project.yml` instead.
 
-For everyday use, run `make install` and turn on Launch at Login from that copy's menu. The login item
+For everyday use, run `make install` and turn on Open at Login from that copy's menu. The login item
 points at the copy that was running when you turned it on, and `./build` disappears with `make clean`. After
 changes, `make install` again (same place, so the login item and Accessibility permission keep working).
 

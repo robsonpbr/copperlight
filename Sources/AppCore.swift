@@ -138,14 +138,19 @@ final class AppCore {
     private var configProblem: String? // its mistake, while it has one
     private var config = Config() // the one in use, for what's asked later (`help`)
     private var configUpdate: Task<Void, Never>?
+    private var hasValidConfig = false // a config that parsed is in use, this launch's or the one saved from before
+    private static let lastConfigKey = "lastConfig" // in state.json: config.toml as it was when it last loaded
 
-    /// Launch, in this order: the example config if there's none, the defaults (the "last valid config" if the file is
-    /// broken from the start), the clipboard history, then the file.
+    /// Launch, in this order: the example config if there's none, the config that last loaded (the defaults the first
+    /// time), the clipboard history, then the file.
     func start() {
         if !FileManager.default.fileExists(atPath: configFile.path) {
             try? Config.example.write(to: configFile, atomically: true, encoding: .utf8)
         }
-        apply(Config())
+        // The last config that loaded, so a file broken before launch doesn't turn what you switched off back on.
+        let saved = state.get(Self.lastConfigKey, as: String.self).flatMap { try? Config.parse($0) }
+        apply(saved ?? Config())
+        hasValidConfig = saved != nil
         do {
             // After the defaults above, so retention only prunes with a config that actually loaded. It records only
             // while clipboard history is on (apply).
@@ -195,13 +200,14 @@ final class AppCore {
         configText = text
         do {
             apply(try text.map(Config.parse) ?? Config())
-            (model.notice, configProblem) = (nil, nil)
+            (model.notice, configProblem, hasValidConfig) = (nil, nil, true)
+            state.set(Self.lastConfigKey, text ?? "")
         } catch {
             configProblem = Config.describe(error)
             let file = configFile
             model.notice = LauncherResult(
                 id: "config-error", title: String(localized: "config.toml: \(Config.describe(error))"),
-                subtitle: String(localized: "Using the last valid config"), icon: .symbol("exclamationmark.triangle"),
+                subtitle: hasValidConfig ? String(localized: "Using the last valid config") : String(localized: "Using the defaults"), icon: .symbol("exclamationmark.triangle"),
                 score: .infinity, actionTitle: String(localized: "Open config.toml"),
                 action: { NSWorkspace.shared.open(file) })
         }

@@ -93,7 +93,7 @@ actor AppProvider: ResultProvider {
     private var infos: [String: AppInfo] = [:] { didSet { terms = infos.mapValues(AppTerms.init) } }
     private var terms: [String: AppTerms] = [:] // infos, ready to search
     private let index: AppIndex?
-    private var online = true
+    private var online = false // until config.toml says: nothing goes out before it's read
     private let brew: String?
     /// Homebrew's apps, to install one you don't have: with Homebrew there and `[apps] online` on.
     private var casks: [(token: String, name: String, desc: String, key: String)] = []
@@ -105,7 +105,10 @@ actor AppProvider: ResultProvider {
         self.brew = brew
     }
 
-    func setOnline(_ online: Bool) { self.online = online }
+    func setOnline(_ online: Bool) {
+        self.online = online
+        if !online { casks = [] } // no Install rows, nothing to run brew from
+    }
     func setInfos(_ infos: [String: AppInfo]) { self.infos = infos }
     func setCasks(_ list: [String: HomebrewApp]) {
         var seen = Set<String>()
@@ -180,7 +183,7 @@ actor AppProvider: ResultProvider {
     /// closest first, below everything you have.
     private func installRows(_ query: String) -> [LauncherResult] {
         let typed = query.lowercased().trimmingCharacters(in: .whitespaces)
-        guard Feature.homebrew.isOn, let brew, typed.count >= 3, !apps.contains(where: { $0.name.lowercased().hasPrefix(typed) }) else { return [] }
+        guard Feature.homebrew.isOn, online, let brew, typed.count >= 3, !apps.contains(where: { $0.name.lowercased().hasPrefix(typed) }) else { return [] }
         return casks.filter { $0.key.hasPrefix(typed) }.sorted { ($0.key.count, $0.key) < ($1.key.count, $1.key) }.prefix(2)
             .enumerated().map { index, cask in installRow(cask.token, name: cask.name, desc: cask.desc, brew: brew, score: -0.5 - Double(index) / 100) }
     }

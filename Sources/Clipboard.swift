@@ -495,12 +495,14 @@ actor ClipboardProvider: ResultProvider {
 /// of the empty launcher, so it's the hotkey and Enter each time (nothing watches ⌘V).
 @MainActor final class PasteQueue {
     static let shared = PasteQueue()
-    var ids: [Int64] = []
+    var ids: [Int64] = [] { didSet { touched = .now } }
+    private(set) var touched = Date.now // started or pasted from; half an hour later it's forgotten, as a relaunch does
 }
 
 /// The empty launcher's row for the next item in `queue`: Enter pastes it, Tab stops. Items deleted since are skipped.
-@MainActor func pasteNextRows(_ queue: PasteQueue, store: ClipboardStore,
+@MainActor func pasteNextRows(_ queue: PasteQueue, store: ClipboardStore, now: Date = .now,
                               paste: @escaping @MainActor @Sendable (ClipboardContent) -> Void) -> [LauncherResult] {
+    if !queue.ids.isEmpty, now.timeIntervalSince(queue.touched) > 30 * 60 { queue.ids = [] }
     while let id = queue.ids.first, (try? store.content(id)) == nil { queue.ids.removeFirst() }
     guard let id = queue.ids.first, let content = try? store.content(id) else { return [] }
     let shown = switch content {
@@ -511,7 +513,7 @@ actor ClipboardProvider: ResultProvider {
     return [LauncherResult(id: "paste-queue:\(id)", title: String(localized: "Paste Next: \(shown)"),
                            subtitle: left == 0 ? String(localized: "The last one")
                                : String(localized: "\(left) more after it, in the order you copied them"),
-                           icon: .symbol("list.number"), score: 210,
+                           icon: .symbol("list.number"), score: 99.999, // under the meeting to join (100), over what's counting
                            actionTitle: String(localized: "Paste", comment: "Enter on the next clipboard item to paste in order"), action: {
         queue.ids.removeFirst()
         paste(content)

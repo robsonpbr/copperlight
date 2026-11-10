@@ -500,7 +500,7 @@ The row shows the title and date Copperlight read before you press Enter; a noti
   Tab on an item: what you can do with it (above), Pin, and Paste in Order from Here. A pinned item stays on top,
   under Pinned, and is never pruned or cleared. Paste in Order pastes that item, then the next one you copied waits on
   top of the empty launcher ("Paste Next: …"), so the hotkey and Enter paste them one by one, in the order you copied
-  them; Tab on it stops. Its own `:` commands: `:copy` (copy without pasting), `:delete`,
+  them, under the meeting to join; Tab on it stops, and so does half an hour without pasting. Its own `:` commands: `:copy` (copy without pasting), `:delete`,
   `:clear` (asks first; pinned items stay). Skips copies marked
   as passwords and copies made in `ignore_apps` (password managers by default). Keeps 1000 items or 90 days by
   default.
@@ -567,7 +567,7 @@ one it can't make cleanly is refused, and the file stays as it was. Edits made b
 
 ## Menu bar
 
-The C, with Settings… (⌘,), Welcome to Copperlight, Help, Launch at Login and Quit, and Update to Copperlight 0.17… on top when a new version is out. A running pomodoro or timer adds its countdown next to it,
+The C, with Settings… (⌘,), Welcome to Copperlight, Help, Open at Login and Quit, and Download Copperlight 0.17… on top when a new version is out. A running pomodoro or timer adds its countdown next to it,
 and `:awake` a sun while it keeps the Mac awake (click either to stop it; for a while, its menu says until when). Keeping
 awake ends when its time is up, or when Copperlight quits.
 

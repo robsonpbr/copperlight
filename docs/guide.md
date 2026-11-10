@@ -410,7 +410,8 @@ on it again unpins it.
 
 **Pasting in order:** to paste several things in the order you copied them (a name, then an email, then a phone
 number, into a form), Tab on the first one, then Paste in Order from Here. It's pasted, and the next one waits on top
-of the empty launcher as Paste Next: press the hotkey and Enter for each. Tab on Paste Next stops. Nothing watches
+of the empty launcher as Paste Next: press the hotkey and Enter for each. Tab on Paste Next stops, and so does half an hour without
+pasting. A meeting about to start stays above it. Nothing watches
 your ⌘V: the hotkey is the only key Copperlight hears.
 
 **Latest screenshots and downloads:** `screenshots` lists your newest screenshots (the files macOS marked as

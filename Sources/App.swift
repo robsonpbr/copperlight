@@ -146,13 +146,13 @@ struct CopperlightApp: App {
     var body: some Scene {
         MenuBarExtra("Copperlight", image: "Mark") { // the icon's C
             if let version = delegate.updates.available {
-                Button("Update to Copperlight \(version)…") { NSWorkspace.shared.open(UpdateCheck.page) }
+                Button("Download Copperlight \(version)…") { NSWorkspace.shared.open(UpdateCheck.page) }
                 Divider()
             }
             Button("Settings…") { delegate.showSettings() }.keyboardShortcut(",")
             Button("Welcome to Copperlight") { delegate.showWelcome() }
             Button("Help") { delegate.showHelp() }
-            Toggle("Launch at Login", isOn: Binding(get: { launchAtLogin }, set: { launchAtLogin = setLaunchAtLogin($0) }))
+            Toggle("Open at Login", isOn: Binding(get: { launchAtLogin }, set: { launchAtLogin = setLaunchAtLogin($0) }))
                 // The menu is built once, so ask again each time it opens: System Settings → Login Items may have
                 // changed it. onAppear covers the first open, before onReceive is listening.
                 .onAppear(perform: readLaunchAtLogin)
@@ -172,7 +172,7 @@ struct CopperlightApp: App {
     do {
         if on { try service.register() } else { try service.unregister() }
     } catch {
-        notify(String(localized: "Couldn't change Launch at Login"), error.localizedDescription)
+        notify(String(localized: "Couldn't change Open at Login"), error.localizedDescription)
     }
     if service.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
     return service.status == .enabled
@@ -231,7 +231,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if Feature.translate.isOn { Task { _ = await TranslateProvider.languages() } } // its language chips
         watcher = DirectoryWatcher(configDir) { [unowned self] in
             core.reloadConfig()
-            notes[mainNoteFile.path]?.reloadIfChanged()
+            notes.values.forEach { $0.reloadIfChanged() } // FSEvents is recursive: notes/ edits land here too
         }
         KeyboardShortcuts.onKeyDown(for: .toggleLauncher) { [unowned self] in
             welcome?.model.triedHotkey = true

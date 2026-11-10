@@ -225,7 +225,7 @@ final class NotePanel: NSPanel, NSTextViewDelegate, NSWindowDelegate {
     }
 
     func show() {
-        reloadIfChanged() // a named note's folder isn't watched: edits made elsewhere show from here
+        reloadIfChanged() // in case it changed while the app wasn't watching
         makeKeyAndOrderFront(nil)
         makeFirstResponder(textView)
     }

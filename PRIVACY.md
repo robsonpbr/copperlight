@@ -31,6 +31,7 @@ Those descriptions let you find an app by what it does, like "draw" or "noise". 
 |---|---|---|
 | query1.finance.yahoo.com | In the Stock chip (`stock aapl`, then Tab), once you pause typing | The ticker |
 | api.open-meteo.com, geocoding-api.open-meteo.com | In the Weather chip, once you pause typing | The city you typed or set in Settings, or where you are, rounded to about a kilometer |
+| Apple's geocoder | In the Weather chip with no city set | Where you are, rounded to about a kilometer, to name your town |
 | *language*.wikipedia.org | In the Wikipedia chip (`wiki lisbon`, then Tab), once you pause typing | What you typed, in your Mac's first language |
 | api.ipify.org | Enter on the Public IP row (`ip`) | Nothing besides the request: it answers with your public address |
 | Apple's servers | Enter on `speed` | The speed test macOS runs itself (`networkQuality`) |
@@ -70,7 +71,7 @@ Everything is in `~/.config/copperlight/`, on your Mac, and nowhere else:
 - `config.toml`: your settings. Never a key or a password.
 - `note.txt` and `notes/`: your notes.
 - `state.json`: what you open most and what you picked for what you typed, recent queries, saved layouts, the
-  running timer, the apps you open around each time of day, the colors you picked, and the last update check.
+  running timer, the apps you open around each time of day, the colors you picked, the last update check, and a copy of config.toml as it last loaded.
 - `clipboard.sqlite`: your clipboard history, readable only by you. Deleted items are overwritten. Copies that apps
   mark as passwords, and copies made in password managers, are never recorded.
 - `rates.json`, `apps.json` and `homebrew-apps.json`: currency rates and app descriptions.

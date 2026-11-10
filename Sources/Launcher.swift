@@ -134,7 +134,9 @@ func formatNumber(_ value: Double, decimals: ClosedRange<Int> = 0...10, mark: St
 
 /// Typed numbers the way Swift reads them. With both marks the last one is the decimal point, on any Mac:
 /// `1.234,56` and `1,234.56` are 1234.56. A lone comma (`12,5`) is one only where the Mac's mark is, since elsewhere it
-/// parts a function's arguments (`max(1,2)`). Anything else stays as typed.
+/// parts a function's arguments (`max(1,2)`). One mark before groups of three digits groups them when there are several
+/// (`1,000,000`) or it isn't the Mac's (`1,000` on a Mac that writes `1.5`). Anything else stays as typed.
+/// ponytail: `max(1,234)` reads as max(1234) where the Mac's mark is "."; a space after the comma keeps two arguments.
 func plainNumbers(_ text: String, mark: String = decimalMark) -> String {
     text.replacing(#/\d+(?:[.,]\d+)+/#) { match in
         let number = String(match.0), marks = number.filter { $0 == "." || $0 == "," }
@@ -142,6 +144,11 @@ func plainNumbers(_ text: String, mark: String = decimalMark) -> String {
             let groups = number.prefix { $0 != point }.split(separator: group)
             guard (1...3).contains(groups[0].count), groups.dropFirst().allSatisfy({ $0.count == 3 }) else { return number }
             return number.filter { $0 != group }.replacing(String(point), with: ".")
+        }
+        let groups = number.split { $0 == "." || $0 == "," }
+        if Set(marks).count == 1, marks.count > 1 || marks != mark, (1...3).contains(groups[0].count), groups[0].first != "0",
+           groups.dropFirst().allSatisfy({ $0.count == 3 }) {
+            return number.filter(\.isNumber)
         }
         return mark == "," && marks == "," ? number.replacing(",", with: ".") : number
     }
