@@ -2,6 +2,21 @@ import AppKit
 import Carbon.HIToolbox
 import TOMLKit
 
+/// The closest of `names` to `word`, a letter or two off at most (`wether` → weather, `meeting` → meetings); nil for none.
+func nearest(_ word: String, in names: some Sequence<String>) -> String? {
+    func distance(_ a: [Character], _ b: [Character]) -> Int { // Levenshtein, one row at a time
+        var row = Array(0...b.count)
+        for (i, x) in a.enumerated() {
+            var diagonal = row[0]
+            row[0] = i + 1
+            for (j, y) in b.enumerated() { (diagonal, row[j + 1]) = (row[j + 1], min(row[j + 1] + 1, row[j] + 1, diagonal + (x == y ? 0 : 1))) }
+        }
+        return row[b.count]
+    }
+    let limit = min(2, max(1, word.count / 3))
+    return names.map { ($0, distance(Array(word), Array($0))) }.filter { $0.1 <= limit }.min { $0.1 < $1.1 }?.0
+}
+
 /// ~/.config/copperlight/config.toml. Every field has a default, so a missing file, an empty file
 /// or a missing section all mean "defaults".
 struct Config: Decodable, Equatable {
@@ -55,8 +70,13 @@ struct Config: Decodable, Equatable {
             let c = try decoder.container(keyedBy: Name.self)
             for key in c.allKeys {
                 guard let feature = Feature(rawValue: key.stringValue), !Feature.parked.contains(feature) else {
-                    throw DecodingError.dataCorruptedError(
-                        forKey: key, in: c, debugDescription: String(localized: "no feature by that name (Settings › Features lists them)"))
+                    // As Settings shows it ("Dictionary"), or a letter or two off ("wether").
+                    let features = Feature.allCases.filter { !Feature.parked.contains($0) }, typed = key.stringValue.lowercased()
+                    let guess = features.first { $0.name.lowercased() == typed.replacing("_", with: " ") }?.rawValue
+                        ?? nearest(typed, in: features.map(\.rawValue))
+                    throw DecodingError.dataCorruptedError(forKey: key, in: c, debugDescription: guess.map {
+                        String(localized: "no feature by that name (did you mean \"\($0)\"?)")
+                    } ?? String(localized: "no feature by that name (docs/configuration.md lists them)"))
                 }
                 if try !c.decode(Bool.self, forKey: key) { off.insert(feature) }
             }
@@ -95,8 +115,12 @@ struct Config: Decodable, Equatable {
             for key in c.allKeys {
                 if key.stringValue == "language" { language = try c.decode(Bool.self, forKey: key); continue }
                 guard Keyword.all.contains(where: { Keyword.key($0) == key.stringValue }) else {
-                    throw DecodingError.dataCorruptedError(
-                        forKey: key, in: c, debugDescription: String(localized: "no keyword by that name (Settings › Keywords lists them)"))
+                    // As Settings shows it ("add todo", ":"), or a letter or two off.
+                    let keys = Keyword.all.map(Keyword.key), typed = key.stringValue.lowercased()
+                    let guess = Keyword.all.first { $0 == typed }.map(Keyword.key) ?? nearest(typed, in: keys)
+                    throw DecodingError.dataCorruptedError(forKey: key, in: c, debugDescription: guess.map {
+                        String(localized: "no keyword by that name (did you mean \"\($0)\"?)")
+                    } ?? String(localized: "no keyword by that name (docs/configuration.md lists them)"))
                 }
                 let words = try (try? c.decode(String.self, forKey: key)).map { [$0] } ?? c.decode([String].self, forKey: key)
                 self.words[key.stringValue] = words.map { $0.lowercased().trimmingCharacters(in: .whitespaces) }
@@ -510,6 +534,47 @@ struct Config: Decodable, Equatable {
                 forKey: key, in: c, debugDescription: String(localized: "expected \(words)", comment: "Then the words config.toml takes, in quotes"))
         }
         return value
+    }
+
+    /// Every section and key the starter config names, set or commented out: "clipboard", "clipboard.max_items",
+    /// "command.alias". The docs' own examples are checked against it (a test).
+    static let known: Set<String> = {
+        var section = "", names: Set<String> = []
+        for line in example.split(separator: "\n") {
+            let text = line.trimmingCharacters(in: .whitespaces).trimmingPrefix(#/#\s*/#)
+            if let name = text.wholeMatch(of: #/\[\[?([a-z_]+)\]\]?/#) { section = String(name.1); names.insert(section) }
+            else if let key = text.prefixMatch(of: #/([a-z_]+)\s*=/#) { names.insert("\(section).\(key.1)") }
+        }
+        return names
+    }()
+
+    /// What in `text` isn't a setting (a typo, or one that's gone), and a timer sound the Mac doesn't have: a line each,
+    /// for a row that blocks nothing, as the rest still loads. [features] and [keywords] refuse a wrong name themselves.
+    static func unknown(_ text: String) -> [String] {
+        guard let table = try? TOMLTable(string: text) else { return [] }
+        let sections = known.filter { !$0.contains(".") }
+        let bracketed = { (name: String, array: Bool) in array ? "[[\(name)]]" : "[\(name)]" }
+        var found: [String] = []
+        for section in table.keys.sorted() where section != "features" && section != "keywords" {
+            guard let value = table[section] else { continue }
+            guard sections.contains(section) else {
+                let shown = bracketed(section, value.array != nil)
+                found.append(nearest(section, in: sections).map {
+                    String(localized: "\(shown) isn't a setting (did you mean \(bracketed($0, ["command", "snippet"].contains($0)))?)")
+                } ?? String(localized: "\(shown) isn't a setting"))
+                continue
+            }
+            let tables = value.table.map { [$0] } ?? value.array.map { $0.compactMap(\.table) } ?? []
+            let keys = known.compactMap { $0.hasPrefix(section + ".") ? String($0.dropFirst(section.count + 1)) : nil }
+            for key in Set(tables.flatMap(\.keys)).sorted() where !keys.contains(key) {
+                found.append(nearest(key, in: keys).map { String(localized: "\(section).\(key) isn't a setting (did you mean \($0)?)") }
+                    ?? String(localized: "\(section).\(key) isn't a setting"))
+            }
+        }
+        if let sound = table["timers"]?.table?["sound"]?.string, !["default", "none"].contains(sound.lowercased()), NSSound(named: sound) == nil {
+            found.append(String(localized: "timers.sound: no sound named \"\(sound)\" (Settings › Options lists them)"))
+        }
+        return found
     }
 
     static func parse(_ text: String) throws -> Config {

@@ -26,6 +26,11 @@ extension [Verb] {
     func belonging(to feature: Feature) -> [Verb] { map { var verb = $0; verb.feature = feature; return verb } }
 }
 
+/// A quiet row once the answers are in and none matched: says so, and Enter does nothing.
+func noMatch(_ title: String) -> LauncherResult {
+    LauncherResult(id: "none", title: title, icon: .symbol("magnifyingglass"), score: -100, actionTitle: "", action: {})
+}
+
 /// The `:` commands of one panel. It gets every query that starts with `:`, and only those.
 struct VerbProvider: ResultProvider {
     static let prefix = ":"
@@ -37,24 +42,40 @@ struct VerbProvider: ResultProvider {
     private var shown: [Verb] { verbs.filter { $0.feature.map(isOn) ?? true } }
     /// The commands that take a name (`:quit `); `:!` is the shell's.
     var modes: [Mode] {
-        shown.filter { $0.targets != nil && $0.keyword != "!" }.map { Mode(prefix: ":\($0.keyword) ", title: $0.shown, icon: $0.icon) }
+        shown.filter { $0.targets != nil && $0.keyword != "!" }.map {
+            Mode(prefix: ":\($0.keyword) ", title: $0.shown, icon: $0.icon,
+                 hint: String(localized: "A name to look for", comment: "The placeholder in a : command's chip (:quit, :reveal)"))
+        }
     }
 
     func results(for query: String) async -> [LauncherResult] {
         guard query.hasPrefix(Self.prefix) else { return [] }
         let text = query.dropFirst().trimmingCharacters(in: .whitespaces)
         let lower = text.lowercased()
-        // Another name takes targets too: `:kill slack` is `:force quit slack`.
+        // Another name takes targets too: `:kill slack` is `:force quit slack`. The longest name typed wins, so
+        // `:sound output` is Switch Sound Output, not Set Volume's "sound", and `:hide all` is Show Desktop.
         let verbs = shown
-        let named = verbs.lazy.compactMap { verb in
-            verb.targets == nil ? nil : ([verb.keyword] + (otherNames[verb.english] ?? [])).first { lower == $0 || lower.hasPrefix($0 + " ") }.map { (verb, $0) }
-        }.first
+        let named: (Verb, String)? = verbs.flatMap { (verb: Verb) -> [(Verb, String)] in
+            let names: [String] = [verb.keyword] + (otherNames[verb.english] ?? [])
+            return names.filter { lower == $0 || lower.hasPrefix($0 + " ") }.map { (verb, $0) }
+        }.max { $0.1.count < $1.1.count }
         if let (verb, name) = named, let targets = verb.targets {
-            // `:hide o` still offers `:hide others`: commands that extend this one's keyword come first.
-            let extensions = verbs.filter { $0.keyword.hasPrefix(verb.keyword + " ") }
-            return rows(extensions, matching: text) + (await targets(text.dropFirst(name.count).trimmingCharacters(in: .whitespaces)))
+            // `:hide o` still offers `:hide others`: commands that extend this one's keyword come first; typed whole
+            // with nothing to list yet (`:reveal`), the command's own row, so the list doesn't empty.
+            let rest = text.dropFirst(name.count).trimmingCharacters(in: .whitespaces)
+            let listed = await targets(rest)
+            let extensions = verbs.filter { $0.keyword.hasPrefix(verb.keyword + " ") || rest.isEmpty && listed.isEmpty && $0.keyword == verb.keyword }
+            return rows(extensions, matching: text) + listed
         }
-        return rows(verbs, matching: text) + (text.isEmpty || !isOn(.menus) ? [] : await more(text))
+        var found = rows(verbs, matching: text)
+        // A command's whole name typed puts it first: `:hide all` is Show Desktop, over Unhide All.
+        if let (verb, _) = named, let index = found.firstIndex(where: { $0.id == "verb:\(verb.keyword)" }) {
+            var row = found.remove(at: index)
+            row.score = (found.map(\.score).max() ?? row.score) + 1
+            found.insert(row, at: 0)
+        }
+        found += text.isEmpty || !isOn(.menus) ? [] : await more(text)
+        return found.isEmpty ? [noMatch(String(localized: "No command matches “\(text)”"))] : found
     }
 
     private func rows(_ verbs: [Verb], matching text: String) -> [LauncherResult] {

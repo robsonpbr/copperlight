@@ -30,10 +30,11 @@ func remaining(until deadline: Date, now: Date = .now) -> TimeInterval {
     max(0, deadline.timeIntervalSince(now))
 }
 
-/// "24:59". Rounds up, so a fresh 25-minute timer shows 25:00 and the last second shows 00:01.
+/// "24:59", and from an hour up "6:29:59". Rounds up, so a fresh 25-minute timer shows 25:00 and the last second 00:01.
 func countdown(_ seconds: TimeInterval) -> String {
     let total = Int(seconds.rounded(.up))
-    return String(format: "%02d:%02d", total / 60, total % 60)
+    return total >= 3600 ? String(format: "%d:%02d:%02d", total / 3600, total / 60 % 60, total % 60)
+        : String(format: "%02d:%02d", total / 60, total % 60)
 }
 
 /// The one pomodoro timer. It's a deadline, not a tick count, so sleep doesn't skew it, and the

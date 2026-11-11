@@ -202,6 +202,14 @@ final class AppCore {
             apply(try text.map(Config.parse) ?? Config())
             (model.notice, configProblem, hasValidConfig) = (nil, nil, true)
             state.set(Self.lastConfigKey, text ?? "")
+            // A name it doesn't know (`[[commands]]`) loads as nothing: said on top, the rest in use.
+            if let unknown = Config.unknown(text ?? "").first {
+                let file = configFile
+                model.notice = LauncherResult(id: "config-error", title: String(localized: "config.toml: \(unknown)"),
+                                              subtitle: String(localized: "The rest is in use"), icon: .symbol("exclamationmark.triangle"),
+                                              score: .infinity, actionTitle: String(localized: "Open config.toml"),
+                                              action: { NSWorkspace.shared.open(file) })
+            }
         } catch {
             configProblem = Config.describe(error)
             let file = configFile

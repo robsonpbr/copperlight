@@ -107,7 +107,8 @@ Settings › Keywords, or `[keywords]` (`weather = "wth"`); `:` gets yours besid
   open for the next. Needs full Reminders access already given (`add todo` or `due` asks). `[reminders] show_due = false`
   (Settings › Launcher) keeps them away; `due` still lists them.
 - **Suggestions, waiting:** up to 3 apps you open around this time of day (from the launcher, within an hour of now, on
-  3 days or more of the last 4 weeks), not the one you're in. Kept in `state.json`; `[apps] suggestions = false`
+  3 days or more of the last 4 weeks), not the one you're in. Tab shows what you can do with it, as on its row in a
+  search (recent documents, Hide, Quit). Kept in `state.json`; `[apps] suggestions = false`
   (Settings › Launcher) turns them off and stops keeping what you open; Forget deletes what's kept.
 - **Tab steps into some rows** while Enter still runs them, and the selected row names both: on a person, Actions ⇥
   (Message ↵); on a calculation, Keep Going ⇥ puts the result in the field (Copy ↵).
@@ -327,7 +328,8 @@ Settings › Keywords, or `[keywords]` (`weather = "wth"`); `:` gets yours besid
   30 minutes or more between 9:00 and 18:00, outside your events (all-day ones and those shown as free don't count),
   from the next quarter hour on. `free` alone is today, or the next workday once today's over; it stays under apps
   that start with "free". The first row has them all, a line a day ("Wed, Nov 4: 9:00 – 10:00 AM, 1:00 – 5:40 PM"),
-  for an email; Enter copies it. Each slot is a row of its own too.
+  for an email; Enter copies it. Each slot is a row of its own too. On a weekend, `free this week` says no workdays
+  are left, and Enter shows next week's. Working hours show in your Mac's clock (9:00 AM on a 12-hour Mac).
 - **Due reminders** (`due`, `overdue`, `todos`): incomplete reminders due today or before, soonest deadline first, with
   their list and a copper badge. Enter completes one, the launcher staying open. The soon ones also wait in the empty
   launcher.
@@ -401,7 +403,9 @@ The row shows its first line, and long ones show whole in the preview pane.
 
 ## `:` commands
 
-`:` lists them all; typing narrows them (`:min`, `:fq`). Window and app commands act on what you were in.
+`:` lists them all; typing narrows them (`:min`, `:fq`). Window and app commands act on what you were in. A command's
+whole name, or another name of it, picks it over a shorter one (`:sound output`, `:hide all`); when none matches, a row
+says so, as it does for a typed path and the Files chip.
 
 | Group | Commands |
 |---|---|

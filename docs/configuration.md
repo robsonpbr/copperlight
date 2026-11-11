@@ -230,7 +230,10 @@ switches. Finding apps, the search row and Copperlight's own rows are always on.
 | `homebrew` | Installing an app you don't have, from its row |
 | `updates` | The update check: once a day, the latest version number from GitHub |
 
-A name that isn't one of these is an error row, so a typo doesn't go unnoticed. A clock already running when its
+A name that isn't one of these is an error row, so a typo doesn't go unnoticed; it suggests the nearest name, and
+takes the name Settings shows too ("Dictionary" → `define`). Anywhere else in the file, a section or key that isn't a
+setting (`[[commands]]`, `show_on_opne`), or a timer `sound` the Mac doesn't have, shows a row too, while the rest
+of the config is in use. A clock already running when its
 feature is turned off keeps going until it ends.
 
 **The accent**, `[look] accent`, colors the field's edge, the selected row, chips and the titles over answers:

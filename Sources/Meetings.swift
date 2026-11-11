@@ -385,11 +385,13 @@ actor MeetingsProvider: ResultProvider {
             })]
         }
         let now = Date.now
-        if let free, let first = free.days.first, let last = free.days.last {
-            let busy = events(in: DateInterval(start: first, end: last.addingTimeInterval(86_400)))
-                .filter { $0.busy && !$0.allDay }.map { DateInterval(start: $0.start, end: max($0.start, $0.end)) }
-            return freeRows(freeSlots(busy: busy, days: free.days, hours: options.workHours, now: now), label: free.label, hours: options.workHours, base: base,
-                            open: (calendarActionTitle(options.openIn), calendarOpener(options.openIn, .day, first, browser: browser)))
+        if let free {
+            let busy = free.days.first.map { first in
+                events(in: DateInterval(start: first, end: free.days.last!.addingTimeInterval(86_400)))
+                    .filter { $0.busy && !$0.allDay }.map { DateInterval(start: $0.start, end: max($0.start, $0.end)) }
+            } ?? []
+            return freeRows(freeSlots(busy: busy, days: free.days, hours: options.workHours, now: now), days: free.days, label: free.label, hours: options.workHours, base: base,
+                            open: (calendarActionTitle(options.openIn), calendarOpener(options.openIn, .day, free.days.first ?? now, browser: browser)))
         }
         if let next = month {
             let card = monthCard(events(in: monthGrid(monthInterval(now: now, next: next))), now: now, next: next)
@@ -417,20 +419,30 @@ actor MeetingsProvider: ResultProvider {
 }
 
 /// `free tomorrow`: all of it to copy first, then a row a slot, each copied as "Wed, Nov 4, 9:00 – 10:00 AM".
-private func freeRows(_ slots: [DateInterval], label: String, hours: Range<Int>, base: Double,
-                      open: (title: String, action: @MainActor @Sendable () -> Void)) -> [LauncherResult] {
+func freeRows(_ slots: [DateInterval], days: [Date], label: String, hours: Range<Int>, base: Double,
+              open: (title: String, action: @MainActor @Sendable () -> Void), calendar: Calendar = .current) -> [LauncherResult] {
     let icon = LauncherResult.Icon.symbol("calendar.badge.checkmark")
+    guard !days.isEmpty else { // `free this week` on a weekend
+        return [LauncherResult(id: "builtin:free", title: String(localized: "No workdays left this week"),
+                               subtitle: String(localized: "Enter shows next week's free time"), icon: icon, score: base,
+                               actionTitle: String(localized: "Next Week", comment: "Enter on 'No workdays left this week': free next week"),
+                               action: {}, completion: "free next week")]
+    }
+    // In a sentence: "today", "next week", but "Friday" as written.
+    let label = calendar.weekdaySymbols.contains(label) ? label : label.lowercased()
     guard !slots.isEmpty else {
+        let style = Date.FormatStyle(date: .omitted, time: .shortened, locale: calendar.locale ?? .current, calendar: calendar, timeZone: calendar.timeZone)
+        let clock = { (hour: Int) in calendar.date(bySettingHour: hour % 24, minute: 0, second: 0, of: days[0])!.formatted(style) }
         return [LauncherResult(id: "builtin:free",
-                               title: String(localized: "No free time \(label.lowercased())", comment: "A day: today, tomorrow, Monday, next week"),
-                               subtitle: String(localized: "Between \(hours.lowerBound):00 and \(hours.upperBound):00, 30 minutes or more"),
+                               title: String(localized: "No free time \(label)", comment: "A day: today, tomorrow, Monday, next week"),
+                               subtitle: String(localized: "Between \(clock(hours.lowerBound)) and \(clock(hours.upperBound)), 30 minutes or more"),
                                icon: icon, score: base, actionTitle: open.title, action: open.action)]
     }
     let all = freeText(slots)
     let lengths = Duration.UnitsFormatStyle(allowedUnits: [.hours, .minutes], width: .narrow)
     let count = slots.count == 1 ? String(localized: "1 slot") : String(localized: "\(slots.count) slots")
     let whole = LauncherResult(id: "builtin:free",
-                               title: String(localized: "Free \(label.lowercased()): \(count)", comment: "A day (today, next week), then 3 slots"),
+                               title: String(localized: "Free \(label): \(count)", comment: "A day (today, next week), then 3 slots"),
                                subtitle: all.replacing("\n", with: " · "), icon: icon, score: base,
                                actionTitle: String(localized: "Copy All", comment: "Enter on free's first row: copies every slot"),
                                action: { copyToClipboard(all) }, preview: all, previewStyle: .prose)

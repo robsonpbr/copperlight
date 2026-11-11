@@ -599,7 +599,7 @@ those of the months around it fade. `next month` shows the one after. Enter open
 
 **Free time:** `free tomorrow` lists the gaps in your calendars between 9:00 and 18:00, 30 minutes or more, to offer
 someone a time. Events shown as free and all-day events don't count. Also `free today`, `free friday` (the next
-Friday, or today), `free this week` (the workdays left) and `free next week`; `free` alone is today, or the next
+Friday, or today), `free this week` (the workdays left; on a weekend, Enter goes to next week) and `free next week`; `free` alone is today, or the next
 workday once today's hours are over, and comes under apps whose names start with "free". The first row has them all, a
 line a day ("Wed, Nov 4: 9:00 – 10:00 AM, 1:00 – 5:40 PM"); Enter copies it. Then a row for each slot, Enter copying
 that one.
@@ -632,7 +632,7 @@ reads that app instead (above, under Your calendar and to-do apps).
 
 **Pomodoro:** `pomo` starts `default_minutes`, `pomo 50` starts 50 minutes (1–240), `pomo break` starts
 `break_minutes` of break (`pomo break 15` for another length; a cup in the menu bar), `pomo stop` stops. While it
-runs, the menu bar shows the countdown; click it to stop. Nothing is shown when no timer runs. The end time is
+runs, the menu bar shows the countdown (hours too, from an hour up: 6:29:59); click it to stop. Nothing is shown when no timer runs. The end time is
 saved, so the timer keeps going through sleep and app restarts (if it ended while the app was closed, you get the
 notification on the next launch). When it ends: a notification with a sound. Starting a timer the first time asks to
 allow notifications. While one runs, `pomo` offers to stop it, its time left ticking, and a break (or, during a

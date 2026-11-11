@@ -48,6 +48,10 @@
 
 "%@ is installed" = "%@ is installed";
 
+"%@ isn't a setting" = "%@ isn't a setting";
+
+"%@ isn't a setting (did you mean %@?)" = "%@ isn't a setting (did you mean %@?)";
+
 "%@ isn't installed" = "%@ isn't installed";
 
 /* Battery time left, after its percent */
@@ -83,6 +87,10 @@
 "%@%% of %@ is %@" = "%@%% of %@ is %@";
 
 "%@, so the default browser" = "%@, so the default browser";
+
+"%@.%@ isn't a setting" = "%@.%@ isn't a setting";
+
+"%@.%@ isn't a setting (did you mean %@?)" = "%@.%@ isn't a setting (did you mean %@?)";
 
 /* “Reveal in Finder: notes.txt” */
 "%@: %@" = "%@: %@";
@@ -212,6 +220,9 @@
 "A meeting about to start" = "A meeting about to start";
 
 "A menu of the app in front" = "A menu of the app in front";
+
+/* The placeholder in a : command's chip (:quit, :reveal) */
+"A name to look for" = "A name to look for";
 
 "A name, or nothing for all" = "A name, or nothing for all";
 
@@ -424,7 +435,7 @@
 
 "Before you type. A meeting about to start: one with a call, from 10 minutes before; both need Calendars access, so type “meetings” once. What's running: a pomodoro, a timer, the stopwatch, keeping awake. Apps: the ones you open around this time on most days, learned from what you open here." = "Before you type. A meeting about to start: one with a call, from 10 minutes before; both need Calendars access, so type “meetings” once. What's running: a pomodoro, a timer, the stopwatch, keeping awake. Apps: the ones you open around this time on most days, learned from what you open here.";
 
-"Between %lld:00 and %lld:00, 30 minutes or more" = "Between %lld:00 and %lld:00, 30 minutes or more";
+"Between %@ and %@, 30 minutes or more" = "Between %@ and %@, 30 minutes or more";
 
 "Bigger and smaller text" = "Bigger and smaller text";
 
@@ -810,6 +821,8 @@
 "Enter asks api.ipify.org" = "Enter asks api.ipify.org";
 
 "Enter on a person" = "Enter on a person";
+
+"Enter shows next week's free time" = "Enter shows next week's free time";
 
 "Esc stops it" = "Esc stops it";
 
@@ -1223,6 +1236,9 @@
 
 "Next Track" = "Next Track";
 
+/* Enter on 'No workdays left this week': free next week */
+"Next Week" = "Next Week";
+
 "Next meeting" = "Next meeting";
 
 "Next month" = "Next month";
@@ -1233,6 +1249,8 @@
 "No" = "No";
 
 "No codes in the last 15 minutes" = "No codes in the last 15 minutes";
+
+"No command matches “%@”" = "No command matches “%@”";
 
 "No commands yet." = "No commands yet.";
 
@@ -1285,6 +1303,8 @@
 
 "No windows to save" = "No windows to save";
 
+"No workdays left this week" = "No workdays left this week";
+
 /* No file chosen yet, in the command editor */
 "None" = "None";
 
@@ -1307,6 +1327,10 @@
 "Nothing due today" = "Nothing due today";
 
 "Nothing for “%@”" = "Nothing for “%@”";
+
+"Nothing in %@ matches “%@”" = "Nothing in %@ matches “%@”";
+
+"Nothing in your folders matches “%@”" = "Nothing in your folders matches “%@”";
 
 "Nothing is listening" = "Nothing is listening";
 
@@ -2019,6 +2043,8 @@
 
 "The password for “%@”" = "The password for “%@”";
 
+"The rest is in use" = "The rest is in use";
+
 "The rest of today" = "The rest of today";
 
 "The rows you pick rise, and come first for what you typed: pick Slack after “ss” and “ss” is Slack from then on. Kept on this Mac, in state.json. Off, nothing new is kept and what's there isn't used. Forget deletes it." = "The rows you pick rise, and come first for what you typed: pick Slack after “ss” and “ss” is Slack from then on. Kept on this Mac, in state.json. Off, nothing new is kept and what's there isn't used. Forget deletes it.";
@@ -2575,9 +2601,13 @@
 
 "no default browser" = "no default browser";
 
-"no feature by that name (Settings › Features lists them)" = "no feature by that name (Settings › Features lists them)";
+"no feature by that name (did you mean \"%@\"?)" = "no feature by that name (did you mean \"%@\"?)";
 
-"no keyword by that name (Settings › Keywords lists them)" = "no keyword by that name (Settings › Keywords lists them)";
+"no feature by that name (docs/configuration.md lists them)" = "no feature by that name (docs/configuration.md lists them)";
+
+"no keyword by that name (did you mean \"%@\"?)" = "no keyword by that name (did you mean \"%@\"?)";
+
+"no keyword by that name (docs/configuration.md lists them)" = "no keyword by that name (docs/configuration.md lists them)";
 
 /* A meeting going on, where how soon it starts goes / An age, short: under a minute */
 "now" = "now";
@@ -2620,6 +2650,8 @@
 "stock aapl. Prices from Yahoo Finance" = "stock aapl. Prices from Yahoo Finance";
 
 "stopped after %lld s" = "stopped after %lld s";
+
+"timers.sound: no sound named \"%@\" (Settings › Options lists them)" = "timers.sound: no sound named \"%@\" (Settings › Options lists them)";
 
 "translate bom dia, on this Mac" = "translate bom dia, on this Mac";
 

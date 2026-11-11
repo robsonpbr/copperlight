@@ -81,7 +81,10 @@ actor FileSearchProvider: ResultProvider {
         guard fileOnly else { return rows(await hits(for: text, limit: 20), text: text, inside: false) }
         async let named = hits(for: text, limit: 60)
         async let inside = hits(for: text, limit: 30, inside: true)
-        return rows(await named, text: text, inside: false) + rows(await inside, text: text, inside: true)
+        let found = rows(await named, text: text, inside: false) + rows(await inside, text: text, inside: true)
+        // Searched and found nothing, so it doesn't look like still searching. ponytail: not shown under 2 letters.
+        guard found.isEmpty, text.count >= 2, !Task.isCancelled else { return found }
+        return [noMatch(String(localized: "Nothing in your folders matches “\(text)”"))]
     }
 
     func contentResults(for text: String) async -> [LauncherResult] {

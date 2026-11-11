@@ -821,7 +821,8 @@ func configRejectsInvalidFiles(_ toml: String, _ messageContains: String) {
     let delete = try #require(await verbs.results(for: ":delete note milk").first)
     #expect(delete.title == "Delete Note: Buy milk" && delete.confirm == "Move the note “Buy milk” to the Trash?")
     #expect(await verbs.results(for: ":delete note").count == 2)
-    #expect(await verbs.results(for: ":rename note").isEmpty) // titles come from the first line: nothing to rename
+    // Titles come from the first line: no command renames a note.
+    #expect(await verbs.results(for: ":rename note").map(\.title) == ["No command matches “rename note”"])
 }
 
 @Test func markdownStyling() {
@@ -2045,7 +2046,8 @@ private func testPNG(width: Int, height: Int, red: CGFloat = 1) -> Data {
     #expect(countdown(remaining(until: deadline, now: deadline - 0.5)) == "00:01")
     #expect(remaining(until: deadline, now: deadline) == 0)
     #expect(remaining(until: deadline, now: deadline + 3600) == 0) // slept through it: done, not negative
-    #expect(countdown(remaining(until: start + 120 * 60, now: start)) == "120:00")
+    #expect(countdown(remaining(until: start + 120 * 60, now: start)) == "2:00:00") // hours from an hour up
+    #expect(countdown(390 * 60) == "6:30:00" && countdown(3600) == "1:00:00" && countdown(59 * 60 + 59) == "59:59")
 }
 
 @MainActor @Test func pomodoroStateRoundTrips() throws {
@@ -2821,6 +2823,62 @@ private struct Sized: ResultProvider {
     model.typed = "2+2"
     try await Task.sleep(for: .milliseconds(200))
     #expect(model.answer != nil)
+}
+
+@Test func freeRowsReadRight() {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "Europe/Lisbon")!
+    calendar.locale = Locale(identifier: "en_US")
+    let friday = calendar.date(from: DateComponents(year: 2026, month: 11, day: 6))!
+    let rows = { (slots: [DateInterval], days: [Date], label: String) in
+        freeRows(slots, days: days, label: label, hours: 9..<18, base: 50, open: (title: "Open", action: {}), calendar: calendar)
+    }
+    #expect(rows([], [friday], "Friday").first?.title == "No free time Friday") // the weekday keeps its capital
+    #expect(rows([], [friday], "Today").first?.title == "No free time today")
+    #expect(rows([], [friday], "Friday").first?.subtitle.replacing("\u{202F}", with: " ") == "Between 9:00 AM and 6:00 PM, 30 minutes or more")
+    #expect(rows([DateInterval(start: friday + 9 * 3600, duration: 3600)], [friday], "Friday").first?.title == "Free Friday: 1 slot")
+    let weekend = rows([], [], "This week") // Saturday: no workdays left
+    #expect(weekend.first?.title == "No workdays left this week" && weekend.first?.completion == "free next week")
+}
+
+@MainActor @Test func colonCommandsByTheirWholeName() async {
+    let provider = VerbProvider(verbs: Verb.launcher(files: FileSearchProvider()))
+    #expect(!(await provider.results(for: ":sound output")).contains { $0.id.hasPrefix("volume") }) // not Set Volume's "sound"
+    #expect(await provider.results(for: ":hide all").first?.id == "verb:show desktop") // Show Desktop's other name, over Unhide All
+    #expect(await provider.results(for: ":reveal").first?.id == "verb:reveal") // typed whole, it's still there
+    #expect(await provider.results(for: ":zzzq").map(\.title) == ["No command matches “zzzq”"])
+    #expect(provider.modes.allSatisfy { !$0.hint.isEmpty })
+    #expect(PathProvider().results(for: "/zzzqqx").map(\.title) == ["Nothing in / matches “zzzqqx”"])
+}
+
+@MainActor @Test func suggestedAppsHaveTheirActions() throws {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "Europe/Lisbon")!
+    let now = calendar.date(from: DateComponents(year: 2026, month: 11, day: 10, hour: 9))!
+    let opens = [1.0, 2, 3].map { AppOpen(app: "/System/Applications/Mail.app", at: now - $0 * 86_400) }
+    #expect(suggestionRows(opens, now: now, calendar: calendar, front: nil).first?.actions != nil) // Tab: Hide, Quit, recent documents
+}
+
+@Test func configNamesItDoesntKnow() throws {
+    #expect(Config.unknown("").isEmpty && Config.unknown(Config.example).isEmpty) // all it writes, it knows
+    #expect(Config.unknown("[[commands]]\nalias = \"gh\"") == ["[[commands]] isn't a setting (did you mean [[command]]?)"])
+    #expect(Config.unknown("[meeting]\nshow_on_open = true") == ["[meeting] isn't a setting (did you mean [meetings]?)"])
+    #expect(Config.unknown("[meetings]\nshow_on_opne = true") == ["meetings.show_on_opne isn't a setting (did you mean show_on_open?)"])
+    #expect(Config.unknown("[clipboard]\nwhatever = 1") == ["clipboard.whatever isn't a setting"])
+    #expect(Config.unknown("[timers]\nsound = \"Glas\"") == ["timers.sound: no sound named \"Glas\" (Settings › Options lists them)"])
+    #expect(Config.unknown("[timers]\nsound = \"Glass\"").isEmpty && Config.unknown("[timers]\nsound = \"none\"").isEmpty)
+    #expect(try Config.parse("[meeting]\nshow_on_open = true") == Config()) // still loads: an old config keeps working
+    // Every key the docs show, it knows.
+    let docs = try String(contentsOf: URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../docs/configuration.md"), encoding: .utf8)
+    for block in docs.matches(of: #/```toml\n([\s\S]*?)```/#) { #expect(Config.unknown(String(block.1)).isEmpty, "\(Config.unknown(String(block.1)))") }
+}
+
+@Test func wrongNamesSuggestTheRightOne() {
+    func mistake(_ text: String) -> String { do { _ = try Config.parse(text); return "" } catch { return Config.describe(error) } }
+    #expect(mistake("[features]\ndictionary = false") == "features.dictionary: no feature by that name (did you mean \"define\"?)") // as Settings shows it
+    #expect(mistake("[features]\nwether = false") == "features.wether: no feature by that name (did you mean \"weather\"?)")
+    #expect(mistake("[keywords]\n\"add todo\" = \"td\"") == "keywords.add todo: no keyword by that name (did you mean \"add_todo\"?)")
+    #expect(mistake("[features]\nzzz = false").hasPrefix("features.zzz: no feature by that name"))
 }
 
 @Test func timeZones() {
@@ -4624,7 +4682,7 @@ private let unknownTicker = Data(#"{"chart":{"result":null,"error":{"code":"Not 
     #expect(!verbs.modes.contains { $0.prefix == ":window " } && verbs.modes.contains { $0.prefix == ":quit " })
 
     let menu = LauncherResult(id: "menu:export", title: "Export…", icon: .symbol("doc"), score: 1, action: {})
-    #expect(await VerbProvider(verbs: [], more: { _ in [menu] }, isOn: { $0 != .menus }).results(for: ":export").isEmpty)
+    #expect(await VerbProvider(verbs: [], more: { _ in [menu] }, isOn: { $0 != .menus }).results(for: ":export").map(\.id) == ["none"])
     #expect(await VerbProvider(verbs: [], more: { _ in [menu] }, isOn: { _ in true }).results(for: ":export").count == 1)
 }
 
@@ -6114,6 +6172,15 @@ private let coreAnswers = Duration.seconds(30)
         core.model.query = "tm"
         core.model.complete()
         #expect(core.model.mode?.prefix == "timer ")
+    }
+
+    /// A name config.toml doesn't know pins a row too, but the config is in use.
+    @Test func flagsNamesItDoesntKnow() async throws {
+        let (core, folder) = try await startedCore()
+        try "[meeting]\nshow_on_open = true\n".write(to: folder.appending(path: "config.toml"), atomically: true, encoding: .utf8)
+        core.reloadConfig()
+        #expect(core.model.notice?.title == "config.toml: [meeting] isn't a setting (did you mean [meetings]?)")
+        #expect(core.model.notice?.subtitle == "The rest is in use")
     }
 
     /// An edit to config.toml applies; a broken one keeps the last valid config and pins an error row until it's fixed.

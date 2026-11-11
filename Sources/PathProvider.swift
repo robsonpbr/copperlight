@@ -63,6 +63,7 @@ struct PathProvider: ResultProvider {
             return [LauncherResult(id: "path:none", title: String(localized: "No folder at \(path.folder)"), icon: .symbol("questionmark.folder"),
                                    score: 0, actionTitle: "", action: {})]
         }
+        if entries.isEmpty, !path.filter.isEmpty { return [noMatch(String(localized: "Nothing in \(path.folder) matches “\(path.filter)”"))] }
         var rows: [LauncherResult] = []
         if path.filter.isEmpty {
             let folder = path.url

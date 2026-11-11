@@ -33,6 +33,10 @@ func suggestedApps(_ opens: [AppOpen], now: Date, calendar: Calendar = .current,
             LauncherResult(id: path, title: FileManager.default.displayName(atPath: path).replacing(#/\.app$/#, with: ""),
                            subtitle: String(localized: "Often around this time", comment: "An app you often open at this time of day"),
                            icon: .file(path), score: 50 - Double(index) / 100,
-                           action: { NSWorkspace.shared.openApplication(at: URL(filePath: path), configuration: .init()) })
+                           action: { NSWorkspace.shared.openApplication(at: URL(filePath: path), configuration: .init()) },
+                           actions: { // Tab: as on the app's row in a search
+                               let recent = await recentDocuments(of: path)
+                               return await MainActor.run { appActionRows(path, recent: recent) }
+                           })
         }
 }

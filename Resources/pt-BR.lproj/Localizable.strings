@@ -423,7 +423,6 @@
 
 "Before you type. A meeting about to start: one with a call, from 10 minutes before; both need Calendars access, so type “meetings” once. What's running: a pomodoro, a timer, the stopwatch, keeping awake. Apps: the ones you open around this time on most days, learned from what you open here." = "Antes de você digitar. Uma reunião prestes a começar: uma com chamada, a partir de 10 minutos antes; ambos precisam de acesso a Calendários, então digite “meetings” uma vez. O que está em andamento: um pomodoro, um timer, o cronômetro, manter o Mac acordado. Apps: os que você abre por volta deste horário na maioria dos dias, aprendidos com o que você abre aqui.";
 
-"Between %lld:00 and %lld:00, 30 minutes or more" = "Entre %lld:00 e %lld:00, 30 minutos ou mais";
 
 "Bigger and smaller text" = "Texto maior e menor";
 
@@ -2574,9 +2573,7 @@
 
 "no default browser" = "nenhum navegador padrão";
 
-"no feature by that name (Settings › Features lists them)" = "nenhum recurso com esse nome (Ajustes › Recursos lista todos)";
 
-"no keyword by that name (Settings › Keywords lists them)" = "nenhuma palavra-chave com esse nome (Ajustes › Palavras-chave lista todas)";
 
 /* A meeting going on, where how soon it starts goes / An age, short: under a minute */
 "now" = "agora";
@@ -2666,3 +2663,21 @@
 "… %lld more characters" = "… mais %lld caracteres";
 
 "↑ brings back what you ran" = "↑ traz de volta o que você executou";
+"%@ isn't a setting" = "%@ não é uma opção";
+"%@ isn't a setting (did you mean %@?)" = "%@ não é uma opção (queria dizer %@?)";
+"%@.%@ isn't a setting" = "%@.%@ não é uma opção";
+"%@.%@ isn't a setting (did you mean %@?)" = "%@.%@ não é uma opção (queria dizer %@?)";
+"Between %@ and %@, 30 minutes or more" = "Entre %@ e %@, 30 minutos ou mais";
+"No workdays left this week" = "Não restam dias úteis esta semana";
+"Next Week" = "Próxima semana";
+"No command matches “%@”" = "Nenhum comando corresponde a “%@”";
+"Nothing in %@ matches “%@”" = "Nada em %@ corresponde a “%@”";
+"Nothing in your folders matches “%@”" = "Nada nas suas pastas corresponde a “%@”";
+"no keyword by that name (did you mean \"%@\"?)" = "nenhuma palavra-chave com esse nome (queria dizer \"%@\"?)";
+"no keyword by that name (docs/configuration.md lists them)" = "nenhuma palavra-chave com esse nome (docs/configuration.md lista todas)";
+"A name to look for" = "Um nome para procurar";
+"Enter shows next week's free time" = "Enter mostra o tempo livre da próxima semana";
+"The rest is in use" = "O resto está em uso";
+"no feature by that name (did you mean \"%@\"?)" = "nenhum recurso com esse nome (queria dizer \"%@\"?)";
+"no feature by that name (docs/configuration.md lists them)" = "nenhum recurso com esse nome (docs/configuration.md lista todos)";
+"timers.sound: no sound named \"%@\" (Settings › Options lists them)" = "timers.sound: nenhum som chamado \"%@\" (Ajustes › Opções lista todos)";
