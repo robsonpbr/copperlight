@@ -486,7 +486,9 @@ private struct Fixed: ResultProvider {
     #expect(try Config.parse(Config.example) == Config())
     let partial = try Config.parse("[hotkeys]\nnote = \"option+m\"") // an old key, ignored
     #expect(partial.hotkeys == Config().hotkeys)
-    #expect(partial.currency.defaultTarget == "EUR")
+    #expect(partial.currency.defaultTarget == (Locale.current.currency?.identifier ?? "EUR")) // unset: the Mac's currency
+    #expect(Config.Currency(mac: Locale(identifier: "pt_BR")).defaultTarget == "BRL")
+    #expect(Config.Currency(mac: Locale(identifier: "en")).defaultTarget == "EUR") // a Mac with no region
     #expect(partial.commands.isEmpty)
     #expect(partial.clipboard == Config.Clipboard())
     #expect(Config().hotkeys.launcher == Hotkey(keyCode: kVK_Space, modifiers: .option))
@@ -2768,6 +2770,57 @@ private struct Sized: ResultProvider {
     #expect(convert("2rem in px") == "32 px" && convert("24px") == "1.5 rem" && convert("1.5 em") == "24 px") // 16 px a rem
     #expect(convert("96 px in in") == "1 in")
     for text in ["10 km in kg", "10 km in km", "10 apples", "km", "25 usd to eur", "3 s"] { #expect(parseUnits(text) == nil, "\(text)") }
+}
+
+@Test func unitsTheWayPeopleTypeThem() {
+    let title = { (query: String) in UnitProvider().results(for: query).first?.title.replacing(",", with: ".") }
+    #expect(parseUnits("10k") == nil && parseUnits("4K") == nil) // a file's name, as in math; Kelvin needs its target
+    #expect(title("300k in c") == "26.85 °C" && title("10 kelvin") == "-263.15 °C")
+    #expect(title("1 mg in kg") == "0.000001 kg" && title("1 kb in gb") == "0.000001 GB") // not "0"
+    #expect(title("12pt in px") == "16 px" && title("12pt") == "16 px") // points, as in type
+    #expect(title("1 pint in l")?.hasPrefix("0.473") == true)
+    #expect(title("100 kgs") == "220.4624 lb" && title("5 kms in mi") == "3.1069 mi") // Foundation's pound
+}
+
+@Test func currencyBesideUnits() {
+    #expect(parseCurrency("100 kgs") == nil && parseCurrency("1 cup") == nil && parseCurrency("5 gal") == nil)
+    #expect(parseCurrency("5 min") == nil && parseCurrency("2 day") == nil)
+    #expect(parseCurrency("1 cup to usd") == CurrencyQuery(amount: 1, from: "CUP", to: "USD")) // with a target, the Cuban peso
+}
+
+@Test func moneySymbolsAndTimesSigns() {
+    #expect(parseCurrency("$25 in eur") == CurrencyQuery(amount: 25, from: "USD", to: "EUR"))
+    #expect(parseCurrency("€50 to usd") == CurrencyQuery(amount: 50, from: "EUR", to: "USD"))
+    #expect(parseCurrency("25€") == CurrencyQuery(amount: 25, from: "EUR", to: "USD"))
+    #expect(parseCurrency("R$ 10 in usd")?.from == "BRL" && parseCurrency("£5")?.from == "GBP" && parseCurrency("¥100 usd")?.from == "JPY")
+    #expect(calculate("3 × 4") == 12 && calculate("10 ÷ 2") == 5 && calculate("3 x 4") == 12)
+    #expect(calculate("1920x1080") == nil) // a size, not math
+}
+
+@Test func weatherOffersItsChip() async {
+    let provider = WeatherProvider(pause: .zero, city: "", status: { .refused }, locate: { nil }, fetch: { _ in nil })
+    let offer = await provider.results(for: "weather lisbon") // typed, not the chip: Open-Meteo isn't asked, a row offers it
+    #expect(offer.map(\.title) == ["Weather in Lisbon"] && offer.first?.completion == "weather lisbon")
+    #expect(offer.first.map { $0.score < 0 } == true)
+}
+
+@Test func searchEngineAsSettingsNamesIt() throws {
+    #expect(try Config.parse("[browser]\nsearch = \"DuckDuckGo\"").browser.search == .duckduckgo)
+    #expect(try Config.parse("[browser]\nsearch = \"Brave Search\"").browser.search == .brave)
+    #expect(throws: (any Error).self) { try Config.parse("[browser]\nsearch = \"yahoo\"") }
+    do { _ = try Config.parse("[browser]\nsearch = \"yahoo\"") } catch { #expect(Config.describe(error).contains("expected \"google\"")) }
+}
+
+/// The config error stays on top, but Enter and the card belong to what you typed.
+@MainActor @Test func configNoticeStaysOutOfTheWay() async throws {
+    let model = SearchModel(providers: [Fixed(rows: [("safari", 2)]), CalculatorProvider()])
+    model.notice = LauncherResult(id: "config-error", title: "config.toml: line 3", icon: .symbol("exclamationmark.triangle"), score: 0, action: {})
+    model.typed = "saf"
+    try await Task.sleep(for: .milliseconds(200))
+    #expect(model.rows.first?.id == "config-error" && model.selected?.id == "safari")
+    model.typed = "2+2"
+    try await Task.sleep(for: .milliseconds(200))
+    #expect(model.answer != nil)
 }
 
 @Test func timeZones() {

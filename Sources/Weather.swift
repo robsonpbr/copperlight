@@ -242,8 +242,17 @@ final class WeatherProvider: ResultProvider {
     }
 
     func results(for query: String) async -> [LauncherResult] {
-        startRow(query, keyword: "weather", title: "Weather", hint: String(localized: "Where you are, or a city: weather lisbon"), symbol: Self.icon)
-            .map { [$0] } ?? []
+        if let start = startRow(query, keyword: "weather", title: "Weather", hint: String(localized: "Where you are, or a city: weather lisbon"),
+                                symbol: Self.icon) {
+            return [start]
+        }
+        let typed = query.dropFirst(8).trimmingCharacters(in: .whitespaces)
+        guard query.lowercased().hasPrefix("weather "), !typed.isEmpty else { return [] }
+        // As for `stock aapl`: under the files it may also be, over the search row; Tab (or Enter) makes it the chip, which asks.
+        return [LauncherResult(id: "weather:offer", title: String(localized: "Weather in \(typed.capitalized)"),
+                               subtitle: String(localized: "From Open-Meteo"), icon: .symbol(Self.icon), score: -5,
+                               actionTitle: String(localized: "Look Up", comment: "Enter on a row that opens a chip"), action: {},
+                               completion: "weather " + typed)]
     }
 
     func modeResults(for query: String) async -> [LauncherResult] {

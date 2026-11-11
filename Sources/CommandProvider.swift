@@ -69,6 +69,16 @@ enum SearchEngine: String, CaseIterable, Decodable, Sendable {
         }
     }
 
+    /// As config.toml has it ("duckduckgo") or as Settings shows it ("DuckDuckGo", "Brave Search"), any case.
+    init(from decoder: any Decoder) throws {
+        let c = try decoder.singleValueContainer(), word = try c.decode(String.self).lowercased()
+        guard let engine = Self(rawValue: word) ?? Self.allCases.first(where: { $0.name.lowercased() == word }) else {
+            let words = Self.allCases.map { "\"\($0.rawValue)\"" }.joined(separator: ", ")
+            throw DecodingError.dataCorruptedError(in: c, debugDescription: String(localized: "expected \(words)", comment: "Then the words config.toml takes, in quotes"))
+        }
+        self = engine
+    }
+
     var logo: String { "search-\(rawValue)" }
 
     func url(for query: String) -> URL {

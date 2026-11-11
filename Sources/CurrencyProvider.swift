@@ -11,7 +11,10 @@ struct CurrencyQuery: Equatable {
 /// (EUR if the default is USD itself), so `25 eur` still shows something.
 func parseCurrency(_ query: String, defaultTarget: String = "EUR", mark: String = decimalMark) -> CurrencyQuery? {
     let pattern = #/([\d(][\d.,\s+\-*\/^()]*?)\s*([a-z]{3})(?:\s+(?:(?:to|in)\s+)?([a-z]{3}))?/#.ignoresCase()
-    guard let match = plainNumbers(query.trimmingCharacters(in: .whitespaces), mark: mark).wholeMatch(of: pattern) else { return nil }
+    guard let match = plainNumbers(symbolsAsCodes(query.trimmingCharacters(in: .whitespaces)), mark: mark).wholeMatch(of: pattern),
+          // `1 cup`, `100 kgs`, `5 min`: a unit, unless a currency follows (`1 cup to usd`).
+          match.3 != nil || unitNamed(String(match.2)) == nil
+    else { return nil }
     let number = String(match.1)
     let amount = number.wholeMatch(of: #/\d+(?:[.,]\d+)?/#) != nil ? Double(number.replacing(",", with: "."))
         : number.contains(where: "+-*/^".contains) ? calculate(number).flatMap { $0 >= 0 && $0.isFinite ? $0 : nil } : nil
@@ -19,6 +22,18 @@ func parseCurrency(_ query: String, defaultTarget: String = "EUR", mark: String 
     let from = match.2.uppercased()
     let to = match.3?.uppercased() ?? (from != defaultTarget ? defaultTarget : from == "USD" ? "EUR" : "USD")
     return CurrencyQuery(amount: amount, from: from, to: to)
+}
+
+/// `$25`, `25€`, `R$ 10`: a symbol beside the amount, at the start, as its code (`25 USD`).
+private func symbolsAsCodes(_ text: String) -> String {
+    let codes = ["R$": "BRL", "$": "USD", "€": "EUR", "£": "GBP", "¥": "JPY"]
+    if let m = text.prefixMatch(of: #/(?i)(R\$|[$€£¥])\s*(\d[\d.,]*)/#), let code = codes[m.1.uppercased()] {
+        return "\(m.2) \(code)" + text[m.range.upperBound...]
+    }
+    if let m = text.prefixMatch(of: #/(?i)(\d[\d.,]*)\s*(R\$|[$€£¥])/#), let code = codes[m.2.uppercased()] {
+        return "\(m.1) \(code)" + text[m.range.upperBound...]
+    }
+    return text
 }
 
 /// `rates` are per 1 EUR and must include EUR itself.
@@ -148,6 +163,7 @@ actor CurrencyProvider: ResultProvider {
     func results(for query: String) -> [LauncherResult] {
         guard let parsed = parseCurrency(query, defaultTarget: defaultTarget) else { return [] }
         guard !rates.isEmpty else {
+            guard Locale.commonISOCurrencyCodes.contains(parsed.from) else { return [] } // `5 abc`: maybe not money
             return [LauncherResult(id: "currency", title: String(localized: "No currency rates yet"),
                                    subtitle: String(localized: "Waiting for the first download from Coinbase"),
                                    icon: .symbol("exclamationmark.triangle"), score: 10, actionTitle: "", action: {})]

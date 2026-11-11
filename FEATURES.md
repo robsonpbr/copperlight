@@ -206,6 +206,7 @@ Settings › Keywords, or `[keywords]` (`weather = "wth"`); `:` gets yours besid
   - Percentages: `20% of 150` (30), `150 + 20%` (180), `150 - 20%` (120), `20% off 80` (64), `30 is what % of 150`
     (20%). `%` elsewhere is the remainder (`10 % 3`).
   - `k` for thousands, in math: `10k * 3` (30000), `2.5k + 1`. Alone, `10k` is left to the search.
+  - The signs as written: `3 × 4`, `10 ÷ 2`, and `3 x 4` with spaces (`1920x1080` stays a size).
   - Tab puts the result in the field (Keep Going), to calculate on with it.
   - Hex and binary: `0xff + 1`, `0b1010 * 2`; `255 in hex` (0xFF), `0xff in dec`, `(2^8 - 1) to binary`; `0xff`
     alone shows 255.
@@ -214,10 +215,11 @@ Settings › Keywords, or `[keywords]` (`weather = "wth"`); `:` gets yours besid
   it writes `1.234,56`, a comma is the decimal point (`12,5 * 2`, `39,90 eur`), and answers come back with one: `2,5`,
   €1.234,56. A number with both marks reads right on any Mac: `1.234,56` and `1,234.56` are both 1234.56. Answers are
   never grouped, so they paste into a spreadsheet set up the same way.
-- **Currency:** `25 usd to eur`, `12,50 gbp in brl`, `100jpy usd`. On a band: what you had → what it makes, big,
+- **Currency:** `25 usd to eur`, `12,50 gbp in brl`, `100jpy usd`, `$25 in eur`, `25€` ($, €, £, ¥ and R$ beside the amount). On a band: what you had → what it makes, big,
   with the currency names, the rate (`1 USD = 0.8593 EUR`) and how fresh it is ("Live rate, 2 min ago"), and both flags faintly behind, one at each end.
   Enter copies it as money (€21.48); the row below copies the number alone (21.48). Without a target, it converts to
-  `[currency] default_target`, and that currency itself converts to USD. Math before it works too: `39*8 usd`. Live
+  `[currency] default_target` (unset: your Mac's currency), and that currency itself converts to USD. A unit word isn't
+  read as a code without a target: `1 cup` is a cup, `1 cup to usd` Cuban pesos. Math before it works too: `39*8 usd`. Live
   rates from Coinbase's public rates, every currency in one request (so it never learns which one you convert), crypto
   too (`0.1 btc in eur`): fetched when the launcher opens and they're over 5 minutes old, kept on disk, so it works
   offline (the band then says how old they are).
@@ -226,7 +228,7 @@ Settings › Keywords, or `[keywords]` (`weather = "wth"`); `:` gets yours besid
   traded and where, the last 7 days drawn hourly in copper with yesterday's close dashed across, and under it the
   previous close and the change over the 7 days. Enter opens the stock on Yahoo Finance. The ticker goes to Yahoo only in the Stock chip, once typing pauses (350 ms); an answer is kept a
   minute. With weather, it's one of the two requests that say what you looked up. Typed without the chip, `stock aapl` asks
-  nothing: a row under the files offers it (Stock Price of AAPL, Tab).
+  nothing: a row under the files offers it (Stock Price of AAPL, Tab). `weather lisbon` too (Weather in Lisbon, Tab).
 - **Wikipedia:** `wiki lisbon` (`wik` ⇥ is the Wikipedia chip). Across the card: the article's picture beside its
   title, what it is in a few words and its first three sentences, in the language your Mac reads first. What you
   typed goes to Wikipedia only in the chip, once typing pauses (350 ms). Enter opens the article. Typed without the
@@ -240,7 +242,9 @@ Settings › Keywords, or `[keywords]` (`weather = "wth"`); `:` gets yours besid
   kilometer, and an answer is kept 10 minutes.
 
 - **Units:** `10 km in mi`, `10km mi`, `100 f to c`, `2,5 kg`, `1 gb in mb`, `90 min in h`, `1 day in hours`,
-  `2rem in px` (CSS's: 16 px a rem, 96 px an inch; `24px` alone gives rem).
+  `2rem in px` (CSS's: 16 px a rem, 96 px an inch; `24px` alone gives rem), `12pt in px` (type's points, 72 an inch;
+  pints are `pint`). Small results keep 4 significant digits: `1 mg in kg` is 0.000001 kg. Kelvin by its letter only
+  with a target (`300k in c`): `10k` alone is left to the search.
   Length, weight, temperature, volume, speed, data, time and area, by the names people type (`km`, `miles`,
   `°c`, `lbs`, `kmh`, `cups`). Without a target, metric and US units convert to each other: `30c` gives °F.
 - **Time zones:** `now in tokyo`, `time in tokyo`, `3pm in sf` (3pm here), `15:30 lisbon in new york`, `noon utc
@@ -607,7 +611,8 @@ first time per launch; after that, a notification says where it is.
 
 ## Where things live
 
-All in `~/.config/copperlight/`: `config.toml` (your settings, hot reloaded; a mistake shows as an error row),
+All in `~/.config/copperlight/`: `config.toml` (your settings, hot reloaded; a mistake shows as an error row on top, while Enter stays on what you
+typed, and Settings › About keeps working),
 `note.txt`, `notes/` (the other notes), `state.json` (frecency, what you picked for what you typed, recent queries, saved layouts, the timer, the apps you opened and when, the colors you picked, the notes' text size), `clipboard.sqlite` (history, readable only
 by you), `rates.json` (currency rates), `apps.json` (what each app does) and `homebrew-apps.json` (Homebrew's list,
 trimmed: names, descriptions, homepages), `photos.sqlite` (the text in your photos), `scripts/` (on the shell's PATH).

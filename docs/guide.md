@@ -77,7 +77,7 @@ language: on a Mac in Portuguese, `add todo pagar a renda amanhã 17h` is due to
 keyword (`pomo break`, `25 usd to eur`) are English for now. To add a language, see [TRANSLATING.md](../TRANSLATING.md).
 
 Things to type: `saf`, `vsc`, `2^10 / 3`, `sqrt(2) * pi`, `20% of 150`, `255 in hex`, `25 usd to eur`, `12,50 gbp in brl`, `100jpy usd`,
-`25 usd` (converts to `default_target`), `25 eur` (the default itself converts to USD), `39*8 usd`, `20% off 80`,
+`$25 in eur`, `25 usd` (converts to `default_target`, unset: your Mac's currency), `25 eur` (the default itself converts to USD), `39*8 usd`, `20% off 80`,
 `30 is what % of 150`, `10k * 3`, `days until dec 25`, `in 3 weeks`, `#c87533`, `pick color`, `qr`, `copy text`,
 `large 555-0100`, `spell definately`, a person's name, an open tab's title, `due`, any command alias,
 `note`, `note milk`, `clip` (opens clipboard history), `pomo`, `pomo 50`, `pomo break`, `pomo stop`, `timer 10 min tea`, `stopwatch`, `bluetooth`,
@@ -495,7 +495,8 @@ Ecosia or Kagi.
 temperature, volume, speed, data (`kb`… decimal, `kib`… binary), time and area, by symbol or name (`km`, `miles`,
 `°c`, `lbs`, `kmh`, `cups`, `floz`). With no target, metric and US units convert to each other (`30c` → °F, `5 lb`
 → kg). `10 in cm` and `10 in in cm` both work. CSS lengths too: `2rem in px` (16 px a rem), `24px` (in rem), `96 px
-in in`. Enter copies the number.
+in in`, and type's points: `12pt in px` (a pint is `pint`). Kelvin needs a target (`300k in c`): `10k` alone is a
+file's name or a thousand. Tiny results keep their digits (`1 mg in kg` is 0.000001 kg). Enter copies the number.
 
 **Time zones:** `now in tokyo` (or `time in tokyo`), `3pm in sf` (3pm here), `15:30 lisbon in new york`, `noon utc
 to sf`, also with `to`. A place is any time zone's city (`lisbon`, `new york`, `são paulo`), an alias (`sf`, `la`,
@@ -527,7 +528,7 @@ for you: what you typed goes to Wikipedia only in the chip, once you pause typin
 
 **Weather:** `weather` ⇥ is the Weather chip. With nothing after it, it's the weather where you are: the first time, a
 row asks for your location (Location Services), once. If you'd rather not share it, set a city in Settings › Options
-› Weather (`[weather] city`), where °C or °F is set too (`[weather] units`). Type a city after the chip (`weather lisbon`) for that city. The card shows the
+› Weather (`[weather] city`), where °C or °F is set too (`[weather] units`). Type a city after the chip (`weather lisbon`) for that city; typed without the chip, a row offers it (Tab). The card shows the
 temperature now with its symbol, the conditions, today's high and low, how it feels and the wind, the next five days
 with their lows and highs on bars of one scale, and the next seven hours. Enter opens the Weather app. It comes from
 Open-Meteo, free and without an account: only in the chip and once you pause typing, and where you are goes rounded to

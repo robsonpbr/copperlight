@@ -151,12 +151,13 @@ struct Config: Decodable, Equatable {
     }
 
     struct Currency: Decodable, Equatable {
-        var defaultTarget = "EUR"
+        var defaultTarget: String
 
-        init() {}
+        /// Unset: the Mac's own currency (EUR on a Mac with no region).
+        init(mac: Locale = .current) { defaultTarget = mac.currency?.identifier ?? "EUR" }
         init(from decoder: any Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
-            defaultTarget = try c.decodeIfPresent(String.self, forKey: .defaultTarget)?.uppercased() ?? defaultTarget
+            defaultTarget = try c.decodeIfPresent(String.self, forKey: .defaultTarget)?.uppercased() ?? Currency().defaultTarget
             guard defaultTarget.count == 3, defaultTarget.allSatisfy({ $0.isASCII && $0.isLetter }) else {
                 throw DecodingError.dataCorruptedError(
                     forKey: .defaultTarget, in: c, debugDescription: String(localized: "expected a 3-letter currency code like \"EUR\""))
@@ -556,7 +557,7 @@ struct Config: Decodable, Equatable {
         # accent = "system"            # copper (the default), system (your Mac's accent color), or a color: "#3478f6"
 
         [currency]
-        default_target = "EUR"         # for "25 usd" with no target ("25 eur" converts to USD)
+        # default_target = "EUR"       # for "25 usd" with no target ("25 eur" converts to USD); unset: your Mac's currency
 
         [clipboard]
         # Copies made while one of these apps is in front aren't recorded (bundle ids).

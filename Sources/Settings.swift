@@ -253,7 +253,8 @@ private struct SettingsView: View {
                     }
                 }
                 .formStyle(.grouped)
-                .disabled(model.broken)
+                // About and General's buttons work with a broken config.toml: General disables its own settings.
+                .disabled(model.broken && pane != .about && pane != .general)
             }
             .navigationTitle(pane.title)
         }
@@ -326,7 +327,8 @@ private struct GeneralPane: View {
                 Note("The only global shortcut. Everything else is typed in the launcher.")
             }
         }
-        look
+        .disabled(model.broken)
+        look.disabled(model.broken)
         Section {
             LabeledContent("Welcome screen") { Button("Show", action: showWelcome) }
             LabeledContent("config.toml") {
@@ -367,10 +369,10 @@ private struct GeneralPane: View {
 private struct OptionsPane: View {
     let model: SettingsModel
 
-    /// The currencies offered as the default target: the most traded.
-    private static let currencies = ["AUD", "BRL", "CAD", "CHF", "CNY", "CZK", "DKK", "EUR", "GBP", "HKD", "HUF", "IDR", "ILS",
-                                     "INR", "ISK", "JPY", "KRW", "MXN", "MYR", "NOK", "NZD", "PHP", "PLN", "RON", "SEK", "SGD",
-                                     "THB", "TRY", "USD", "ZAR"]
+    /// The currencies offered as the default target: the most traded, and the Mac's own (the default).
+    private static let currencies = Set(["AUD", "BRL", "CAD", "CHF", "CNY", "CZK", "DKK", "EUR", "GBP", "HKD", "HUF", "IDR", "ILS",
+                                         "INR", "ISK", "JPY", "KRW", "MXN", "MYR", "NOK", "NZD", "PHP", "PLN", "RON", "SEK", "SGD",
+                                         "THB", "TRY", "USD", "ZAR", Config.Currency().defaultTarget]).sorted()
 
     var body: some View {
         let features = model.config.features

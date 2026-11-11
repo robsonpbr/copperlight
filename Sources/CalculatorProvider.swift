@@ -15,6 +15,8 @@ func calculate(_ query: String, ans: Double? = nil, mark: String = decimalMark) 
     // inputs like "x 2()". No math needs them. Fuzzed ~6M random inputs with this guard: no crash.
     guard Double(text) == nil, !text.contains(#/\(\s*\)/#) else { return nil }
     text = text.replacing(#/\b0b([01]+)\b/#) { binary in Int(binary.1, radix: 2).map(String.init) ?? String(binary.0) }
+    // The signs as written: 3 × 4, 10 ÷ 2, and an x between spaced numbers (not 1920x1080, a size).
+    text = text.replacing("×", with: "*").replacing("÷", with: "/").replacing(#/(\d)\s+x\s+(?=[\d(])/#) { "\($0.1) * " }
     // Thousands, as plain digits: "10k" alone stays a number, which isn't math.
     text = text.replacing(#/\b(\d+(?:\.\d+)?)k\b/#) { short in Double(short.1).map { formatNumber($0 * 1000, mark: ".") } ?? String(short.0) }
     // Expression's % is the remainder (10 % 3), so only these shapes mean percent.

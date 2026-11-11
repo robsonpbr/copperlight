@@ -443,7 +443,7 @@ final class SearchModel {
     /// Only for a row with something to show: never an empty pane, and never beside an answer.
     var showsPreview: Bool { answer == nil && (selected?.hasPreview ?? false) && (previewsByDefault || previewOpen) }
     /// The answer of the row you're on, or else of the first row: moving to the search row under a color keeps its band.
-    var answer: Answer? { showsCards ? selected?.answer ?? rows.first?.answer : nil }
+    var answer: Answer? { showsCards ? selected?.answer ?? rows.first { $0.id != notice?.id }?.answer : nil }
     var selected: LauncherResult? { rows.indices.contains(selection) ? rows[selection] : nil }
 
     func move(_ delta: Int) {
@@ -527,6 +527,8 @@ final class SearchModel {
                     // A row whose Enter would type what's already there ("translate " beside its chip) does nothing.
                     results = merged.filter { !replaced.contains($0.id) && $0.completion?.lowercased() != typed }
                     selection = min(selection, max(0, rows.count - 1))
+                    // A pinned notice (config.toml's mistake) stays on top, but Enter is for what you typed.
+                    if selection == 0, notice != nil, stepped == nil, confirming == nil, !results.isEmpty { selection = 1 }
                     settling = false
                     if pending == 0 { return group.cancelAll() } // ends the wait early
                 }

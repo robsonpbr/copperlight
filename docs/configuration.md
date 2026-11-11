@@ -28,8 +28,8 @@ language = true                # default: the words in your Mac's language work 
 accent = "system"              # copper (the default), system (your Mac's accent color), or a color: "#3478f6"
 
 [currency]
-default_target = "EUR"         # default. Used by "25 usd" (no target). When the source is the default
-                               # itself ("25 eur"), it converts to USD (to EUR if the default is USD).
+default_target = "EUR"         # optional; unset: your Mac's currency. Used by "25 usd" (no target). When the source is
+                               # the default itself ("25 eur"), it converts to USD (to EUR if the default is USD).
 
 [clipboard]
 ignore_apps = ["com.1password.1password", "com.agilebits.onepassword7", "com.bitwarden.desktop",
@@ -121,7 +121,7 @@ default_target = "german"      # optional: "translate bom dia" without "to …" 
 name = "Google Chrome"         # optional: name or bundle id; the default browser if missing
 profile = "Personal"           # optional; unset, the browser picks the profile
 search = "duckduckgo"          # optional: the search row's engine: google (default), duckduckgo, bing, brave,
-                               # ecosia, kagi. Settings › Browser › Search engine.
+                               # ecosia, kagi, any case, or the name Settings shows ("DuckDuckGo"). Settings › Browser.
 
 [[command]]
 alias = "github"
