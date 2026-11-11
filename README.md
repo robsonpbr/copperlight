@@ -79,7 +79,7 @@ The little tools you'd otherwise install one by one, a keystroke away. No extra 
 | **Weather**<br>`weather` | Now, the next hours and five days across the card, for where you are or any city. Enter opens Weather. |
 | **Lookups**<br>`ip`, `battery`, `disk`, `port 3000` | Your IP addresses, the battery and its health, free space on each disk, and what's listening on a port, with Enter to end it. |
 | **Speed test**<br>`speed` | Your internet's download and upload speed and its latency, measured by macOS's own tool against Apple's servers, when you press Enter. |
-| **Processes**<br>`cpu`, `memory` | What's using the processor or memory, the busiest first, with each one's app icon. Enter ends a process, or quits an app, after asking. |
+| **Processes**<br>`cpu`, `memory` | Which apps are using the processor or memory, each with its share of the Mac, and a bar of how busy it is. Enter quits an app, or ends a tool's processes, after asking. |
 | **Keep awake**<br>`:awake`, `:awake 2h` | Keeps your Mac and its displays awake until you say so, or for a while (`:awake 2h`, `:awake until 18:00`), with a sun in the menu bar while it's on. |
 | **Text tools**<br>`json`, `uuid`, `fake name`, `b64` | Format JSON, make a UUID, a password or made-up test data (Tab for another), encode text, convert colors and timestamps. |
 | **Colors**<br>`#c87533`, `pick color`, `colors` | A color on a band, with how it reads on white and black, in hex, RGB and HSL and a step lighter and darker. Pick one off the screen and its hex is copied; `colors` lists the ones you picked. |
@@ -238,7 +238,7 @@ The answer appears big as you type, with what a percentage hid beside it; Enter 
 | `ip`, `battery`, `disk`, `port 3000` | Your IP addresses, the battery, free space, and what's listening on a port (Enter ends it) |
 | `wifi password` | The Wi-Fi password, and a QR code that joins a phone; macOS asks for your password first |
 | `speed` | Your internet speed: download and upload big, and the latency, about 20 seconds after Enter |
-| `cpu`, `memory`, `cpu chrome` | Your processes, the busiest first; Enter ends one (an app quits), after asking. Tab lists them all |
+| `cpu`, `memory`, `cpu chrome` | Your apps, the busiest first; Enter quits one (a tool's processes end), after asking. Tab lists an app's processes |
 
 ### Your day
 

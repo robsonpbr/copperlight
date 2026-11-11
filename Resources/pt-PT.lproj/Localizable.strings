@@ -2681,3 +2681,9 @@
 "no feature by that name (did you mean \"%@\"?)" = "nenhuma funcionalidade com esse nome (queria dizer \"%@\"?)";
 "no feature by that name (docs/configuration.md lists them)" = "nenhuma funcionalidade com esse nome (docs/configuration.md lista todas)";
 "timers.sound: no sound named \"%@\" (Settings › Options lists them)" = "timers.sound: nenhum som chamado \"%@\" (Definições › Opções lista todos)";
+
+"%lld processes" = "%lld processos";
+"End %lld %@ processes?" = "Terminar %lld processos %@?";
+"End Processes" = "Terminar Processos";
+"Your apps use %@ of %@" = "As suas apps usam %@ de %@";
+"Your apps use %@ of the processor" = "As suas apps usam %@ do processador";

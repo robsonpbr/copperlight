@@ -541,10 +541,12 @@ each disk mounted, as Finder counts it; Enter opens Storage settings. `port` (`p
 processes listening on TCP ports, `port 3000` (or `port 30`, `port node`) narrows them, and Enter ends one, after
 asking. Another user's processes aren't listed.
 
-**Processes:** `cpu` lists your 8 busiest processes by recent CPU use, `memory` (from `mem`, or `ram`) by memory, each
-with its CPU, memory and pid, and the icon of the app it belongs to: a Chrome Helper shows Chrome's. `cpu chrome`
-narrows them by name; `cpu` ⇥ or `memory` ⇥, the chip, lists every one. Enter ends a process after asking, the way
-`kill` does (SIGTERM); on an app itself (not a helper inside it) it quits the app instead, so it can ask to save.
+**Processes:** `cpu` lists the 8 apps using the most of your processor, `memory` (from `mem`, or `ram`) the most
+memory. An app's helpers count as the app (Chrome's 30 helpers are one Google Chrome row), and a tool's processes count
+together by name (`node`). Each shows its share of the whole Mac in its color, and a bar on top splits what your apps
+use between them: "Your apps use 79% of the processor". `cpu chrome` narrows them by name; `cpu` ⇥ or `memory` ⇥, the
+chip, lists every one. Enter quits an app after asking, so it can ask to save, or ends a tool's processes the way
+`kill` does (SIGTERM). Tab on a row lists its processes, with their CPU, memory and pid, to end just one.
 `kill process` and `processes` find it too. Copperlight and another user's processes aren't listed.
 
 **Speed test:** `speed` (also `speedtest`, `internet speed`) offers Test Internet Speed. Enter runs macOS's own

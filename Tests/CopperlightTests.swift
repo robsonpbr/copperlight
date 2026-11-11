@@ -4340,15 +4340,28 @@ private let unknownTicker = Data(#"{"chart":{"result":null,"error":{"code":"Not 
     #expect(processes[0].name == "Google Chrome Helper (Renderer)" && processes[0].app == "/Applications/Google Chrome.app")
     #expect(processes[1].name == "node" && processes[1].app == nil)
 
-    let lookups = LookupProvider(processes: { processes })
+    // Grouped by app (Chrome's helpers are Chrome), a tool's processes by name; shares of the whole Mac, its 4 cores.
+    let more = processes + parseProcesses("""
+        90004   1.2  100000 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+        90005   6.0  200000 node
+        """)
+    let lookups = LookupProvider(processes: { more }, cores: 4, physicalMemory: 16 << 30)
     let cpu = await lookups.results(for: "cpu")
-    #expect(cpu.map(\.title) == ["Google Chrome Helper (Renderer)", "node", "Xcode"]) // the busiest first
-    #expect(cpu[0].subtitle.hasPrefix("23.8% CPU · ") && cpu[0].subtitle.hasSuffix(" · pid 90001"))
-    #expect(cpu[0].actionTitle == "End Process" && cpu[0].confirm == "End Google Chrome Helper (Renderer) (pid 90001)?")
-    #expect(cpu[2].actionTitle == "Quit" && cpu[2].confirm == "Quit Xcode?") // an app itself quits, asking to save
+    #expect(cpu.map(\.title) == ["Google Chrome", "node", "Xcode"]) // the busiest first
+    #expect(cpu.map(\.badge) == ["6%", "5%", "<1%"] && cpu[0].subtitle == "2 processes" && cpu[2].subtitle == "")
+    #expect(cpu.allSatisfy { $0.section == "Your apps use 11% of the processor" })
+    #expect(cpu.map { $0.meter?.slot } == [0, 1, 2] && abs((cpu[0].meter?.share ?? 0) - 0.0625) < 0.0001)
+    #expect(cpu[0].actionTitle == "Quit" && cpu[0].confirm == "Quit Google Chrome?") // an app quits, asking to save
+    #expect(cpu[1].actionTitle == "End Processes" && cpu[1].confirm == "End 2 node processes?")
+    #expect(cpu[2].actionTitle == "Quit" && cpu[2].confirm == "Quit Xcode?")
+    let tab = try #require(cpu[0].actions)
+    let inside = await tab() // Tab: its processes, one at a time
+    #expect(inside.map(\.title) == ["Google Chrome Helper (Renderer)", "Google Chrome"])
+    #expect(inside[0].subtitle.hasSuffix(" · pid 90001") && inside[0].confirm == "End Google Chrome Helper (Renderer) (pid 90001)?")
     let memory = await lookups.results(for: "memory")
-    #expect(memory.map(\.title) == ["Xcode", "Google Chrome Helper (Renderer)", "node"] && memory[0].subtitle.hasSuffix("0.4% CPU · pid 90003"))
-    #expect(await lookups.results(for: "cpu chrome").map(\.title) == ["Google Chrome Helper (Renderer)"]) // narrowed by name
+    #expect(memory.map(\.title) == ["Google Chrome", "Xcode", "node"] && memory[1].badge == formatBytes(2_279_200 * 1024, style: .memory))
+    #expect(memory[0].section?.hasPrefix("Your apps use ") == true && memory[0].section?.hasSuffix(" of 16 GB") == true)
+    #expect(await lookups.results(for: "cpu chrome").map(\.title) == ["Google Chrome"]) // narrowed by name
     #expect(await lookups.modeResults(for: "memory no").map(\.title) == ["node"])
     #expect(await lookups.results(for: "mem").first?.completion == "memory ")
     #expect(await lookups.results(for: "kill process").first?.completion == "cpu ")

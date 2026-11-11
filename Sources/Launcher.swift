@@ -72,6 +72,10 @@ struct LauncherResult: Identifiable, Sendable {
     var confirm: String? = nil
     /// Rows get a header where this changes (clipboard: Today, Yesterday, Earlier).
     var section: String? = nil
+    /// Its share of something whole (the processor), drawn in its section's header as one bar, a color a row
+    /// (`slot`), and its badge in that color.
+    var meter: Meter? = nil
+    struct Meter: Sendable, Equatable { var share: Double, slot: Int }
     /// A pill in the accent beside the title, for what's coming up ("in 9 min", "Now").
     var badge: String? = nil
     /// A clock in that pill instead, ticking while the row is shown: a timer's time left, a stopwatch's time so far.
@@ -996,12 +1000,17 @@ private struct LauncherView: View {
                     ForEach(Array(model.rows.enumerated()), id: \.element.id) { index, result in
                         VStack(spacing: 0) {
                             if let section = sectionStarting(at: index) {
-                                Text(section)
-                                    .font(.system(size: 11.5, weight: .semibold))
-                                    .foregroundStyle(.tertiary)
-                                    .padding(.horizontal, 12)
-                                    .padding(.bottom, 6)
-                                    .frame(maxWidth: .infinity, minHeight: Self.sectionHeight, alignment: .bottomLeading)
+                                HStack(spacing: 10) {
+                                    Text(section)
+                                        .font(.system(size: 11.5, weight: .semibold))
+                                        .foregroundStyle(.tertiary)
+                                        .fixedSize()
+                                    let meters = model.rows[index...].prefix { $0.section == section }.compactMap(\.meter)
+                                    if !meters.isEmpty { MeterBar(meters: meters).frame(height: 8) }
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.bottom, 6)
+                                .frame(maxWidth: .infinity, minHeight: Self.sectionHeight, alignment: .bottomLeading)
                             }
                             let selected = index == model.selection
                             ResultRow(result: result, selected: selected,
@@ -1163,9 +1172,11 @@ struct ResultRow: View {
             Text(result.title).font(.system(size: 14.5)).lineLimit(1).layoutPriority(1)
             if let pill {
                 ViewThatFits(in: .horizontal) { // the title comes first: with the preview open, the badge steps aside
-                    pill.font(.system(size: 11.5, weight: .semibold)).monospacedDigit().foregroundStyle(scheme == .dark ? Color.accentLight : Color.accentDeep)
+                    let tint = result.meter.map { MeterBar.color($0.slot) }
+                    pill.font(.system(size: 11.5, weight: .semibold)).monospacedDigit()
+                        .foregroundStyle(tint ?? (scheme == .dark ? Color.accentLight : Color.accentDeep))
                         .padding(.horizontal, 7).padding(.vertical, 2)
-                        .background(Color.accent.opacity(0.18), in: Capsule())
+                        .background((tint ?? Color.accent).opacity(0.18), in: Capsule())
                         .fixedSize()
                     Color.clear.frame(width: 0, height: 0)
                 }
@@ -1219,6 +1230,28 @@ struct ResultRow: View {
         case .up(let start): Text(timerInterval: start...Date.distantFuture, countsDown: false)
         case nil: result.badge.map { Text(verbatim: $0) }
         }
+    }
+}
+
+/// Shares of a whole, side by side in one rounded bar, each in its row's color; what's left is the track.
+struct MeterBar: View {
+    let meters: [LauncherResult.Meter]
+    static let colors: [Color] = [.orange, .purple, .blue, .teal, .pink, .green, .yellow, .indigo]
+    static func color(_ slot: Int) -> Color { colors[slot % colors.count] }
+
+    var body: some View {
+        GeometryReader { geometry in
+            HStack(spacing: 1) {
+                ForEach(meters, id: \.slot) { meter in
+                    Self.color(meter.slot).frame(width: max(0, min(meter.share, 1)) * geometry.size.width)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(width: geometry.size.width, alignment: .leading)
+            .background(Color.primary.opacity(0.08))
+            .clipShape(Capsule())
+        }
+        .accessibilityHidden(true) // the header and each row's badge say it in words
     }
 }
 

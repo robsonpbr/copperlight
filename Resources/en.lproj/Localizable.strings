@@ -138,6 +138,8 @@
 
 "%lld ms" = "%lld ms";
 
+"%lld processes" = "%lld processes";
+
 "%lld s" = "%lld s";
 
 "%lld s · Esc stops it" = "%lld s · Esc stops it";
@@ -816,7 +818,11 @@
 
 "End %@ (pid %@)? It’s listening on port %@." = "End %@ (pid %@)? It’s listening on port %@.";
 
+"End %lld %@ processes?" = "End %lld %@ processes?";
+
 "End Process" = "End Process";
+
+"End Processes" = "End Processes";
 
 "Enter asks api.ipify.org" = "Enter asks api.ipify.org";
 
@@ -2433,6 +2439,10 @@
 "Your Mac" = "Your Mac";
 
 "Your Mac's accent color" = "Your Mac's accent color";
+
+"Your apps use %@ of %@" = "Your apps use %@ of %@";
+
+"Your apps use %@ of the processor" = "Your apps use %@ of the processor";
 
 "Your cities" = "Your cities";
 

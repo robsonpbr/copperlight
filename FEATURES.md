@@ -71,7 +71,7 @@ Settings › Keywords, or `[keywords]` (`weather = "wth"`); `:` gets yours besid
 | `ip`, `battery`, `disk` | Your IP addresses (and the public one, asked on Enter), the battery, free space per disk | Copies the IP, opens Battery or Storage settings |
 | `port`, `port 3000` | Your processes listening on TCP ports | Ends that process (asks first) |
 | `speed` | An internet speed test (macOS's `networkQuality`) | Runs it, then copies the result |
-| `cpu`, `memory`, `cpu chrome` | Your processes, the busiest first by CPU or by memory | Ends it, or quits an app (asks first) |
+| `cpu`, `memory`, `cpu chrome` | Your apps, the busiest first by CPU or by memory, with a bar of how busy the Mac is | Quits the app, or ends a tool's processes (asks first) |
 | `:layout save work`, `:layout work` | Every window on screen, saved by name | Saves them, or puts them back |
 | `help`, `cheat sheet` | Every command there is, on one sheet | Puts the one you pick in the launcher |
 
@@ -269,11 +269,12 @@ Settings › Keywords, or `[keywords]` (`weather = "wth"`); `:` gets yours besid
 - **`port`** (a chip, with Tab): your processes listening on TCP ports, from `lsof`; `port 3000` or `port 30` those
   on a port starting with it, `port node` by name. Enter ends the process (asks first). Other users' processes
   aren't listed: you couldn't end them anyway.
-- **`cpu` and `memory`** (also `kill process`, `processes`, `ram`): your processes, from `ps`, the busiest first by
-  recent CPU or by memory, each with its CPU, memory and pid, and the icon of the app it belongs to (a Chrome Helper
-  shows Chrome's). Typed, the 8 busiest; `cpu` ⇥ or `memory` ⇥, the chip, lists them all, and `cpu chrome` narrows
-  them by name. Enter ends a process after asking (SIGTERM), or quits an app, which can ask to save. Copperlight and
-  other users' processes aren't listed.
+- **`cpu` and `memory`** (also `kill process`, `processes`, `ram`): your apps, from `ps`, the busiest first by recent
+  CPU or by memory. An app's helpers count as the app (Chrome's are Google Chrome), a tool's processes as one by name.
+  Each shows its share of the whole Mac in its color, and a bar on top splits what your apps use. Typed, the 8 busiest;
+  `cpu` ⇥ or `memory` ⇥, the chip, lists them all, and `cpu chrome` narrows them by name. Enter quits an app (it can
+  ask to save) or ends a tool's processes (SIGTERM), after asking; Tab lists one app's processes, with pids, to end
+  one. Copperlight and other users' processes aren't listed.
 - **`speed`** (also `speedtest`, `internet speed`, `bandwidth`): Enter runs macOS's own `networkQuality` against
   Apple's servers, about 20 seconds: its card shows at once, download and upload climbing as they're measured, a
   spinner and the seconds so far (Esc stops it). Then the result settles on the card: download and upload big ("322 Mbps", "243 Mbps"), the latency idle and under load, how you're connected and

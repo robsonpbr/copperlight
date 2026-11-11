@@ -264,6 +264,8 @@ struct LookupProvider: ResultProvider {
     var addresses: @Sendable () -> [(address: String, interface: String)] = localAddresses
     var listeners: @Sendable () -> [Listener] = listeningProcesses
     var processes: @Sendable () -> [ProcessUsage] = readProcesses
+    var cores = ProcessInfo.processInfo.activeProcessorCount
+    var physicalMemory = Int64(ProcessInfo.processInfo.physicalMemory)
     var isOn: @Sendable (Feature) -> Bool = { $0.isOn }
 
     var modes: [Mode] {
@@ -395,28 +397,74 @@ struct LookupProvider: ResultProvider {
         }
     }
 
-    /// Your processes named with `filter`'s words, the busiest first by CPU or by memory. Enter ends one, after asking;
-    /// an app (not a helper inside one) quits instead, so it can ask to save.
+    /// Your apps named with `filter`'s words, the busiest first by CPU or by memory: an app's helpers count as the app
+    /// (Chrome's), a tool's processes as one by name. Each a share of the whole Mac, a bar for them all on top. Enter
+    /// quits an app (it can ask to save) or ends a tool's processes, after asking; Tab lists them one by one.
     private func processRows(_ filter: String, byMemory: Bool, limit: Int) -> [LauncherResult] {
-        let words = typedWords(filter)
-        let found = processes().filter { process in words.allSatisfy { wordStarts(process.name).contains($0) } }
-            .sorted { byMemory ? $0.memory > $1.memory : $0.cpu > $1.cpu }.prefix(limit)
+        let words = typedWords(filter), all = processes()
+        struct Group { var key: String, name: String, app: String?, members: [ProcessUsage], cpu: Double, memory: Int64 }
+        let groups: [Group] = Dictionary(grouping: all) { $0.app ?? $0.name }.map { key, members in
+            let app = members[0].app
+            let name = app.map { ($0 as NSString).lastPathComponent.replacing(#/\.app$/#, with: "") } ?? key
+            let sorted = members.sorted { byMemory ? $0.memory > $1.memory : $0.cpu > $1.cpu }
+            return Group(key: key, name: name, app: app, members: sorted,
+                         cpu: members.map(\.cpu).reduce(0, +), memory: members.map(\.memory).reduce(0, +))
+        }
+        let matching = groups.filter { group in
+            words.allSatisfy { word in wordStarts(group.name).contains(word) || group.members.contains { wordStarts($0.name).contains(word) } }
+        }
+        let found = matching.sorted { (a: Group, b: Group) -> Bool in
+            let (x, y) = byMemory ? (Double(a.memory), Double(b.memory)) : (a.cpu, b.cpu)
+            return x != y ? x > y : a.key < b.key
+        }.prefix(limit)
         guard !found.isEmpty else {
             return [LauncherResult(id: "process:none", title: String(localized: "No process named “\(filter)”"), icon: .symbol("cpu"), score: 50,
                                    actionTitle: "", action: {})]
         }
-        return found.enumerated().map { index, process in
-            let cpu = String(localized: "\(formatNumber(process.cpu, decimals: 1...1))% CPU"), memory = formatBytes(process.memory, style: .memory)
-            let (pid, name, isApp) = (process.pid, process.name, process.isApp)
-            return LauncherResult(
-                id: "process:\(pid)", title: name,
-                subtitle: (byMemory ? [memory, cpu] : [cpu, memory]).joined(separator: " · ") + " · " + String(localized: "pid \(String(pid))"),
-                icon: process.app.map { .file($0) } ?? .symbol("gearshape"), score: 50 - Double(index) / 1000,
-                actionTitle: isApp ? String(localized: "Quit", comment: "Enter on an app's process: quits the app") : String(localized: "End Process"),
-                action: {
-                    if isApp, let app = NSRunningApplication(processIdentifier: pid) { app.terminate() } else { endProcess(pid, name) }
-                }, confirm: isApp ? String(localized: "Quit \(name)?") : String(localized: "End \(name) (pid \(String(pid)))?"))
+        let processor = Double(max(cores, 1) * 100), percent = { (share: Double) in
+            share > 0 && share < 0.005 ? "<1%" : formatNumber((share * 100).rounded(), decimals: 0...0) + "%"
         }
+        let header = byMemory
+            ? String(localized: "Your apps use \(formatBytes(all.map(\.memory).reduce(0, +), style: .memory)) of \(formatBytes(physicalMemory, style: .memory))")
+            : String(localized: "Your apps use \(percent(all.map(\.cpu).reduce(0, +) / processor)) of the processor")
+        return found.enumerated().map { index, group in
+            let share = byMemory ? Double(group.memory) / Double(max(physicalMemory, 1)) : group.cpu / processor
+            let members = group.members, name = group.name, many = members.count > 1
+            let inside: @Sendable () async -> [LauncherResult] = { members.map { Self.processRow($0, byMemory: byMemory) } }
+            let action: @MainActor @Sendable () -> Void, actionTitle: String, confirm: String
+            if let app = group.app {
+                actionTitle = String(localized: "Quit", comment: "Enter on an app's process: quits the app")
+                confirm = String(localized: "Quit \(name)?")
+                action = {
+                    let running = NSWorkspace.shared.runningApplications.filter { $0.bundleURL?.path == app }
+                    if running.isEmpty { members.forEach { endProcess($0.pid, $0.name) } } else { running.forEach { $0.terminate() } }
+                }
+            } else {
+                actionTitle = many ? String(localized: "End Processes") : String(localized: "End Process")
+                confirm = many ? String(localized: "End \(members.count) \(name) processes?") : String(localized: "End \(name) (pid \(String(members[0].pid)))?")
+                action = { members.forEach { endProcess($0.pid, $0.name) } }
+            }
+            return LauncherResult(
+                id: "process:\(group.key)", title: name, subtitle: many ? String(localized: "\(members.count) processes") : "",
+                icon: group.app.map { .file($0) } ?? .symbol("gearshape"), score: 50 - Double(index) / 1000,
+                actionTitle: actionTitle, action: action, actions: many ? inside : nil,
+                confirm: confirm, section: header, meter: .init(share: share, slot: index),
+                badge: byMemory ? formatBytes(group.memory, style: .memory) : percent(share))
+        }
+    }
+
+    /// One process, Tab's row inside its app: Enter ends it (the app itself quits).
+    private static func processRow(_ process: ProcessUsage, byMemory: Bool) -> LauncherResult {
+        let cpu = String(localized: "\(formatNumber(process.cpu, decimals: 1...1))% CPU"), memory = formatBytes(process.memory, style: .memory)
+        let (pid, name, isApp) = (process.pid, process.name, process.isApp)
+        return LauncherResult(
+            id: "process:\(pid)", title: name,
+            subtitle: (byMemory ? [memory, cpu] : [cpu, memory]).joined(separator: " · ") + " · " + String(localized: "pid \(String(pid))"),
+            icon: process.app.map { .file($0) } ?? .symbol("gearshape"), score: 0,
+            actionTitle: isApp ? String(localized: "Quit", comment: "Enter on an app's process: quits the app") : String(localized: "End Process"),
+            action: {
+                if isApp, let app = NSRunningApplication(processIdentifier: pid) { app.terminate() } else { endProcess(pid, name) }
+            }, confirm: isApp ? String(localized: "Quit \(name)?") : String(localized: "End \(name) (pid \(String(pid)))?"))
     }
 
     /// Every process listening, or those on ports starting with `filter` (`port 30`), or named like it (`port node`).
