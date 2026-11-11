@@ -84,6 +84,12 @@ func calculatorRejectsNonMath(_ input: String) {
     #expect(formatNumber(5, decimals: 2...2) == "5.00")
 }
 
+@Test func sizesUseTheMacsDecimalMark() {
+    #expect(formatBytes(429_706_854, mark: ",") == "429,7 MB")
+    #expect(formatBytes(429_706_854, mark: ".") == "429.7 MB")
+    #expect(formatBytes(2_190_000_000, style: .memory, mark: ",") == "2,04 GB")
+}
+
 @Test func decimalCommaWhereTheMacUsesOne() {
     // Both marks: the last one is the decimal point, on any Mac.
     #expect(calculate("1.234,5 + 0.5") == 1235 && calculate("1,234.5 + 0.5") == 1235)

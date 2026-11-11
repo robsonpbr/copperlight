@@ -53,7 +53,7 @@ struct LatestFilesProvider: ResultProvider {
         return files.enumerated().map { index, file in
             let values = try? file.resourceValues(forKeys: [.addedToDirectoryDateKey, .creationDateKey, .fileSizeKey])
             let added = values?.addedToDirectoryDate ?? values?.creationDate ?? now
-            let size = values?.fileSize.map { " · " + Int64($0).formatted(.byteCount(style: .file)) } ?? ""
+            let size = values?.fileSize.map { " · " + formatBytes(Int64($0), style: .file) } ?? ""
             let path = file.path, image = UTType(filenameExtension: file.pathExtension)?.conforms(to: .image) == true
             return LauncherResult(
                 id: "latest:\(path)", title: file.lastPathComponent, subtitle: added.formatted(.relative(presentation: .named, unitsStyle: .wide)) + size,

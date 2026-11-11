@@ -382,7 +382,7 @@ struct LookupProvider: ResultProvider {
     private func diskRows(_ score: Double) -> [LauncherResult] {
         volumes().enumerated().map { index, volume in
             let used = Int((Double(volume.total - volume.free) / Double(volume.total) * 100).rounded())
-            let size = { (bytes: Int64) in bytes.formatted(.byteCount(style: .file)) }
+            let size = { (bytes: Int64) in formatBytes(bytes, style: .file) }
             let startup = volume.path == "/"
             return LauncherResult(
                 id: "disk:\(volume.path)", title: String(localized: "\(size(volume.free)) free of \(size(volume.total))"),
@@ -406,7 +406,7 @@ struct LookupProvider: ResultProvider {
                                    actionTitle: "", action: {})]
         }
         return found.enumerated().map { index, process in
-            let cpu = String(localized: "\(formatNumber(process.cpu, decimals: 1...1))% CPU"), memory = process.memory.formatted(.byteCount(style: .memory))
+            let cpu = String(localized: "\(formatNumber(process.cpu, decimals: 1...1))% CPU"), memory = formatBytes(process.memory, style: .memory)
             let (pid, name, isApp) = (process.pid, process.name, process.isApp)
             return LauncherResult(
                 id: "process:\(pid)", title: name,

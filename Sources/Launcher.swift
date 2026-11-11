@@ -132,6 +132,12 @@ func formatNumber(_ value: Double, decimals: ClosedRange<Int> = 0...10, mark: St
     return mark == "," ? plain.replacing(".", with: ",") : plain
 }
 
+/// `409.8 MB`, with `mark` for the decimal point, like the numbers beside it.
+func formatBytes(_ bytes: Int64, style: ByteCountFormatStyle.Style = .file, mark: String = decimalMark) -> String {
+    let plain = bytes.formatted(.byteCount(style: style).locale(Locale(identifier: "en_US_POSIX")))
+    return mark == "," ? plain.replacing(".", with: ",") : plain
+}
+
 /// Typed numbers the way Swift reads them. With both marks the last one is the decimal point, on any Mac:
 /// `1.234,56` and `1,234.56` are 1234.56. A lone comma (`12,5`) is one only where the Mac's mark is, since elsewhere it
 /// parts a function's arguments (`max(1,2)`). One mark before groups of three digits groups them when there are several

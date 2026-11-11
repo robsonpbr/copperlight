@@ -10,7 +10,7 @@ private func filePreview(_ path: String) -> (load: (@Sendable () async -> String
     let details = [(String(localized: "Where", comment: "A file's detail: its folder"), shortParentPath(path)),
                    (String(localized: "Kind", comment: "A file's detail: its kind (“PDF document”)"),
                     values?.localizedTypeDescription ?? String(localized: "File", comment: "A file's kind, when macOS doesn't say")),
-                   (String(localized: "Size", comment: "A file's detail"), Int64(values?.fileSize ?? 0).formatted(.byteCount(style: .file))),
+                   (String(localized: "Size", comment: "A file's detail"), formatBytes(Int64(values?.fileSize ?? 0))),
                    (String(localized: "Modified", comment: "A file's detail: when it last changed"),
                     values?.contentModificationDate?.formatted(date: .abbreviated, time: .shortened) ?? "–")]
     if type?.conforms(to: .image) == true {

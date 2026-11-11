@@ -382,7 +382,7 @@ actor ClipboardProvider: ResultProvider {
                 image = { (try? store.image(item.id)).flatMap(NSImage.init(data:)) }
                 icon = .image("clipboard:\(item.id)") { (try? store.image(item.id)).flatMap { thumbnail($0, maxPixels: 64) } }
                 details += [(String(localized: "Dimensions"), "\(size.width) × \(size.height)"),
-                            (String(localized: "Size", comment: "Label: a file's size"), item.length.formatted(.byteCount(style: .file)))]
+                            (String(localized: "Size", comment: "Label: a file's size"), formatBytes(Int64(item.length)))]
             } else {
                 details += [(String(localized: "Characters"), "\(item.length)"), (String(localized: "Lines"), more > 0 ? "\(lines)+" : "\(lines)")]
             }
