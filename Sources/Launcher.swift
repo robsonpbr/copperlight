@@ -220,7 +220,8 @@ final class SearchModel {
     @ObservationIgnored private var task: Task<Void, Never>?
     /// A round has started and its rows aren't shown yet: the list still shows the previous query's.
     @ObservationIgnored private(set) var settling = false
-    /// A row's output step while it runs (a shell line): Esc cancels it, which stops the process.
+    /// A row's output step while its row shows (a shell line): Esc cancels it, which stops the process. Forgotten, not
+    /// stopped, once that row goes (hidden and shown again, or typed over), so Esc on a later question can't reach it.
     @ObservationIgnored var run: Task<Void, Never>?
     @ObservationIgnored private let state: StateStore?
     @ObservationIgnored private var frecency: Frecency.Table
@@ -474,6 +475,7 @@ final class SearchModel {
     private func search() {
         task?.cancel()
         confirming = nil
+        run = nil // a hidden run goes on, and says how it ended in a notification
         stepped = nil
         previewOpen = false
         selection = 0
