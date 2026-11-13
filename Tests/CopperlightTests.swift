@@ -204,6 +204,18 @@ private struct Echo: ResultProvider {
     }
 }
 
+/// COPL-2: a run you hid keeps going. Once its row is gone, Esc on a later question can't reach it.
+@MainActor @Test func hiddenRunOutlivesLaterQuestions() async throws {
+    let model = SearchModel(providers: [Fixed(rows: [])])
+    let run = Task<Void, Never> { try? await Task.sleep(for: .seconds(5)) }
+    model.run = run
+    model.query = "" // shown again, or typed in: the run's row is gone
+    #expect(model.run == nil)
+    model.run?.cancel() // what Esc on a question does
+    #expect(!run.isCancelled)
+    run.cancel()
+}
+
 @MainActor @Test func rowsShowTogetherAndSlowOnesMergeLater() async throws {
     let model = SearchModel(providers: [Echo(delay: .seconds(1)), Echo(delay: .zero), Fixed(rows: [])])
     model.query = "a"
